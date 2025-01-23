@@ -1,4 +1,4 @@
-# Template repository for NEON Biodiversity Research
+# Repository for IBEEM Conspecific Density Dependence Project
 
 [*For more information on how to use this repository, see: [AboutThisTemplate.md](https://github.com/NEON-biodiversity/template_repository/blob/main/AboutThisTemplate.md)*]
 
