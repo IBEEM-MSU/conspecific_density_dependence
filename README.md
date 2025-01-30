@@ -19,6 +19,8 @@ We like trees.
 
 ## Workflow
 
+Here are the steps that we will take to analyze the tree data!
+
 [*Provide a high-level overview of the steps in the workflow (e.g., Download raw data files, merge to monthly time scale, and calculate geodiversity statistics).*] 
 
 ## Location of data 
