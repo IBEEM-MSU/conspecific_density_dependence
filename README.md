@@ -15,7 +15,7 @@
 
 ## Introduction
 
-[*Clearly state the purpose of this repository, including a description of how it fits into the broader goals of the NEON-biodiversity project as a whole.*]  
+We like trees. 
 
 ## Workflow
 
