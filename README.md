@@ -15,7 +15,7 @@
 
 ## Introduction
 
-Trees hate trees. A lot.
+The overarching goal of our project is to investigate how mycorrhizal associations mediate density-dependent interactions between adult trees and seedlings along resource gradients under climate change. 
 
 ## Workflow
 
@@ -25,7 +25,7 @@ Here are the steps that we will take to analyze the tree data!
 
 ## Location of data 
 
-The preliminary seedling data files for analyses, for the 12 sites (49.01, 59.12, 8.21, 39.21, 16.35, 60.35, 7.40, 40.40, 21.43, 25.43, 6.45, and 24.45) in the Manistee National Forest (6 excel files per site) are archived in the data/L0 folder.
+The seedling data files for analyses, for the 12 sites (49.01, 59.12, 8.21, 39.21, 16.35, 60.35, 7.40, 40.40, 21.43, 25.43, 6.45, and 24.45) in the Manistee National Forest (6 excel files per site), are archived in the data/L0 folder.
 
 ## Spatiotemporal extent and resolution 
 
