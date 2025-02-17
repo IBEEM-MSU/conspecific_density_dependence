@@ -1,0 +1,62 @@
+# Authors: A Eagar & B McNichol 2-2025
+
+# Packages
+library(tidyverse) # For data manipulation & graphing
+library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and Walker, S., 2014. Fitting linear mixed-effects models using lme4. arXiv preprint arXiv:1406.5823.
+# library(MuMIn) # For AIC and R-squared values. Barton, K. and Barton, M.K., 2015. Package ‘mumin’. Version, 1(18), p.439.
+# library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christensen, R.H., 2017. lmerTest package: tests in linear mixed effects models. Journal of statistical software, 82, pp.1-26.
+# library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
+# library(vegan) # For the analysis & analytical considerations of ecological data. Oksanen, J., Blanchet, F.G., Kindt, R., Legendre, P., Minchin, P.R., O’hara, R.B., Simpson, G.L., Solymos, P., Stevens, M.H.H., Wagner, H. and Oksanen, M.J., 2013. Package ‘vegan’. Community Ecology Package, version, 2(9), pp.1-295.
+
+############################################################################################
+
+# Problem 1: Determine a standard timeperiod to analyze cohorts over. Group quadrats at entire plot (or larger) area and across time. Use a central tendency?
+
+rm_16_35 <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_16_35.csv") %>%
+					replace(is.na(.), 0) 
+					
+rm_16_35[,c(11:36)] <- rm_16_35[,c(11:36)]/apply(rm_16_35[,c(11:36)], 1, max) # This line converts our time by cohort observation matrix into % of seedlings remaining in each quadrat based on their original cohort size.
+
+rm_stats <- rm_16_35 %>%
+					gather(c(11:36), key = "Obs.Year", value = "Perc") %>%
+					mutate(Time = 1 + (LY - FY)) %>% # Time since original cohort recording. # unique(rm_stats[,c(9, 10, 13, 14)])
+					filter(Perc >= 0.05) %>% # Remove times where 5% or fewer of seedlings remain. This allows us to approxiamte a "time to 95% mortality" point. # plot(rm_stats$Time, rm_stats$Perc)
+					group_by(First.Year) %>%
+					mutate(Mean = mean(Time), Median = median(Time)) %>% # Calculate mean and median time to 95% mortality for each cohort.
+					ungroup() %>%
+					mutate(Mean_overall = mean(Time), Median_overall = median(Time)) %>% # Calculate mean and median time to 95% mortality for all cohorts combined.
+					select(First.Year, Mean, Median, Mean_overall, Median_overall) %>%
+					unique()
+					
+	## The median time to 95% seedling mortality across all cohorts is 4 years. We'll use this range to standardize the time we perform regression over.
+	
+# Example regression
+
+	# We'll eventually build a for loop to handle every cohort. Maybe.
+
+rm_16_35 <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_16_35.csv") %>%
+					replace(is.na(.), 0) 
+# for(each year):					
+Year_1998 <- rm_16_35 %>%
+					gather(c(11:36), key = "Obs.Year", value = "Count") %>%
+					filter(First.Year == "1998") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					mutate(Time = 1 + (as.numeric(Obs.Year) - as.numeric(First.Year))) %>%
+					filter(Time <= 4)
+					
+	LM_1998 <- lm(Count ~ Time, data = Year_1998)
+
+	Slope_coeff <- as.vector(LM_1998$coefficients)
+
+	Slope_coeff[2]
+# for(each quadrat):
+Year_1998_quad_1 <- Year_1998 %>%
+					filter(quadrat == 1)
+					
+	LM_1998_quad_1 <- lm(Count ~ Time, data = Year_1998_quad_1)
+
+	Slope_coeff_quad_1 <- as.vector(LM_1998_quad_1$coefficients)
+
+	Slope_coeff_quad_1[2]
+
+	log(Slope_coeff[2]/Slope_coeff_quad_1[2]) # Log ratio of the plot level slope vs quadrat slope. This tells us if the individual quadrat slope is more negative than overall (- values) or less negative overall (+ values). We should be able to use this value as a response and regress it against various community level explanatory terms (conspecific BA, Myc BA, etc). We'll have one value per quadrat per transect per year, so we should have plenty of DF.
