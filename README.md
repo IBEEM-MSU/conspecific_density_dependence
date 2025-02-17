@@ -27,6 +27,11 @@ Here are the steps that we will take to analyze the tree data!
 
 The seedling data files for analyses, for the 12 sites (49.01, 59.12, 8.21, 39.21, 16.35, 60.35, 7.40, 40.40, 21.43, 25.43, 6.45, and 24.45) in the Manistee National Forest (6 excel files per site), are archived in the data/L0 folder.
 
+Some of the relevant covariates are also now in this folder - specifically,
+1) "quad_envVars_allSites.csv"", which contains information on the light availability, soil nutrients and moisture for each quadrat
+2) "quad_climateData_allSites.csv", which contains climatic variables for each quadrat-year combination (from 1998-2023)
+3) "MNF_ba_radii_allCensuses.csv", which contains the species-level BA in a 5-m, 10-m, and 15-m radius around each quadrat for each of the nine years that adult trees were censused (1999, 2005, 2007, 2009, 2011, 2013, 2016, 2019, and 2022).
+
 ## Spatiotemporal extent and resolution 
 
 [*Describe the spatial and temporal extent and resolution of the data sets resulting from the workflow. For example:*]  
@@ -41,7 +46,7 @@ The seedling data files for analyses, for the 12 sites (49.01, 59.12, 8.21, 39.2
 
 ### File Naming Conventions
 
-**Data Files**: Naming for the seedling data files follows the convention "SiteNumber_FirstYear_LastYear.xlsx", with each site having 6 excel files covering subsets of the 26 years of data, with every age of seedling (all suriviving cohorts) censused in a given year included in the excel file with that year. Here's some additional information on the column meanings in these files:
+**Seedling Data Files**: Naming for the seedling data files follows the convention "SiteNumber_FirstYear_LastYear.xlsx", with each site having 6 excel files covering subsets of the 26 years of data, with every age of seedling (all suriviving cohorts) censused in a given year included in the excel file with that year. Here's some additional information on the column meanings in these files:
 - **uniqueID**: concatenation of Transect ID and Julian (5-digit) date
 - **TransectID**: concatenation of Site Name and Quadrat (X) Number
 - **Site**: Site Name
@@ -51,7 +56,47 @@ The seedling data files for analyses, for the 12 sites (49.01, 59.12, 8.21, 39.2
 - **X**: Quadrat number (quadrats 1-200 identified as 0.5 to 199.5, with labeling by the 0.5-m mark to avoid confusion)
 -  **rm through ae**: Abbreviations for seedling species' names; RM = red maple, SM = sugar maple, AB = American beech, WA = white ash,  BC = black cherry, WO = white oak, NR = northern red oak, BO = black oak, BONRO/BNR = black oak/northern red oak, BS = American basswood, wp = white pine, IW = ironwood, ae = American elm (note we do not have sufficient replication to model HEM. WP, or AE)
 -  **Notes**: any pertinent notes about the quadrat/censusing that year
-- **Scripts**: [*Use descriptive names for scripts and follow a consistent naming convention, such as `process_data.py` or `cleaning_script.R`. If scripts are designed to be run in sequence, it may be helpful to number them in order (e.g., `1_cleaning_script.R`, `2_process_data.R`)*]
+
+**Environmental (non-climatic) Covariates**: "quad_envVars_allSites.csv"
+Here's some additional information on the column meanings in this file:
+- **TransectID**: concatenation of Site Name and Quadrat (X) Number
+- **Site**: Site Name
+- **X**: Quadrat number (quadrats 1-200 identified as 0.5 to 199.5, with labeling by the 0.5-m mark to avoid confusion)
+- **dateOpen**: Exact date that percent canopy openness (percOpen) was measured
+- **percOpen**: percent canopy openness (%/100) - derived from diffuse non-interceptance measured with a hemispherical lens; proportion representing understory light availability (percentage divided by 100) where 1 = 100% open (no shade); measured every 2 m and interpolated to the quadrat-level
+- **mean_VWC**: Mean volumetric water content (%), based on an average of 2 measurements taken in early April and late May 1999; measurements were taken every 10 m and interpolated to the quadrat-level; represents a relative site indicator of dryness (only 1 year of measurements)
+- **Ca_ppm**: Concentrations of total extractable Calcium, in ppm; measured in 2011 every 10 m and interpolated to the quadrat-level
+- **K_ppm**: Concentrations of total extractable Potassium, in ppm; measured in 2011 every 10 m and interpolated to the quadrat-level
+- **Mg_ppm**: Concentrations of total extractable Magnesium, in ppm; measured in 2011 every 10 m and interpolated to the quadrat-level
+- **NH4_ppm**: Concentrations of ammonium, in ppm, determined with acolorimetric assay using an absorbance microplate reader; measured in 2011 every 10 m and interpolated to the quadrat-level
+- **NO3_ppm**: Concentrations of nitrate, in ppm, determined with acolorimetric assay using an absorbance microplate reader; measured in 2011 every 10 m and interpolated to the quadrat-level
+- **Base_CEC**: Base cation exchange capacity (milliequivalent, meq, per 100 g soil); integrated index of soil fertility calculates as Bas_CEC = (ppm Ca/200) + (ppm K/390) + (ppm Mg/120), where 200, 390, and 120 represent the meq/100 g soil for base cations of Ca, K, and Mg, respectively. Calculated every 10 m and interpolated to the quadrat-level.
+
+**Climatic Covariates**: "quad_climateData_allSites.csv"
+Here's some additional information on the column meanings in this file:
+- **TransectID**: concatenation of Site Name and Quadrat Number
+- **Year**:Year of climate variables (1998-2023; will add in 2024 if we need it)
+- **Site**: Site Name
+- **precipTotGS_mm**: Total accumulated precipitation (mm) during the growing season (May to September)
+- **sradTotGS_wm2**: Total solar radiation (W/m2) during the growing season 
+- **max_tempGS_c**: Maximum daily temperature (C) reached during the growing season 
+- **min_tempGS_c**: Minimum daily temperature (C) reached during the growing season 
+- **mean_pdsiGS**: Mean monthly growing season Palmer Drought Severity Index (PDSI) (average across May-September monthly averages)
+- **min_pdsiGS**: Minimum monthly growing season Palmer Drought Severity Index (PDSI) (minimum of the May-September monthly averages)
+	
+**Species' Basal Area in 5-m, 10-m, and 15-m radii**: "MNF_ba_radii_allCensuses.csv"
+Here's some additional information on the column meanings in this file:
+- **TransectID**: concatenation of Site Name and Quadrat (X) Number
+- **Site**: Site Name
+- **X**: X coordinate denoting the position of quadrat along the transect
+- **Y**: Y coordinate, denoting that the quadrats are along transect (always = 0)
+- **Midpoint_X**: X coordinate denoting the center of the quadrat
+- **Midpoint_Y**: Y coordinate denoting the vertical center point of each quadrat are along transect (always = 0.5)
+- **Year**: Year of mature tree census (1999, 2005, 2007, 2009, 2011, 2013, 2016, 2019, and 2022).
+- **All other columns**: take the form xx_ym and hold the basal area values (m2 per radius), where xx is a 2-letter species abbreviation, and ym is one of 5m, 10m, or 15m representing the radius for which BA was calculated in meters
+ab = American beech, bs = basswood, sm = sugar maple, qa = quaking aspen, ae = American elm, wa = white ash, bta = bigtooth aspen, nro = Northern red oak, iw = ironwood, rm = red maple, bo = black oak, bc = black cherry, bonro = black oak/nro hybrid, wo = white oak, hem = eastern hemlock, wp = white pine, jp = jack pine, svb = serviceberry
+
+**Scripts**: [*Use descriptive names for scripts and follow a consistent naming convention, such as `process_data.py` or `cleaning_script.R`. If scripts are designed to be run in sequence, it may be helpful to number them in order (e.g., `1_cleaning_script.R`, `2_process_data.R`)*]
 
 ## Scripts
 
