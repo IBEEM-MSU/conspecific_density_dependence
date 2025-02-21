@@ -5,7 +5,7 @@ library(readxl)
 
 
 # Find all the excel files in the L0 data folder 
-temp <- list.files("./data/L0/Site_Year_Data", pattern = ".xlsx", full.names=T) 
+temp <- list.files("./data/L0/Site_Year_Data", pattern = "^25.43.*\\.xlsx$", full.names = TRUE)
 # Read them into a list (Use indexing if you don't want all of the files!)
 t <- lapply(temp, readxl::read_excel, col_types = c("text", "text", "text",
                                                     "text",  "text","text",
@@ -17,14 +17,11 @@ t <- lapply(temp, readxl::read_excel, col_types = c("text", "text", "text",
 # Bind them all together 
 u <- do.call(dplyr::bind_rows, t)
 
-# Take a look 
-head(u)
-tail(u)
 
 u = as.data.frame(u)
 
 # Write csv
-write.csv(u, "./data/L0/all_Seedlings_SpSiteYear.csv")
+write.csv(u, "./data/L0/all_SpYears_25.43.csv")
 
 
 # Find all the excel files in the L0 data folder 
