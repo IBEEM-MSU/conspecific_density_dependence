@@ -28,7 +28,7 @@ Here are the steps that we will take to analyze the tree data!
 The seedling data files for analyses, for the 12 sites (49.01, 59.12, 8.21, 39.21, 16.35, 60.35, 7.40, 40.40, 21.43, 25.43, 6.45, and 24.45) in the Manistee National Forest (6 excel files per site), are archived in the data/L0 folder.
 
 Some of the relevant covariates are also now in this folder - specifically,
-1) "quad_envVars_allSites.csv"", which contains information on the light availability, soil nutrients and moisture for each quadrat
+1) "quad_envVars_allSites.csv", which contains information on the light availability, soil nutrients and moisture for each quadrat
 2) "quad_climateData_allSites.csv", which contains climatic variables for each quadrat-year combination (from 1998-2023)
 3) "MNF_ba_radii_allCensuses.csv", which contains the species-level BA in a 5-m, 10-m, and 15-m radius around each quadrat for each of the nine years that adult trees were censused (1999, 2005, 2007, 2009, 2011, 2013, 2016, 2019, and 2022).
 
