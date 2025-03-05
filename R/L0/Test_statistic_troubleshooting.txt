@@ -10,53 +10,108 @@ library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and
 
 ############################################################################################
 
-# Problem 1: Determine a standard timeperiod to analyze cohorts over. Group quadrats at entire plot (or larger) area and across time. Use a central tendency?
+# Obstacle 1: Determine a standard timeperiod to analyze cohorts over. Group quadrats at entire plot (or larger) area and (maybe) across time. Calculate a central tendency from an entire plot's cohort to compare against quadrat cohorts & the density of adult trees surrounding @m radius.
 
-rm_16_35 <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_16_35.csv") %>%
-					replace(is.na(.), 0) 
-					
-rm_16_35[,c(11:36)] <- rm_16_35[,c(11:36)]/apply(rm_16_35[,c(11:36)], 1, max) # This line converts our time by cohort observation matrix into % of seedlings remaining in each quadrat based on their original cohort size.
-
-rm_stats <- rm_16_35 %>%
-					gather(c(11:36), key = "Obs.Year", value = "Perc") %>%
-					mutate(Time = 1 + (LY - FY)) %>% # Time since original cohort recording. # unique(rm_stats[,c(9, 10, 13, 14)])
-					filter(Perc >= 0.05) %>% # Remove times where 5% or fewer of seedlings remain. This allows us to approxiamte a "time to 95% mortality" point. # plot(rm_stats$Time, rm_stats$Perc)
-					group_by(First.Year) %>%
-					mutate(Mean = mean(Time), Median = median(Time)) %>% # Calculate mean and median time to 95% mortality for each cohort.
-					ungroup() %>%
-					mutate(Mean_overall = mean(Time), Median_overall = median(Time)) %>% # Calculate mean and median time to 95% mortality for all cohorts combined.
-					select(First.Year, Mean, Median, Mean_overall, Median_overall) %>%
-					unique()
-					
-	## The median time to 95% seedling mortality across all cohorts is 4 years. We'll use this range to standardize the time we perform regression over.
+Red_maple_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_allCohortsSites.csv") %>%
+					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s. 
 	
-# Example regression
+	Red_maple_demography[,c(12:38)] <- Red_maple_demography[,c(12:38)]/apply(Red_maple_demography[,c(12:38)], 1, max) # Convert time by cohort observation matrix into % of seedlings remaining in each quadrat based on the highest number of seedlings recorded in that row. This helps account for missed observations in early cohort years (yr 1, 10 seedlings -> yr 2, 11 seedlings) and frees the data from its more linear structure. 
 
-	# We'll eventually build a for loop to handle every cohort. Maybe.
-
-rm_16_35 <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_16_35.csv") %>%
-					replace(is.na(.), 0) 
-# for(each year):					
-Year_1998 <- rm_16_35 %>%
-					gather(c(11:36), key = "Obs.Year", value = "Count") %>%
-					filter(First.Year == "1998") %>%
+Red_maple_dem_stats <- Red_maple_demography %>%
+					gather(c(12:38), key = "Obs.Year", value = "Perc") %>%
 					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
-					mutate(Time = 1 + (as.numeric(Obs.Year) - as.numeric(First.Year))) %>%
-					filter(Time <= 4)
-					
-	LM_1998 <- lm(Count ~ Time, data = Year_1998)
+					mutate(Time.Since.First.Year = as.numeric(Obs.Year) - as.numeric(First.Year)) %>% # Time since original cohort recording.
+					filter(Perc >= 0.05) %>% # Remove times where 5% or fewer of seedlings remain. This allows us to approxiamte a "time to 95% mortality" point. # plot(rm_stats$Time, rm_stats$Perc)
+					group_by(First.Year, Site) %>%
+					mutate(Yt95.C.S.Mean = mean(Time.Since.First.Year), Yt95.C.S.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for each cohort at each site.
+					ungroup() %>%
+					group_by(First.Year) %>%
+					mutate(Yt95.C.Mean = mean(Time.Since.First.Year), Yt95.C.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for each cohort across all sites.
+					ungroup() %>%
+					group_by(Site) %>%
+					mutate(Yt95.S.Mean = mean(Time.Since.First.Year), Yt95.S.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality across all cohort at each site.
+					ungroup() %>% 
+					mutate(Mean.Overall = mean(Time.Since.First.Year), Median.Overall = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for all cohorts combined.
+					select(First.Year, Site, Yt95.C.S.Mean, Yt95.C.Mean, Yt95.S.Mean, Mean.Overall,Yt95.C.Median.Site, Yt95.C.Median, Yt95.S.Median, Median.Overall) %>% 
+					unique()
+	# Cohort year + 3 years after (for a total of 4 observations) looks like it will work well.
+	
+	Red_maple_cohorts <- Red_maple_dem_stats %>% select(First.Year, Yt95.C.Mean, Yt95.C.Median) %>% unique()
+		as.data.frame(Red_maple_cohorts)
+		
+	# Seedlings were not recorded after year 3 for earlier cohorts - from the distribution of the mean and median values, it looks like 2002 is where more detailed records began.
+	
+# Obstacle 2: Obtain slope coefficients for "global" data and compare to each quadrat. Modeling based on Counts may be problematic, as quadrats that start with higher numbers of seedlings naturally have farther to fall and will yield steeper slopes. Likely better to use % remaining, 
 
-	Slope_coeff <- as.vector(LM_1998$coefficients)
+	# We'll eventually build a for loop to handle every cohort. Maybe. Or write a function.
+
+Red_maple_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_allCohortsSites.csv") %>%
+					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s. 
+
+# Write a compare and replace function:
+compare_replace <- function(df) {
+  # Loop through all columns except the last one
+  for (i in (ncol(df) - 1):1) {
+    # Compare each value in column i to the value in the next column (i+1)
+    df[[i]] <- ifelse(df[[i]] < df[[i + 1]], df[[i + 1]], df[[i]])
+  }
+  return(df)
+}
+
+	Red_maple_demography[,c(12:38)] <- compare_replace(Red_maple_demography[,c(12:38)])
+	
+	Red_maple_demography[,c(12:38)] <- Red_maple_demography[,c(12:38)]/apply(Red_maple_demography[,c(12:38)], 1, max) # Convert time by cohort observation matrix into % of seedlings remaining in each quadrat based on the highest number of seedlings recorded in that row. This helps account for missed observations in early cohort years (yr 1, 10 seedlings -> yr 2, 11 seedlings) and frees the data from its more linear structure.   
+# for(each year):
+		
+Year_2002 <- Red_maple_demography %>%
+					filter(First.Year == "2002") %>%
+					filter(Site == "16.35") %>%
+					filter(sumAll > 0) %>%
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					mutate(Time.Since.First.Year = as.numeric(Obs.Year) - as.numeric(First.Year)) %>%
+					filter(Time.Since.First.Year <= 3)
+					
+	LM_2002 <- lm(Count ~ Time.Since.First.Year, data = Year_2002)
+
+	Slope_coeff <- as.vector(LM_2002$coefficients)
 
 	Slope_coeff[2]
-# for(each quadrat):
-Year_1998_quad_1 <- Year_1998 %>%
-					filter(quadrat == 1)
+	
+# for(i in 1:200):
+Year_2002_quad <- Year_2002 %>%
+					filter(quadrat == i)
 					
-	LM_1998_quad_1 <- lm(Count ~ Time, data = Year_1998_quad_1)
+	LM_2002_quad_1 <- lm(Count ~ Time.Since.First.Year, data = Year_2002_quad_1)
 
-	Slope_coeff_quad_1 <- as.vector(LM_1998_quad_1$coefficients)
+	Slope_coeff_quad_1 <- as.vector(LM_2002_quad_1$coefficients)
 
 	Slope_coeff_quad_1[2]
 
 	log(Slope_coeff[2]/Slope_coeff_quad_1[2]) # Log ratio of the plot level slope vs quadrat slope. This tells us if the individual quadrat slope is more negative than overall (- values) or less negative overall (+ values). We should be able to use this value as a response and regress it against various community level explanatory terms (conspecific BA, Myc BA, etc). We'll have one value per quadrat per transect per year, so we should have plenty of DF.
+	
+	(Slope_coeff[2] - Slope_coeff_quad_1[2]) 
+	
+	# Make a scatter plot
+	
+	theme_Scatter <- theme_classic() + # Classic theme with white background.
+		theme(aspect.ratio = 1, axis.title = (element_text(face = "bold", size = 45)), axis.text.y = element_text(margin = margin(r = 5)), axis.title.y = element_text(margin = margin(r = 10)), axis.text.x = element_text(margin = margin(t = 5)), axis.text = element_text(size = 45, color = "black"), legend.title = element_text(size = 14, face = "bold"), legend.text = element_text(size = 12), legend.position = "none", legend.background = element_rect(fill='transparent'), legend.box.background = element_rect(fill='transparent', linetype = 'blank'), legend.spacing.y = unit(0.01, 'cm')) # axis.line = element_line(color = "black", size = 2) legend.position = "none"
+
+		Example_regression <- Year_2002 %>%
+								ggplot(aes(x = Time.Since.First.Year, y = Count)) +
+											geom_jitter(aes(color = as.factor(quadrat)), size = 3) +	
+											theme_Scatter +
+											# geom_text(x = 46, y = 0.9, label = "R² = 67.4% (F, G, X)", size = 22) +
+											# geom_text(x = 18, y = 1, label = "a", size = 21) +
+											# scale_shape(labels = c("AM Focal Tree", "ECM Focal Tree")) +
+											# labs(title = "Soil", x = "% Relative ECM Basal Area", y = "Primary Saprotroph \nRelative Abundance") +
+											# scale_y_continuous(breaks = seq(0,1,0.25), limits = c(0, 1)) +
+											# scale_x_continuous(breaks = seq(20,100,20), limits = c(18, 101)) +
+											# scale_color_manual(values = c("orange1", "springgreen3")) +
+											stat_smooth(data = Year_2002, method = "lm", color = "black", se = FALSE, size = 2) +
+											stat_smooth(data = (Year_2002[which(Year_2002$quadrat == 1),]), method = "lm", color = "firebrick2", se = FALSE, size = 2) +
+											stat_smooth(data = (Year_2002[which(Year_2002$quadrat == 5),]), method = "lm", color = "royalblue2", se = FALSE, size = 2)
+
+	# Orange = North; Green = South; Circle = AM focal tree; Triangle = ECM focal tree.									
+	ggsave("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/2002_cohort_example_regression.png", plot = Example_regression, device = "png", dpi = 800)
+	
