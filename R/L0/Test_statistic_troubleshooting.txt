@@ -32,12 +32,17 @@ Red_maple_dem_stats <- Red_maple_demography %>%
 					mutate(Yt95.S.Mean = mean(Time.Since.First.Year), Yt95.S.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality across all cohort at each site.
 					ungroup() %>% 
 					mutate(Mean.Overall = mean(Time.Since.First.Year), Median.Overall = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for all cohorts combined.
-					select(First.Year, Site, Yt95.C.S.Mean, Yt95.C.Mean, Yt95.S.Mean, Mean.Overall,Yt95.C.Median.Site, Yt95.C.Median, Yt95.S.Median, Median.Overall) %>% 
+					select(First.Year, Site, Yt95.C.S.Mean, Yt95.C.Mean, Yt95.S.Mean, Mean.Overall,Yt95.C.S.Median, Yt95.C.Median, Yt95.S.Median, Median.Overall) %>% 
 					unique()
+					
 	# Cohort year + 3 years after (for a total of 4 observations) looks like it will work well.
 	
 	Red_maple_cohorts <- Red_maple_dem_stats %>% select(First.Year, Yt95.C.Mean, Yt95.C.Median) %>% unique()
 		as.data.frame(Red_maple_cohorts)
+		
+		Select_cohorts <- Red_maple_cohorts[c(5:24), 2]
+		
+		mean(Select_cohorts$Yt95.C.Mean)
 		
 	# Seedlings were not recorded after year 3 for earlier cohorts - from the distribution of the mean and median values, it looks like 2002 is where more detailed records began.
 	
@@ -58,60 +63,76 @@ compare_replace <- function(df) {
   return(df)
 }
 
-	Red_maple_demography[,c(12:38)] <- compare_replace(Red_maple_demography[,c(12:38)])
+	Red_maple_demography[,c(12:38)] <- compare_replace(Red_maple_demography[,c(12:38)]) # Correct for seedlings missed in a previous year's census
 	
-	Red_maple_demography[,c(12:38)] <- Red_maple_demography[,c(12:38)]/apply(Red_maple_demography[,c(12:38)], 1, max) # Convert time by cohort observation matrix into % of seedlings remaining in each quadrat based on the highest number of seedlings recorded in that row. This helps account for missed observations in early cohort years (yr 1, 10 seedlings -> yr 2, 11 seedlings) and frees the data from its more linear structure.   
-# for(each year):
-		
-Year_2002 <- Red_maple_demography %>%
-					filter(First.Year == "2002") %>%
-					filter(Site == "16.35") %>%
+Red_maple_demography_subset <- Red_maple_demography %>%
 					filter(sumAll > 0) %>%
 					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
 					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
 					mutate(Time.Since.First.Year = as.numeric(Obs.Year) - as.numeric(First.Year)) %>%
-					filter(Time.Since.First.Year <= 3)
-					
-	LM_2002 <- lm(Count ~ Time.Since.First.Year, data = Year_2002)
+					filter(Time.Since.First.Year <= 3 & Time.Since.First.Year >= 0) %>%
+					filter(First.Year >= 2002 & First.Year <= 2021) %>%
+					select(c(2, 4, 5, 7, 14, 15))
+						
+Year_results <- matrix(nrow = 0, ncol = 5, 0)
+	colnames(Year_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate')
 
-	Slope_coeff <- as.vector(LM_2002$coefficients)
+for(y in 2002:2021) {
 
-	Slope_coeff[2]
+	By_year <- Red_maple_demography_subset %>%
+						filter(First.Year == y)
+			
+	Site_results <- matrix(nrow = 0, ncol = 5, 0)
+		colnames(Site_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate')
 	
-# for(i in 1:200):
-Year_2002_quad <- Year_2002 %>%
-					filter(quadrat == i)
-					
-	LM_2002_quad_1 <- lm(Count ~ Time.Since.First.Year, data = Year_2002_quad_1)
+for(s in 1:12) {
 
-	Slope_coeff_quad_1 <- as.vector(LM_2002_quad_1$coefficients)
-
-	Slope_coeff_quad_1[2]
-
-	log(Slope_coeff[2]/Slope_coeff_quad_1[2]) # Log ratio of the plot level slope vs quadrat slope. This tells us if the individual quadrat slope is more negative than overall (- values) or less negative overall (+ values). We should be able to use this value as a response and regress it against various community level explanatory terms (conspecific BA, Myc BA, etc). We'll have one value per quadrat per transect per year, so we should have plenty of DF.
+	By_site <- By_year %>%
+						filter(SiteID == s)
 	
-	(Slope_coeff[2] - Slope_coeff_quad_1[2]) 
+	Slope_coefficients <- matrix(nrow = 200, ncol = 5, 0) # Matrix to store slopes.nrow(Red_maple_demography_subset)
+		colnames(Slope_coefficients) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate')
 	
-	# Make a scatter plot
+for(q in 1:200) {
+	By_quadrat <- By_site %>%
+						filter(quadrat == q)
 	
-	theme_Scatter <- theme_classic() + # Classic theme with white background.
-		theme(aspect.ratio = 1, axis.title = (element_text(face = "bold", size = 45)), axis.text.y = element_text(margin = margin(r = 5)), axis.title.y = element_text(margin = margin(r = 10)), axis.text.x = element_text(margin = margin(t = 5)), axis.text = element_text(size = 45, color = "black"), legend.title = element_text(size = 14, face = "bold"), legend.text = element_text(size = 12), legend.position = "none", legend.background = element_rect(fill='transparent'), legend.box.background = element_rect(fill='transparent', linetype = 'blank'), legend.spacing.y = unit(0.01, 'cm')) # axis.line = element_line(color = "black", size = 2) legend.position = "none"
+	if(length(By_quadrat$quadrat) > 0) {
+								
+		GLM_quadrat <- glm(cbind(Count, max(By_quadrat$Count) - Count)  ~ Time.Since.First.Year, family = binomial(link = "logit"), data = By_quadrat)
+		
+		Slope_coefficients[q,1] <- unique(By_quadrat$TransectID)
+		Slope_coefficients[q,2] <- unique(By_site$SiteID)
+		Slope_coefficients[q,3] <- q
+		Slope_coefficients[q,4] <- unique(By_year$First.Year)
+		Slope_coefficients[q,5] <- as.vector(GLM_quadrat$coefficients[2])
+		
+										} else {
+										
+											Slope_coefficients[q,1] <- NA
+											Slope_coefficients[q,2] <- unique(By_site$SiteID) # Site throws an error here if there are no site-level observations. Fix this 3-10-2025
+											Slope_coefficients[q,3] <- q
+											Slope_coefficients[q,4] <- unique(By_year$First.Year)
+											Slope_coefficients[q,5] <- NA
+											
+												}
+	
+}
 
-		Example_regression <- Year_2002 %>%
-								ggplot(aes(x = Time.Since.First.Year, y = Count)) +
-											geom_jitter(aes(color = as.factor(quadrat)), size = 3) +	
-											theme_Scatter +
-											# geom_text(x = 46, y = 0.9, label = "R² = 67.4% (F, G, X)", size = 22) +
-											# geom_text(x = 18, y = 1, label = "a", size = 21) +
-											# scale_shape(labels = c("AM Focal Tree", "ECM Focal Tree")) +
-											# labs(title = "Soil", x = "% Relative ECM Basal Area", y = "Primary Saprotroph \nRelative Abundance") +
-											# scale_y_continuous(breaks = seq(0,1,0.25), limits = c(0, 1)) +
-											# scale_x_continuous(breaks = seq(20,100,20), limits = c(18, 101)) +
-											# scale_color_manual(values = c("orange1", "springgreen3")) +
-											stat_smooth(data = Year_2002, method = "lm", color = "black", se = FALSE, size = 2) +
-											stat_smooth(data = (Year_2002[which(Year_2002$quadrat == 1),]), method = "lm", color = "firebrick2", se = FALSE, size = 2) +
-											stat_smooth(data = (Year_2002[which(Year_2002$quadrat == 5),]), method = "lm", color = "royalblue2", se = FALSE, size = 2)
+	Site_results <- rbind(Site_results, na.omit(Slope_coefficients))
+	
+	}
+	
+Year_results <- rbind(Year_results, Site_results)
 
-	# Orange = North; Green = South; Circle = AM focal tree; Triangle = ECM focal tree.									
-	ggsave("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/2002_cohort_example_regression.png", plot = Example_regression, device = "png", dpi = 800)
+}
+
+
+rbind data
+
+
+	
+# Obstacle 3: Use a random slopes model as an additional analysis
+
++ (quadrat|Site)
 	
