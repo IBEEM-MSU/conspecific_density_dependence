@@ -175,23 +175,23 @@ cmNs_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ con
                family = binomial(link = "logit"), 
                data = rm_surv)
 summary(cmNs_5m)
-## Interactive effect between conspecific and mycorrhizal dominance
-csHmInt_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                 rm_5m*hetMyc_5m + (1 | Site), 
-               family = binomial(link = "logit"), 
-               data = rm_surv)
-summary(csHmInt_5m)
-## Additive effect between conspecific and mycorrhizal dominance
-csHmAdd_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                   rm_5m + hetMyc_5m + (1 | Site), 
-                 family = binomial(link = "logit"), 
-                 data = rm_surv)
-summary(csHmAdd_5m)
 ## Effect of hetero-mycorrhizal DD in 5-m radius 
 hm_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ hetMyc_5m + (1 | Site), 
-                 family = binomial(link = "logit"), 
-                 data = rm_surv)
+               family = binomial(link = "logit"), 
+               data = rm_surv)
 summary(hm_5m)
+## Effect of hetero-mycorrhizal * con-mycorrhizal DD in 5-m radius - excluding RM
+hmcmNS_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
+                     hetMyc_5m * conMycNS_5m  + (1 | Site), 
+               family = binomial(link = "logit"), 
+               data = rm_surv)
+summary(hmcmNS_5m)
+## Effect of hetero-mycorrhizal * con-mycorrhizal DD in 5-m radius 
+hmcm_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
+                     hetMyc_5m*conMyc_5m  + (1 | Site), 
+                   family = binomial(link = "logit"), 
+                   data = rm_surv)
+summary(hmcm_5m)
 ## Effect of hetero-specific DD in 5-m radius 
 hs_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ hetSp_5m + (1 | Site), 
                family = binomial(link = "logit"), 
@@ -200,10 +200,10 @@ summary(hs_5m)
 
 ## Model selection/evaluation using AIC
 # Create a data frame with model names and AIC values
-aic_df_5m <- tibble(Model = c("cs_5m", "cm_5m", "cmNs_5m", "csHmInt_5m", 
-                           "csHmAdd_5m", "hm_5m", "hs_5m"),
-  AIC = sapply(list(cs_5m, cm_5m, cmNs_5m, csHmInt_5m, 
-                    csHmAdd_5m, hm_5m, hs_5m), AIC)) %>%
+aic_df_5m <- tibble(Model = c("cs_5m", "cm_5m", "cmNs_5m", "hm_5m", 
+                           "hmcmNS_5m", "hmcm_5m", "hs_5m"),
+  AIC = sapply(list(cs_5m, cm_5m, cmNs_5m, hm_5m, 
+                    hmcmNS_5m, hmcm_5m, hs_5m), AIC)) %>%
   arrange(AIC)  # Sort by AIC
 
 # Print the sorted AIC values
