@@ -1,6 +1,6 @@
 
 #################################################
-####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
+####### Analyses of one-year survivorship of Red Maple WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol
 ####### Date: 17 March 2025
 #################################################
@@ -20,14 +20,6 @@ library(dplyr)
 # (1 | Site/survYear)
 # (1 | Site) + (1 | survYear)
 
-## Create color palette for sites
-fertility = c("49.01" = "#FCECAEFF","59.12" = "#FECD90FF",
-              "8.21" = "#FEAC76FF","39.21" = "#FC8B62FF",
-              "16.35" = "#F56B5CFF","60.35" = "#D8456CFF",
-              "7.4" = "#BD3977FF","40.4" = "#A02F7FFF",
-              "21.43" = "#762181FF","25.43" = "#5B167EFF",
-              "6.45" = "#3F0F72FF","24.45" = "#21114EFF")
-
 #################################################
 #################################################
 ##### Red Maple
@@ -39,25 +31,25 @@ rm_surv <- read.csv( "./data/L1/rm_oneYrSurv_matureBA.csv", row.names = 1)
 rm_surv$Site = as.factor(rm_surv$Site)
 rm_surv$survYear = as.factor(rm_surv$survYear)
 
-#### Calculate the percent conspecific BA, percent con-mycorrhizAL species BA including the species, and percent con-mycorrhizAL species BA excluding the species for each radius
+#### Calculate the proportion conspecific BA, proportion con-mycorrhizAL species BA including the species, and proportion con-mycorrhizAL species BA excluding the species for each radius
 ## Conspecific - 5m
-rm_surv$percCS_5m = (rm_surv$rm_5m / (rm_surv$conMyc_5m + rm_surv$hetMyc_5m))
+rm_surv$propCS_5m = (rm_surv$rm_5m / (rm_surv$conMyc_5m + rm_surv$hetMyc_5m))
 ## Con-Mycorrhizal including species - 5m
-rm_surv$percCM_5m = (rm_surv$conMyc_5m / (rm_surv$conMyc_5m + rm_surv$hetMyc_5m))
+rm_surv$propCM_5m = (rm_surv$conMyc_5m / (rm_surv$conMyc_5m + rm_surv$hetMyc_5m))
 ## Con-Mycorrhizal excluding species - 5m
-rm_surv$percCM_NS_5m = (rm_surv$conMycNS_5m / (rm_surv$conMycNS_5m + rm_surv$hetMyc_5m))
+rm_surv$propCM_NS_5m = (rm_surv$conMycNS_5m / (rm_surv$conMycNS_5m + rm_surv$hetMyc_5m))
 ## Conspecific - 10m
-rm_surv$percCS_10m = (rm_surv$rm_10m / (rm_surv$conMyc_10m + rm_surv$hetMyc_10m))
+rm_surv$propCS_10m = (rm_surv$rm_10m / (rm_surv$conMyc_10m + rm_surv$hetMyc_10m))
 ## Con-Mycorrhizal including species - 10m
-rm_surv$percCM_10m = (rm_surv$conMyc_10m / (rm_surv$conMyc_10m + rm_surv$hetMyc_10m))
+rm_surv$propCM_10m = (rm_surv$conMyc_10m / (rm_surv$conMyc_10m + rm_surv$hetMyc_10m))
 ## Con-Mycorrhizal excluding species - 10m
-rm_surv$percCM_NS_10m = (rm_surv$conMycNS_10m / (rm_surv$conMycNS_10m + rm_surv$hetMyc_10m))
+rm_surv$propCM_NS_10m = (rm_surv$conMycNS_10m / (rm_surv$conMycNS_10m + rm_surv$hetMyc_10m))
 ## Conspecific - 15m
-rm_surv$percCS_15m = (rm_surv$rm_15m / (rm_surv$conMyc_15m + rm_surv$hetMyc_15m))
+rm_surv$propCS_15m = (rm_surv$rm_15m / (rm_surv$conMyc_15m + rm_surv$hetMyc_15m))
 ## Con-Mycorrhizal including species - 15m
-rm_surv$percCM_15m = (rm_surv$conMyc_15m / (rm_surv$conMyc_15m + rm_surv$hetMyc_15m))
+rm_surv$propCM_15m = (rm_surv$conMyc_15m / (rm_surv$conMyc_15m + rm_surv$hetMyc_15m))
 ## Con-Mycorrhizal excluding species - 15m
-rm_surv$percCM_NS_15m = (rm_surv$conMycNS_15m / (rm_surv$conMycNS_15m + rm_surv$hetMyc_15m))
+rm_surv$propCM_NS_15m = (rm_surv$conMycNS_15m / (rm_surv$conMycNS_15m + rm_surv$hetMyc_15m))
 
 ###############################
 ###############################
@@ -108,35 +100,40 @@ aic_rm_5m <- tibble(Model = c("cs_5m", "cm_5m", "cmNs_5m", "hm_5m",
   arrange(AIC)  # Sort by AIC
 # Print the sorted AIC values
 print(aic_rm_5m)
+# Pseudo R2 for best models
+r.squaredGLMM(hmcm_5m)
+r.squaredGLMM(cm_5m)
 
 ###############################
 ##### Candidate Models - 5-m radius - proportional BA
 ## Effect of proportional conspecific DD in 5-m radius
-perc_cs_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-               percCS_5m + (1 | Site) + (1 | survYear), 
+prop_cs_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+               propCS_5m + (1 | Site) + (1 | survYear), 
                family = binomial(link = "logit"), 
                data = rm_surv)
-summary(perc_cs_5m)
+summary(prop_cs_5m)
 ## Effect of proportional Con-Mycorrhizal DD in 5-m radius - including the species
-perc_cm_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      percCM_5m + (1 | Site) + (1 | survYear), 
+prop_cm_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      propCM_5m + (1 | Site) + (1 | survYear), 
                     family = binomial(link = "logit"), 
                     data = rm_surv)
-summary(perc_cm_5m)
+summary(prop_cm_5m)
 ## Effect of proportional Con-Mycorrhizal DD in 5-m radius - excluding the species
-perc_cmNS_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                    percCM_NS_5m + (1 | Site) + (1 | survYear), 
+prop_cmNS_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                    propCM_NS_5m + (1 | Site) + (1 | survYear), 
                     family = binomial(link = "logit"), 
                     data = rm_surv)
-summary(perc_cmNS_5m)
+summary(prop_cmNS_5m)
 
 ## Model selection/evaluation using AIC
 # Create a data frame with model names and AIC values
-aic_rm_5m_prop <- tibble(Model = c("perc_cs_5m", "perc_cm_5m", "perc_cmNS_5m"),
-                    AIC = sapply(list(perc_cs_5m, perc_cm_5m, perc_cmNS_5m), AIC)) %>%
+aic_rm_5m_prop <- tibble(Model = c("prop_cs_5m", "prop_cm_5m", "prop_cmNS_5m"),
+                    AIC = sapply(list(prop_cs_5m, prop_cm_5m, prop_cmNS_5m), AIC)) %>%
   arrange(AIC)  # Sort by AIC
 # Print the sorted AIC values
 print(aic_rm_5m_prop)
+# Pseudo R2 for best models
+r.squaredGLMM(prop_cmNS_5m)
 
 ###############################
 ##################################
@@ -192,28 +189,28 @@ print(aic_rm_10m)
 ###############################
 ##### Candidate Models - 10-m radius - proportional BA
 ## Effect of proportional conspecific DD in 10-m radius
-perc_cs_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      percCS_10m + (1 | Site) + (1 | survYear), 
+prop_cs_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      propCS_10m + (1 | Site) + (1 | survYear), 
                     family = binomial(link = "logit"), 
                     data = rm_surv)
-summary(perc_cs_10m)
+summary(prop_cs_10m)
 ## Effect of proportional Con-Mycorrhizal DD in 10-m radius - including the species
-perc_cm_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      percCM_10m + (1 | Site) + (1 | survYear), 
+prop_cm_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      propCM_10m + (1 | Site) + (1 | survYear), 
                     family = binomial(link = "logit"), 
                     data = rm_surv)
-summary(perc_cm_10m)
+summary(prop_cm_10m)
 ## Effect of proportional Con-Mycorrhizal DD in 10-m radius - excluding the species
-perc_cmNS_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                        percCM_NS_10m + (1 | Site) + (1 | survYear), 
+prop_cmNS_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                        propCM_NS_10m + (1 | Site) + (1 | survYear), 
                       family = binomial(link = "logit"), 
                       data = rm_surv)
-summary(perc_cmNS_10m)
+summary(prop_cmNS_10m)
 
 ## Model selection/evaluation using AIC
 # Create a data frame with model names and AIC values
-aic_rm_10m_prop <- tibble(Model = c("perc_cs_10m", "perc_cm_10m", "perc_cmNS_10m"),
-                         AIC = sapply(list(perc_cs_10m, perc_cm_10m, perc_cmNS_10m), AIC)) %>%
+aic_rm_10m_prop <- tibble(Model = c("prop_cs_10m", "prop_cm_10m", "prop_cmNS_10m"),
+                         AIC = sapply(list(prop_cs_10m, prop_cm_10m, prop_cmNS_10m), AIC)) %>%
   arrange(AIC)  # Sort by AIC
 # Print the sorted AIC values
 print(aic_rm_10m_prop)
@@ -273,28 +270,28 @@ print(aic_rm_15m)
 ###############################
 ##### Candidate Models - 15-m radius - proportional BA
 ## Effect of proportional conspecific DD in 15-m radius
-perc_cs_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                       percCS_15m + (1 | Site) + (1 | survYear), 
+prop_cs_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                       propCS_15m + (1 | Site) + (1 | survYear), 
                      family = binomial(link = "logit"), 
                      data = rm_surv)
-summary(perc_cs_15m)
+summary(prop_cs_15m)
 ## Effect of proportional Con-Mycorrhizal DD in 15-m radius - including the species
-perc_cm_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                       percCM_15m + (1 | Site) + (1 | survYear), 
+prop_cm_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                       propCM_15m + (1 | Site) + (1 | survYear), 
                      family = binomial(link = "logit"), 
                      data = rm_surv)
-summary(perc_cm_15m)
+summary(prop_cm_15m)
 ## Effect of proportional Con-Mycorrhizal DD in 15-m radius - excluding the species
-perc_cmNS_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                         percCM_NS_15m + (1 | Site) + (1 | survYear), 
+prop_cmNS_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                         propCM_NS_15m + (1 | Site) + (1 | survYear), 
                        family = binomial(link = "logit"), 
                        data = rm_surv)
-summary(perc_cmNS_15m)
+summary(prop_cmNS_15m)
 
 ## Model selection/evaluation using AIC
 # Create a data frame with model names and AIC values
-aic_rm_15m_prop <- tibble(Model = c("perc_cs_15m", "perc_cm_15m", "perc_cmNS_15m"),
-                          AIC = sapply(list(perc_cs_15m, perc_cm_15m, perc_cmNS_15m), AIC)) %>%
+aic_rm_15m_prop <- tibble(Model = c("prop_cs_15m", "prop_cm_15m", "prop_cmNS_15m"),
+                          AIC = sapply(list(prop_cs_15m, prop_cm_15m, prop_cmNS_15m), AIC)) %>%
   arrange(AIC)  # Sort by AIC
 # Print the sorted AIC values
 print(aic_rm_15m_prop)
@@ -302,41 +299,90 @@ print(aic_rm_15m_prop)
 
 ###### ###### ###### ###### ###### ###### ###### ###### 
 ###### ###### ###### ###### ###### ###### ###### ###### 
-###### Plot survivorship versus conmycorrhizal BA with fit lines from:
+###### Plot survivorship versus TOTAL conmycorrhizal BA with fit lines from:
 # 1) cm_5m ; 2) cmNs_5m; 3) cs_5m
-# Extract model coefficients
-intercept_cm_5m <- fixef(cm_5m)[1]  # Intercept on logit scale
-slope_cm_5m <- fixef(cm_5m)[2]      # Slope on logit scale
+# Extract model coefficients (logit scale)
+models <- data.frame(
+  Model = c("Con-Mycorrhizal - RM", "Con-Mycorrhizal - no RM", "RM"),
+  Intercept = c(fixef(cm_5m)[1], fixef(cmNs_5m)[1], fixef(cs_5m)[1]),
+  Slope = c(fixef(cm_5m)[2], fixef(cmNs_5m)[2], fixef(cs_5m)[2])
+)
 
-# Generate predictor values (range of conMycNS_5m)
+# Generate predictor values (common range for x-axis)
 x_values <- seq(min(rm_surv$conMyc_5m), max(rm_surv$conMyc_5m), length.out = 100)
 
-# Convert logit-scale predictions to probability scale
-logit_predictions <- intercept_cm_5m + slope_cm_5m * x_values
-prob_predictions <- plogis(logit_predictions)  # Inverse logit function
+# Compute back-transformed survival probabilities
+fit_data <- do.call(rbind, lapply(1:nrow(models), function(i) {
+  logit_pred <- models$Intercept[i] + models$Slope[i] * x_values
+  prob_pred <- plogis(logit_pred)  # Transform logit to probability
+  data.frame(conMyc_5m = x_values, survivorship = prob_pred, Model = models$Model[i])
+}))
 
-# Create dataframe for plotting the fitted line
-fit_data <- data.frame(conMycNS_5m = x_values, survivorship = prob_predictions)
+## Re-order levels
+fit_data$Model <- factor(fit_data$Model, 
+                levels = c("Con-Mycorrhizal - RM", "Con-Mycorrhizal - no RM", "RM"))
 
-# Create scatterplot with fitted line
-ggplot(rm_surv, aes(x = conMycNS_5m, y = total_count_yr1 / total_count_yr0)) +
+# Scatterplot with fitted lines from all models
+ggplot(rm_surv, aes(x = conMyc_5m, y = total_count_yr1 / total_count_yr0)) +
   geom_point(alpha = 0.5) +  # Observed survivorship
-  geom_line(data = fit_data, aes(x = conMycNS_5m, y = survivorship), color = "red", linewidth = 1) +
-  labs(x = "Basal Area of Trees (conMycNS_5m)", y = "Seedling Survivorship", title = "Seedling Survivorship vs. Basal Area") +
-  theme_minimal()
-
-
-ggplot(rm_surv, aes(x = conMyc_5m, y = Survivorship, color = Site)) +
-  geom_point(alpha = 0.6) +
-  geom_abline(intercept = -0.78743, slope = -0.84482, color = "black") + # conMyc_5m
-  scale_color_manual(values = fertility) +
-  labs(x = "Con-mycorrhizal Basal Area (m²) in 5-m Neighborhood",
-       y = "Survivorship") +
+  geom_line(data = fit_data, aes(x = conMyc_5m, y = survivorship, color = Model), linewidth = 1) +
+  scale_color_manual(values = c("blue", "red", "gold")) +  # Custom colors
+  labs(x = "Con-Mycorrhizal Basal Area in 5-m Neighborhood", 
+       y = "Seedling Survivorship", 
+       title = "RM Seedling Survivorship") +
   theme_bw() +
   theme(axis.text = element_text(colour = 'black', size = 10), 
-        axis.title = element_text(size = 10), legend.key = element_blank(), 
-        plot.title = element_text(size = 10, hjust = 0.5),
-        legend.text = element_text(size = 8),
-        legend.title = element_text(size = 8),
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 12, hjust = 0.5),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10),
         panel.grid.minor = element_blank(),
-        legend.position = "none")
+        legend.position = "bottom")
+
+
+###### ###### ###### ###### ###### ###### ###### ###### 
+###### ###### ###### ###### ###### ###### ###### ###### 
+###### Plot survivorship versus PROPORTIONAL conmycorrhizal BA with fit lines from:
+# 1) prop_cm_5m ; 2) prop_cmNS_5m; 3) prop_cs_5m
+# Extract model coefficients (logit scale)
+models <- data.frame(
+  Model = c("Con-Mycorrhizal - RM", "Con-Mycorrhizal - no RM", "RM"),
+  Intercept = c(fixef(prop_cm_5m)[1], fixef(prop_cmNS_5m)[1], fixef(prop_cs_5m)[1]),
+  Slope = c(fixef(prop_cm_5m)[2], fixef(prop_cmNS_5m)[2], fixef(prop_cs_5m)[2])
+)
+
+# Generate predictor values (common range for x-axis)
+x_values_prop <- seq(min(rm_surv$propCM_5m, na.rm = TRUE), 
+                     max(rm_surv$propCM_5m, na.rm = TRUE), length.out = 100)
+
+# Compute back-transformed survival probabilities
+fit_data_prop <- do.call(rbind, lapply(1:nrow(models), function(i) {
+  logit_pred <- models$Intercept[i] + models$Slope[i] * x_values_prop
+  prob_pred <- plogis(logit_pred)  # Transform logit to probability
+  data.frame(propCM_5m = x_values_prop, survivorship = prob_pred, Model = models$Model[i])
+}))
+
+## geom_smooth() - add line and CIs
+## r.squaredGLMM() - pseudo R2 - gives theoretical and delta values
+
+## Re-order levels
+fit_data_prop$Model <- factor(fit_data_prop$Model, 
+                         levels = c("Con-Mycorrhizal - RM", "Con-Mycorrhizal - no RM", "RM"))
+
+# Scatterplot with fitted lines from all models
+ggplot(rm_surv, aes(x = propCM_5m, y = total_count_yr1 / total_count_yr0)) +
+  geom_point(alpha = 0.5) +  # Observed survivorship
+  geom_line(data = fit_data_prop, aes(x = propCM_5m, y = survivorship, 
+                                      color = Model), linewidth = 1) +
+  scale_color_manual(values = c("blue", "red", "gold")) +  # Custom colors
+  labs(x = "Proportion of Con-Mycorrhizal BA in 5-m Neighborhood", 
+       y = "Seedling Survivorship", 
+       title = "RM Seedling Survivorship") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 12, hjust = 0.5),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10),
+        panel.grid.minor = element_blank(),
+        legend.position = "bottom")
