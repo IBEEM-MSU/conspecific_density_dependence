@@ -45,6 +45,24 @@ Red_maple_dem_stats <- Red_maple_demography %>%
 Red_maple_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_allCohortsSites.csv") %>%
 					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s  
 
+Red_maple_demography_prevous_year_cohort_densities <- Red_maple_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive feedback.
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					filter(First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
+					group_by(Site, quadrat, Obs.Year) %>%
+					mutate(Prior_3_year_counts = sum(Count)) %>%
+					select(c(2,3,4,5,7,13,15)) %>%
+					unique()
+
+write.csv(Red_maple_demography_prevous_year_cohort_densities, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_prior_cohort_densities.csv", row.names = FALSE) # Export data for random slopes modeling
+
+{ # Partial results for example:
+16.35      5     146       2006     2008                   3
+16.35      5     146       2007     2008                   3 # How many seedlings were in this quadrat at this site prior to the 2008 cohort? This number has been spot-checked: The 2006 cohort had 1 seedling left in 2008, while the 2007 cohort had 2 seedlings left in 2008 for a total of three present
+16.35      5     146       2008     2008                   0 # How many seedlings were in the 2008 cohort?
+}
+
 compare_replace <- function(df) { # Write a compare and replace function. This corrects for missed observations in early cohort years (yr 1, 10 seedlings -> yr 2, 11 seedlings gets corrected to yr 1, 11 seedlings)
   
 	for(i in (ncol(df) - 1):1) {
@@ -58,7 +76,7 @@ compare_replace <- function(df) { # Write a compare and replace function. This c
 }
 
 Red_maple_demography[,c(12:38)] <- compare_replace(Red_maple_demography[,c(12:38)]) # Correct for seedlings missed in a previous year's census
-	
+					
 Red_maple_demography_subset <- Red_maple_demography %>% # Format data & filter for time (years 0 - 3); remove early cohorts with insufficient data and later cohorts that lack enough time (e.g., cohort 1998 with only 3 years of observations, 2024 cohort)
 					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
 					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
@@ -72,24 +90,24 @@ Red_maple_demography_subset <- Red_maple_demography %>% # Format data & filter f
 
 # For loops for obtaining slope estimates from Binomial GLMs
 	
-Year_results <- matrix(nrow = 0, ncol = 5, 0)
-	colnames(Year_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate') # Create matrix to store slopes by year by site by quadrat
+Year_results <- matrix(nrow = 0, ncol = 6, 0)
+	colnames(Year_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate', 'Cohort.Count') # Create matrix to store slopes by year by site by quadrat
 
 for(y in 2002:2021) {
 
 	By_year <- Red_maple_demography_subset %>%
 						filter(First.Year == y)
 			
-	Site_results <- matrix(nrow = 0, ncol = 5, 0)
-		colnames(Site_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate') # Create matrix to store slopes by site by quadrat
+	Site_results <- matrix(nrow = 0, ncol = 6, 0)
+		colnames(Site_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate', 'Cohort.Count') # Create matrix to store slopes by site by quadrat
 	
 	for(s in 1:12) {
 
 		By_site <- By_year %>%
 							filter(SiteID == s)
 		
-		Slope_coefficients <- matrix(nrow = 200, ncol = 5, 0) # Matrix to store slopes.nrow(Red_maple_demography_subset)
-			colnames(Slope_coefficients) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate') # Create matrix to store slopes by quadrat
+		Slope_coefficients <- matrix(nrow = 200, ncol = 6, 0) # Matrix to store slopes.nrow(Red_maple_demography_subset)
+			colnames(Slope_coefficients) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate', 'Cohort.Count') # Create matrix to store slopes by quadrat
 		
 		for(q in 1:200) {
 		
@@ -105,14 +123,16 @@ for(y in 2002:2021) {
 				Slope_coefficients[q,3] <- q
 				Slope_coefficients[q,4] <- unique(By_year$First.Year)
 				Slope_coefficients[q,5] <- as.vector(GLM_quadrat$coefficients[2])
+				Slope_coefficients[q,6] <- max(By_quadrat$Count)
 				
 			} else {
 												
 				Slope_coefficients[q,1] <- NA
-				Slope_coefficients[q,2] <- s # Site throws an error here if there are no site-level observations. Fix this 3-10-2025
+				Slope_coefficients[q,2] <- s
 				Slope_coefficients[q,3] <- q
 				Slope_coefficients[q,4] <- y
 				Slope_coefficients[q,5] <- NA
+				Slope_coefficients[q,6] <- 0
 				
 			}
 

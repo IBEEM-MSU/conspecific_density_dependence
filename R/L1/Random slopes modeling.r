@@ -595,12 +595,44 @@ RM_glm_rm_plot_densities <- RM_demography_BA %>%
 								
 								)								
 								
+# Plot 4: All densities, plotted by quadrats
+
+(			
+RM_glm_rm_plot_densities <- RM_demography_BA %>%
+					filter(Time.Since.First.Year != 0) %>%
+					group_by(First.Year, SiteID, quadrat) %>%
+					mutate(Perc_mort = Count/Starting_counts) %>%
+					ggplot(aes(x = as.numeric(Time.Since.First.Year), y = Perc_mort)) +
+								# geom_line(aes(color = rm_5m, group = Transect_quad_year_unifier), linewidth = 0.1) +
+								geom_smooth(aes(color = rm_5m, group = Transect_quad_year_unifier), linewidth = 0.1, method = "glm", method.args = list(family = "binomial"), se = FALSE) +
+								theme_Scatter +
+								scale_color_gradient2(low = "grey90", mid = "salmon", high = "firebrick4", midpoint = 0.4)
 								
+								)									
 								
-								
-								
-								
-								
+# Plot 5: All times plotted by density
+
+(			
+RM_glm_rm_plot_densities <- RM_demography_BA %>%
+					filter(Time.Since.First.Year != 0) %>%
+					group_by(First.Year, SiteID, quadrat) %>%
+					mutate(Perc_mort = Count/Starting_counts, First.Year.Time = paste(Time.Since.First.Year, First.Year)) %>%
+					ggplot(aes(x = as.numeric(rm_5m), y = Perc_mort)) +
+								# geom_line(aes(color = rm_5m, group = Transect_quad_year_unifier), linewidth = 0.1) +
+								geom_smooth(aes(color = Time.Since.First.Year, group = First.Year.Time), linewidth = 0.1, method = "glm", method.args = list(family = "binomial"), se = FALSE) +
+								theme_Scatter
+)
+							
+(			
+RM_glm_rm_plot_densities <- RM_demography_BA %>%
+					filter(Time.Since.First.Year != 0) %>%
+					group_by(First.Year, SiteID, quadrat) %>%
+					mutate(Perc_mort = Count/Starting_counts) %>%
+					ggplot(aes(x = as.numeric(rm_5m), y = Perc_mort)) +
+								# geom_line(aes(color = rm_5m, group = Transect_quad_year_unifier), linewidth = 0.1) +
+								geom_smooth(aes(color = Time.Since.First.Year, group = Time.Since.First.Year), linewidth = 0.1, method = "glm", method.args = list(family = "binomial"), se = FALSE) +
+								theme_Scatter
+)								
 								+ 
 								geom_text(x = 46, y = 0.9, label = "R² = 67.4% (F, G, X)", size = 22) +
 								geom_text(x = 18, y = 1, label = "a", size = 21) +
