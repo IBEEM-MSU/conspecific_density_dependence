@@ -9,7 +9,7 @@ library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and
 Red_maple_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/rm_allCohortsSites.csv") %>%
 					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s 
 	
-	Red_maple_demography[,c(12:38)] <- Red_maple_demography[,c(12:38)]/apply(Red_maple_demography[,c(12:38)], 1, max) # Convert time by cohort observation matrix into % of seedlings remaining in each quadrat based on the highest number of seedlings recorded in that row
+	Red_maple_demography[,c(12:38)] <- Red_maple_demography[,c(12:38)]/apply(Red_maple_demography[,c(12:38)], 1, max) # Convert time by cohort observation matrix into % of seedlings remaining in each quadrat based on the highest number of seedlings recorded in that row 
 
 Red_maple_dem_stats <- Red_maple_demography %>%
 					gather(c(12:38), key = "Obs.Year", value = "Perc") %>%
