@@ -2,7 +2,7 @@
 #################################################
 ####### Analyses of one-year survivorship of Red Maple WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol
-####### Date: 17 March 2025
+####### Date: 03 April 2025
 #################################################
 
 ## Read in packages
@@ -28,9 +28,12 @@ library(dplyr)
 rm_surv_temp <- read.csv( "./data/L1/rm_oneYrSurv_matureBA.csv", row.names = 1)
 rm_dens <- read.csv( "./data/L1/rm_prior_cohort_densities.csv")
 
+### Filter to include 2001 as first First.Year
+rm_surv_temp <- filter(rm_surv_temp, First.Year > 2000)
+
 # Merging the dataframes by matching TransectID and Obs.Year (in rm_dens) with TransectID and survYear (in rm_surv)
 rm_surv_temp$TI_FY = paste(rm_surv_temp$TransectID,rm_surv_temp$First.Year)
-rm_dens$TI_FY = paste(rm_dens$TransectID,rm_dens$First.Year)
+rm_dens$TI_FY = paste(rm_dens$TransectID,rm_dens$Obs.Year)
 
 ## Add new column with match
 rm_surv_temp$Prior_3_year_counts = rm_dens$Prior_3_year_counts[match(rm_surv_temp$TI_FY,
@@ -50,6 +53,13 @@ rm_surv$percEMF_5m = (rm_surv$hetMyc_5m / (rm_surv$hetMyc_5m + rm_surv$conMyc_5m
 rm_surv$percEMF_10m = (rm_surv$hetMyc_10m / (rm_surv$hetMyc_10m + rm_surv$conMyc_10m))
 # %EMF - 15m
 rm_surv$percEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
+
+#### Scale the 0-yr and 3-yr count data
+rm_surv$zero_count_log10 <- log10(rm_surv$total_count_yr0)
+rm_surv$zero_count_log10 <- log10(rm_surv$total_count_yr0)
+hist(zero_count_scale)
+zero_count_scale <- scale(rm_surv$total_count_yr0, center = TRUE)
+hist(zero_count_scale)
 
 #### Calculate the proportion conspecific BA, proportion con-mycorrhizAL species BA including the species, and proportion con-mycorrhizAL species BA excluding the species for each radius
 # ## Conspecific - 5m
@@ -74,8 +84,9 @@ rm_surv$percEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc
 ###############################
 ###############################
 
+
 ## Full model to fit: 
-# (total_count_yr1 / total_count_yr0) ~ rm_10m * % EMF hosts + conMyc_10m + hetMyc_10m + Prior_3_year_counts + total_count_yr0 + (1 | Site) + (1 | survYear)
+# (total_count_yr1 / total_count_yr0) ~ rm_10m * % EMF hosts + conMycNS_10m + hetMyc_10m + Prior_3_year_counts + total_count_yr0 + (1 | Site) + (1 | survYear)
 
 ## 5-m radius
 cor(rm_surv[, c("rm_5m", "percEMF_5m", "conMyc_5m", "hetMyc_5m",
@@ -83,17 +94,18 @@ cor(rm_surv[, c("rm_5m", "percEMF_5m", "conMyc_5m", "hetMyc_5m",
 
 rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       rm_5m * percEMF_5m + 
-                      conMyc_5m + hetMyc_5m + 
-                      # Prior_3_year_counts + 
-                      # total_count_yr0 + 
+                      conMycNS_5m + 
+                      hetMyc_5m + 
+                      log10(Prior_3_year_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
-                    #control = glmerControl(optimizer = "nloptwrap"),
-                    family = binomial(link = "logit"), 
-                    data = rm_surv)
+                      family = binomial(link = "logit"), 
+                      data = rm_surv)
 summary(rm_mod_5m)
 
+car::vif(rm_mod_5m)
 
-## 10-m radius
+### 10-m radius
 cor(rm_surv[, c("rm_10m", "percEMF_10m", "conMyc_10m", "hetMyc_10m",
                 "Prior_3_year_counts", "total_count_yr0")], use = "complete.obs")
 
