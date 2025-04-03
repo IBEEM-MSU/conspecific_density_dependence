@@ -29,15 +29,18 @@ rm_surv_temp <- read.csv( "./data/L1/rm_oneYrSurv_matureBA.csv", row.names = 1)
 rm_dens <- read.csv( "./data/L1/rm_prior_cohort_densities.csv")
 
 # Merging the dataframes by matching TransectID and Obs.Year (in rm_dens) with TransectID and survYear (in rm_surv)
-rm_surv <- merge(rm_surv_temp, rm_dens[, c("TransectID", "Obs.Year", "Prior_3_year_counts")], 
-                   by.x = c("TransectID", "survYear"), by.y = c("TransectID", "Obs.Year"), 
-                   all.x = TRUE)
+rm_surv_temp$TI_FY = paste(rm_surv_temp$TransectID,rm_surv_temp$First.Year)
+rm_dens$TI_FY = paste(rm_dens$TransectID,rm_dens$First.Year)
+
+## Add new column with match
+rm_surv_temp$Prior_3_year_counts = rm_dens$Prior_3_year_counts[match(rm_surv_temp$TI_FY,
+                                                                     rm_dens$TI_FY)]
+
+rm_surv <- rm_surv_temp
 
 #### Make site and year into factors
 rm_surv$Site = as.factor(rm_surv$Site)
 rm_surv$survYear = as.factor(rm_surv$survYear)
-
-head(rm_surv,50)
 
 #### Calculate the proportion of EMF hosts within each radius
 # %EMF - 5m
@@ -74,20 +77,44 @@ rm_surv$percEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc
 ## Full model to fit: 
 # (total_count_yr1 / total_count_yr0) ~ rm_10m * % EMF hosts + conMyc_10m + hetMyc_10m + Prior_3_year_counts + total_count_yr0 + (1 | Site) + (1 | survYear)
 
+## 5-m radius
+cor(rm_surv[, c("rm_5m", "percEMF_5m", "conMyc_5m", "hetMyc_5m",
+                "Prior_3_year_counts", "total_count_yr0")], use = "complete.obs")
+
+rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      rm_5m * percEMF_5m + 
+                      conMyc_5m + hetMyc_5m + 
+                      # Prior_3_year_counts + 
+                      # total_count_yr0 + 
+                      (1 | Site) + (1 | survYear),
+                    #control = glmerControl(optimizer = "nloptwrap"),
+                    family = binomial(link = "logit"), 
+                    data = rm_surv)
+summary(rm_mod_5m)
+
+
+## 10-m radius
 cor(rm_surv[, c("rm_10m", "percEMF_10m", "conMyc_10m", "hetMyc_10m",
                 "Prior_3_year_counts", "total_count_yr0")], use = "complete.obs")
 
-
 rm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      rm_10m + percEMF_10m + 
-                      #conMyc_10m + hetMyc_10m + 
-                      Prior_3_year_counts + 
-                      total_count_yr0 + 
+                      rm_10m * percEMF_10m + 
+                      conMyc_10m + hetMyc_10m + 
+                     # Prior_3_year_counts + 
+                     # total_count_yr0 + 
                       (1 | Site) + (1 | survYear),
-               control = glmerControl(optimizer = "nloptwrap"),
+               #control = glmerControl(optimizer = "nloptwrap"),
                family = binomial(link = "logit"), 
                data = rm_surv)
 summary(rm_mod_10m)
+
+
+
+
+
+
+
+
 
 ##### Candidate Models - 5-m radius - total BA
 ## Effect of conspecific DD in 5-m radius
