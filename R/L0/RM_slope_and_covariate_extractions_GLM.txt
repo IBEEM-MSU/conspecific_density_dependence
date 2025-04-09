@@ -52,38 +52,47 @@ Y1 <- Red_maple_demography %>% # Calculate existing seedling densities over the 
 					filter(First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
 					filter(Obs.Year > 2000) %>%
 					mutate(Cohort.Year = Obs.Year) %>%
-					group_by(Site, quadrat, Cohort.Year) %>%
+					group_by(SiteID, quadrat, Cohort.Year) %>%
 					mutate(Prior_3_year_cohorts_counts = sum(Count)) %>%
-					select(Site, quadrat, TransectID, First.Year, Obs.Year, Count, Cohort.Year, 16)
+					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
+					unique() %>%
+					mutate(Joiner = paste(TransectID,".",Cohort.Year))
 				
 Y2 <- Red_maple_demography %>% # Calculate existing seedling densities over the previous 2 years AND the new seedlings that emerge (think little siblings) that would challenge a given cohort year's survival one year after establishment. This is for year 2 survivorship
-					filter(sumAll > 0 & Site == 16.35) %>% # Remove quadrats with no observed seedlings at a given time and site
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
 					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
 					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
 					filter(First.Year == as.numeric(Obs.Year) | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
-					filter(Obs.Year == 2002) %>%
+					filter(Obs.Year > 2001) %>%
 					mutate(Cohort.Year = as.numeric(Obs.Year) - 1) %>%
-					group_by(Site, quadrat, Cohort.Year) %>%
+					group_by(SiteID, quadrat, Cohort.Year) %>%
 					mutate(Prior_2_year_cohorts_and_new_1st_year_counts = sum(Count)) %>%
-					select(Site, quadrat, TransectID, First.Year, Obs.Year, Count, Cohort.Year, 16)
+					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
+					unique() %>%
+					mutate(Joiner = paste(TransectID,".",Cohort.Year))
 
 Y3 <- Red_maple_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive feedback.
-					filter(sumAll > 0 & Site == 16.35) %>% # Remove quadrats with no observed seedlings at a given time and site
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
 					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
 					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
 					filter(First.Year == as.numeric(Obs.Year) | First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 3) %>%
-					filter(Obs.Year == 2003) %>%
+					filter(Obs.Year > 2002) %>%
 					mutate(Cohort.Year = as.numeric(Obs.Year) - 2) %>%
-					group_by(Site, quadrat, Cohort.Year) %>%
+					group_by(SiteID, quadrat, Cohort.Year) %>%
 					mutate(Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts = sum(Count)) %>%
-					select(Site, quadrat, TransectID, First.Year, Obs.Year, Count, Cohort.Year, 16)
+					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
+					unique() %>%
+					mutate(Joiner = paste(TransectID,".",Cohort.Year))
 
-Compare <- cbind(Y1, Y2, Y3) %>%
-					select(c(4,5,6,7,14))
+Three_year_densities <- Y1 %>%
+					full_join(Y2, by = "Joiner") %>%
+					full_join(Y3, by = "Joiner") %>%
+					replace(is.na(5), 0) %>%
+					replace(is.na(11), 0) %>%
+					replace(is.na(16), 0) %>%
+					select(SiteID, quadrat, TransectID, Cohort.Year, 5, 11, 16)
 
-as.data.frame(Compare)
-
-write.csv(Red_maple_demography_prevous_year_cohort_densities, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_prior_cohort_densities.csv", row.names = FALSE) # Export data for random slopes modeling
+write.csv(Three_year_densities, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_prior_cohort_densities.csv", row.names = FALSE) # Export data for modeling
 
 	# Same code, but more inclusive of columns so we can spot check the values with the spreadsheet:
 	{
