@@ -1,0 +1,235 @@
+# Authors: A Eagar & B McNichol 2-2025
+
+# Packages
+library(tidyverse) # For data manipulation & graphing. Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M, Pedersen TL, Miller E, Bache IW, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo K, Yutani H (2019). “Welcome to the tidyverse.” Journal of Open Source Software, 4(43), 1686. doi:10.21105/joss.01686. 
+library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and Walker, S., 2014. Fitting linear mixed-effects models using lme4. arXiv preprint arXiv:1406.5823
+
+# Obstacle 1: Determine a standard timeperiod to analyze cohorts over. Group quadrats at entire plot (or larger) area and (maybe) across time. Calculate a central tendency from an entire plot's cohort to compare against quadrat cohorts & the density of adult trees surrounding @m radius
+
+Ironwood_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/iw_allCohortsSites.csv") %>%
+					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s 
+	
+	Ironwood_demography[,c(12:38)] <- Ironwood_demography[,c(12:38)]/apply(Ironwood_demography[,c(12:38)], 1, max) # Convert time by cohort observation matrix into % of seedlings remaining in each quadrat based on the highest number of seedlings recorded in that row 
+
+Ironwood_dem_stats <- Ironwood_demography %>%
+					gather(c(12:38), key = "Obs.Year", value = "Perc") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					mutate(Time.Since.First.Year = as.numeric(Obs.Year) - as.numeric(First.Year)) %>% # Time since original cohort recording
+					filter(Perc >= 0.05) %>% # Remove times where 5% or fewer of seedlings remain. This allows us to approxiamte a "time to 95% mortality" point. # plot(iw_stats$Time, iw_stats$Perc)
+					group_by(First.Year, Site) %>%
+					mutate(Yt95.C.S.Mean = mean(Time.Since.First.Year), Yt95.C.S.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for each cohort at each site
+					ungroup() %>%
+					group_by(First.Year) %>%
+					mutate(Yt95.C.Mean = mean(Time.Since.First.Year), Yt95.C.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for each cohort across all sites
+					ungroup() %>%
+					group_by(Site) %>%
+					mutate(Yt95.S.Mean = mean(Time.Since.First.Year), Yt95.S.Median = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality across all cohort at each site
+					ungroup() %>% 
+					mutate(Mean.Overall = mean(Time.Since.First.Year), Median.Overall = median(Time.Since.First.Year)) %>% # Calculate mean and median time to 95% mortality for all cohorts combined
+					select(First.Year, Site, Yt95.C.S.Mean, Yt95.C.Mean, Yt95.S.Mean, Mean.Overall,Yt95.C.S.Median, Yt95.C.Median, Yt95.S.Median, Median.Overall) %>% 
+					unique()
+					
+	# Cohort year + 3 years after (for a total of 4 observations) looks like it will work well.
+	
+	Ironwood_cohorts <- Ironwood_dem_stats %>% select(First.Year, Yt95.C.Mean, Yt95.C.Median) %>% unique()
+		as.data.frame(Ironwood_cohorts)
+		
+		Select_cohorts <- Ironwood_cohorts[c(5:24), 2]
+		
+		mean(Select_cohorts$Yt95.C.Mean)
+		
+	# Seedlings were not recorded after year 3 for earlier cohorts - from the distribution of the mean and median values, it looks like 2002 is where more detailed records began
+	
+# Obstacle 2: Obtain previous cohort seedling densities for use as a fixed effect in all the modeling.
+
+Ironwood_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/iw_allCohortsSites.csv") %>%
+					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s  
+
+Y1 <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive mortality. This is for year 1 survivorship
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					filter(First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
+					filter(Obs.Year > 2000) %>%
+					mutate(Cohort.Year = Obs.Year) %>%
+					group_by(SiteID, quadrat, Cohort.Year) %>%
+					mutate(Prior_3_year_cohorts_counts = sum(Count)) %>%
+					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
+					unique() %>%
+					mutate(Joiner = paste(TransectID,".",Cohort.Year))
+				
+Y2 <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 2 years AND the new seedlings that emerge (think little siblings) that would challenge a given cohort year's survival one year after establishment. This is for year 2 survivorship
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					filter(First.Year == as.numeric(Obs.Year) | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
+					filter(Obs.Year > 2001) %>%
+					mutate(Cohort.Year = as.numeric(Obs.Year) - 1) %>%
+					group_by(SiteID, quadrat, Cohort.Year) %>%
+					mutate(Prior_2_year_cohorts_and_new_1st_year_counts = sum(Count)) %>%
+					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
+					unique() %>%
+					mutate(Joiner = paste(TransectID,".",Cohort.Year))
+
+Y3 <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive feedback.
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					filter(First.Year == as.numeric(Obs.Year) | First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 3) %>%
+					filter(Obs.Year > 2002) %>%
+					mutate(Cohort.Year = as.numeric(Obs.Year) - 2) %>%
+					group_by(SiteID, quadrat, Cohort.Year) %>%
+					mutate(Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts = sum(Count)) %>%
+					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
+					unique() %>%
+					mutate(Joiner = paste(TransectID,".",Cohort.Year))
+
+Three_year_densities <- Y1 %>%
+					full_join(Y2, by = "Joiner") %>%
+					full_join(Y3, by = "Joiner") %>%
+					replace(is.na(5), 0) %>%
+					replace(is.na(11), 0) %>%
+					replace(is.na(16), 0) %>%
+					select(SiteID, quadrat, TransectID, Cohort.Year, 5, 11, 16)
+
+write.csv(Three_year_densities, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/iw_prior_cohort_densities.csv", row.names = FALSE) # Export data for modeling
+
+	# Same code, but more inclusive of columns so we can spot check the values with the spreadsheet:
+	{
+		Y1 <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive mortality. This is for year 1 survivorship
+				filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+				gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+				separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+				filter(First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
+				filter(Obs.Year > 2000) %>%
+				mutate(Cohort.Year = Obs.Year) %>%
+				group_by(Site, quadrat, Cohort.Year) %>%
+				mutate(Prior_3_year_cohorts_counts = sum(Count)) %>%
+				select(Site, quadrat, TransectID, First.Year, Obs.Year, Count, Cohort.Year, 16)
+			
+		Y2 <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 2 years AND the new seedlings that emerge (think little siblings) that would challenge a given cohort year's survival one year after establishment. This is for year 2 survivorship
+				filter(sumAll > 0 & Site == 16.35) %>% # Remove quadrats with no observed seedlings at a given time and site
+				gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+				separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+				filter(First.Year == as.numeric(Obs.Year) | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
+				filter(Obs.Year == 2002) %>%
+				mutate(Cohort.Year = as.numeric(Obs.Year) - 1) %>%
+				group_by(Site, quadrat, Cohort.Year) %>%
+				mutate(Prior_2_year_cohorts_and_new_1st_year_counts = sum(Count)) %>%
+				select(Site, quadrat, TransectID, First.Year, Obs.Year, Count, Cohort.Year, 16)
+
+		Y3 <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive feedback.
+				filter(sumAll > 0 & Site == 16.35) %>% # Remove quadrats with no observed seedlings at a given time and site
+				gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+				separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+				filter(First.Year == as.numeric(Obs.Year) | First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 3) %>%
+				filter(Obs.Year == 2003) %>%
+				mutate(Cohort.Year = as.numeric(Obs.Year) - 2) %>%
+				group_by(Site, quadrat, Cohort.Year) %>%
+				mutate(Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts = sum(Count)) %>%
+				select(Site, quadrat, TransectID, First.Year, Obs.Year, Count, Cohort.Year, 16)
+		}
+
+# Obstacle 3: Obtain slope coefficients for each quadrat. Modeling done via GLM with binomial distribution due to data being proportional in nature 
+
+compare_replace <- function(df) { # Write a compare and replace function. This corrects for missed observations in early cohort years (yr 1, 10 seedlings -> yr 2, 11 seedlings gets corrected to yr 1, 11 seedlings)
+  
+	for(i in (ncol(df) - 1):1) {
+   
+		df[[i]] <- ifelse(df[[i]] < df[[i + 1]], df[[i + 1]], df[[i]])
+	
+	}
+  
+	return(df)
+	
+}
+
+Ironwood_demography[,c(12:38)] <- compare_replace(Ironwood_demography[,c(12:38)]) # Correct for seedlings missed in a previous year's census
+					
+Ironwood_demography_subset <- Ironwood_demography %>% # Foiwat data & filter for time (years 0 - 3); remove early cohorts with insufficient data and later cohorts that lack enough time (e.g., cohort 1998 with only 3 years of observations, 2024 cohort)
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					mutate(Time.Since.First.Year = as.numeric(Obs.Year) - as.numeric(First.Year)) %>%
+					filter(Time.Since.First.Year <= 3 & Time.Since.First.Year >= 0) %>% # Filter for time
+					filter(First.Year >= 2002 & First.Year <= 2021) %>% # Filter for cohorts
+					select(c(2, 4, 5, 7, 14, 15)) # Reduce column number
+
+	write.csv(Ironwood_demography_subset, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/iw_count_demography.csv", row.names = FALSE) # Export data for random slopes modeling
+
+# For loops for obtaining slope estimates from Binomial GLMs
+	
+Year_results <- matrix(nrow = 0, ncol = 6, 0)
+	colnames(Year_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate', 'Cohort.Count') # Create matrix to store slopes by year by site by quadrat
+
+for(y in 2002:2021) {
+
+	By_year <- Ironwood_demography_subset %>%
+						filter(First.Year == y)
+			
+	Site_results <- matrix(nrow = 0, ncol = 6, 0)
+		colnames(Site_results) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate', 'Cohort.Count') # Create matrix to store slopes by site by quadrat
+	
+	for(s in 1:12) {
+
+		By_site <- By_year %>%
+							filter(SiteID == s)
+		
+		Slope_coefficients <- matrix(nrow = 200, ncol = 6, 0) # Matrix to store slopes.nrow(Ironwood_demography_subset)
+			colnames(Slope_coefficients) <- c('TransectID', 'SiteID','quadrat', 'Cohort.Year', 'GLM.Slope.Estimate', 'Cohort.Count') # Create matrix to store slopes by quadrat
+		
+		for(q in 1:200) {
+		
+			By_quadrat <- By_site %>%
+								filter(quadrat == q)
+			
+			if(length(By_quadrat$quadrat) > 0) { # This if-else statement checks to see if a quadrat has data to model. If the quadrat (or above site or year) is devoid of seedlings the object has a length of 0 and fails the check, defailting to the else clause that populates the storage matrix with NAs. If the object does have data, it runs a Binomial GLM and stores the slope estimate along with quadrat, site, and year inforamtion
+										
+				GLM_quadrat <- glm(cbind(Count, max(By_quadrat$Count) - Count)  ~ Time.Since.First.Year, family = binomial(link = "logit"), data = By_quadrat)
+				
+				Slope_coefficients[q,1] <- unique(By_quadrat$TransectID)
+				Slope_coefficients[q,2] <- unique(By_site$SiteID)
+				Slope_coefficients[q,3] <- q
+				Slope_coefficients[q,4] <- unique(By_year$First.Year)
+				Slope_coefficients[q,5] <- as.vector(GLM_quadrat$coefficients[2])
+				Slope_coefficients[q,6] <- max(By_quadrat$Count)
+				
+			} else {
+												
+				Slope_coefficients[q,1] <- NA
+				Slope_coefficients[q,2] <- s
+				Slope_coefficients[q,3] <- q
+				Slope_coefficients[q,4] <- y
+				Slope_coefficients[q,5] <- NA
+				Slope_coefficients[q,6] <- 0
+				
+			}
+
+		}
+
+		Site_results <- rbind(Site_results, na.omit(Slope_coefficients)) # This adds the results of the current loop to those from previous loops. It also removes those combinations of quadrats, sites, and years where there were no observations to simplify the data by removing NAs
+		
+	}
+	
+Year_results <- rbind(Year_results, Site_results)
+
+}
+
+# Export data
+
+Year_results <- as.data.frame(Year_results)
+
+write.csv(Year_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/iw_GLM_slopes.csv", row.names = FALSE)
+	
+# Old Code
+
+Ironwood_demography_prevous_year_cohort_densities <- Ironwood_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive feedback.
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					filter(First.Year == as.numeric(Obs.Year) - 1 | First.Year == as.numeric(Obs.Year) - 2 | First.Year == as.numeric(Obs.Year) - 3) %>%
+					group_by(Site, quadrat, Obs.Year) %>%
+					mutate(Prior_3_year_counts = sum(Count)) %>%
+					select(c(2,3,4,5,13,15)) %>%
+					unique() %>%
+					filter(Obs.Year > 2000)
