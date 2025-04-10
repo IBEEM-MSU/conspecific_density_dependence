@@ -90,6 +90,7 @@ rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
 summary(rm_mod_5m)
 # Variance inflation factors - all < 3
 car::vif(rm_mod_5m)
+r.squaredGLMM(rm_mod_5m)
 
 #################### 10-m radius
 ### Most complex model
@@ -106,15 +107,16 @@ rm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
 summary(rm_mod_10m)
 # Variance inflation factors - all < 5
 car::vif(rm_mod_10m)
+r.squaredGLMM(rm_mod_10m)
 
 #################### 15-m radius
 ### Most complex model - not converging properly with all terms
 rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      rm_15m + percEMF_15m + 
+                      rm_15m + #percEMF_15m + 
                       #rm_15m * percEMF_15m + 
                       conMycNS_15m + hetMyc_15m + 
                       log10(rm_Prior3_counts + 1) + 
-                      #log10(hetSp_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
@@ -122,6 +124,7 @@ rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
 summary(rm_mod_15m)
 # Variance inflation factors - all < 9, but questionable
 car::vif(rm_mod_15m)
+r.squaredGLMM(rm_mod_15m)
 
 
 #################################################
@@ -285,7 +288,8 @@ car::vif(ab_mod_5m)
 ab_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       #ab_10m * percEMF_10m + 
                       ab_10m + #percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
+                      conMycNS_10m + 
+                      hetMyc_10m + 
                       log10(ab_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -397,7 +401,7 @@ car::vif(wa_mod_10m)
 wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                       #wa_15m * percEMF_15m + 
                       wa_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+                      conMycNS_15m * hetMyc_15m + 
                       log10(wa_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
