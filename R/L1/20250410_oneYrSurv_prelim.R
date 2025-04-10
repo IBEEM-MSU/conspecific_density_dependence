@@ -13,8 +13,9 @@ library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christense
 library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
 library(dplyr)
 
-## Full model to fit: 
-# (#1 yr / #0 yr) ~ Conspecific BA * % EMF hosts + Con-myc BA + Hetero-myc BA + (total # RM present - #0 yr seedlings) + #0 yr seedlings + (1 | Site) + (1 | survYear)
+## Most complex model to fit (at 5-m, 10-m, and 15-m scales): 
+# glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ conSp_BA + 
+# conMycNS * hetMyc + log10(conSp_Prior3_counts + 1) + log10(hetSp_Prior3_counts + 1) + log10(total_count_yr0 + 1) + (1 | Site) + (1 | survYear), family = binomial(link = "logit"), data = data)
 
 #################################################
 #################################################
@@ -57,30 +58,18 @@ rm_surv <- rm_surv_temp
 rm_surv$Site = as.factor(rm_surv$Site)
 rm_surv$survYear = as.factor(rm_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-rm_surv$percEMF_5m = (rm_surv$hetMyc_5m / (rm_surv$hetMyc_5m + rm_surv$conMyc_5m))
-# %EMF - 10m
-rm_surv$percEMF_10m = (rm_surv$hetMyc_10m / (rm_surv$hetMyc_10m + rm_surv$conMyc_10m))
-# %EMF - 15m
-rm_surv$percEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
-
 ###############################
 ###############################
-
-## Full model to fit: 
-# (total_count_yr1 / total_count_yr0) ~ rm_10m * % EMF hosts + conMycNS_10m + hetMyc_10m + Prior_3_year_counts + total_count_yr0 + (1 | Site) + (1 | survYear)
 
 #################### 5-m radius
-# cor(rm_surv[, c("rm_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
+# cor(rm_surv[, c("rm_5m", "conMycNS_5m", "hetMyc_5m",
 #                 "rm_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
 
 ### Most complex model
 # Scaling the count covariates using log10() to account for difference in magnitude 
 rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      rm_5m * percEMF_5m + 
-                      conMycNS_5m + hetMyc_5m + 
+                      rm_5m + conMycNS_5m * hetMyc_5m + 
                       log10(rm_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -88,7 +77,7 @@ rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                       family = binomial(link = "logit"), 
                       data = rm_surv)
 summary(rm_mod_5m)
-# Variance inflation factors - all < 3
+# Variance inflation factors - all <2
 car::vif(rm_mod_5m)
 r.squaredGLMM(rm_mod_5m)
 
@@ -96,8 +85,7 @@ r.squaredGLMM(rm_mod_5m)
 ### Most complex model
 # Scaling the count covariates using log10() to account for difference in magnitude 
 rm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     rm_10m * percEMF_10m + 
-                     conMycNS_10m + hetMyc_10m + 
+                     rm_10m + conMycNS_10m * hetMyc_10m + 
                      log10(rm_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -105,27 +93,26 @@ rm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = rm_surv)
 summary(rm_mod_10m)
-# Variance inflation factors - all < 5
+# Variance inflation factors - all <2
 car::vif(rm_mod_10m)
 r.squaredGLMM(rm_mod_10m)
 
 #################### 15-m radius
 ### Most complex model - not converging properly with all terms
 rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      rm_15m + #percEMF_15m + 
-                      #rm_15m * percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
-                      log10(rm_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = rm_surv)
+                     rm_15m + conMycNS_15m * hetMyc_15m + 
+                     log10(rm_Prior3_counts + 1) + 
+                     log10(hetSp_Prior3_counts + 1) + 
+                     log10(total_count_yr0 + 1) + 
+                     (1 | Site) + (1 | survYear),
+                   family = binomial(link = "logit"), 
+                   data = rm_surv)
 summary(rm_mod_15m)
-# Variance inflation factors - all < 9, but questionable
+# Variance inflation factors - all < 3
 car::vif(rm_mod_15m)
 r.squaredGLMM(rm_mod_15m)
 
+############## PICK UP HERE
 
 #################################################
 #################################################
