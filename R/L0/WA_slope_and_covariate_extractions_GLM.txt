@@ -56,7 +56,7 @@ Y1 <- White_ash_demography %>% # Calculate existing seedling densities over the 
 					mutate(Prior_3_year_cohorts_counts = sum(Count)) %>%
 					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
 					unique() %>%
-					mutate(Joiner = paste(TransectID,".",Cohort.Year))
+					mutate(Joiner = paste(SiteID,".",quadrat,".",Cohort.Year))
 				
 Y2 <- White_ash_demography %>% # Calculate existing seedling densities over the previous 2 years AND the new seedlings that emerge (think little siblings) that would challenge a given cohort year's survival one year after establishment. This is for year 2 survivorship
 					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
@@ -69,7 +69,7 @@ Y2 <- White_ash_demography %>% # Calculate existing seedling densities over the 
 					mutate(Prior_2_year_cohorts_and_new_1st_year_counts = sum(Count)) %>%
 					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
 					unique() %>%
-					mutate(Joiner = paste(TransectID,".",Cohort.Year))
+					mutate(Joiner = paste(SiteID,".",quadrat,".",Cohort.Year))
 
 Y3 <- White_ash_demography %>% # Calculate existing seedling densities over the previous 3 years that would challenge a given cohort year's establishent and potentially drive feedback.
 					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
@@ -82,7 +82,7 @@ Y3 <- White_ash_demography %>% # Calculate existing seedling densities over the 
 					mutate(Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts = sum(Count)) %>%
 					select(SiteID, quadrat, TransectID, Cohort.Year, 16) %>%
 					unique() %>%
-					mutate(Joiner = paste(TransectID,".",Cohort.Year))
+					mutate(Joiner = paste(SiteID,".",quadrat,".",Cohort.Year))
 
 Three_year_densities <- Y1 %>%
 					full_join(Y2, by = "Joiner") %>%
@@ -90,7 +90,8 @@ Three_year_densities <- Y1 %>%
 					mutate(Prior_3_year_cohorts_counts = replace_na(Prior_3_year_cohorts_counts, 0)) %>%
 					mutate(Prior_2_year_cohorts_and_new_1st_year_counts = replace_na(Prior_2_year_cohorts_and_new_1st_year_counts, 0)) %>%
 					mutate(Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts = replace_na(Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts, 0)) %>%
-					select(SiteID, quadrat, TransectID, Cohort.Year, Prior_3_year_cohorts_counts, Prior_2_year_cohorts_and_new_1st_year_counts, Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts)
+					select(Joiner, Prior_3_year_cohorts_counts, Prior_2_year_cohorts_and_new_1st_year_counts, Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts) %>%
+					separate_wider_delim(Joiner, names = c("SiteID", "quadrat", "Cohort.Year"), delim = ".")
 
 write.csv(Three_year_densities, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/wa_prior_cohort_densities.csv", row.names = FALSE) # Export data for modeling
 
