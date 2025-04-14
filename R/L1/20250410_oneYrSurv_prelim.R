@@ -17,11 +17,14 @@ library(dplyr)
 # glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ conSp_BA + 
 # conMycNS * hetMyc + log10(conSp_Prior3_counts + 1) + log10(hetSp_Prior3_counts + 1) + log10(total_count_yr0 + 1) + (1 | Site) + (1 | survYear), family = binomial(link = "logit"), data = data)
 
+# For species with sufficient observations per site (n ≥ 10), we included a random effect of site to account for spatial clustering. For species with limited replication across sites, we excluded this term due to singular fits and lack of variance attributable to site.
+
 #################################################
 #################################################
 ##### Read in file that has the counts by species for every TransectID-ObsYear combination
 allSp_TI_ObsYear <- read.csv("./data/L1/allSp_prior_cohort_densities.csv")
 
+#################################################
 #################################################
 #################################################
 ##### Red Maple
@@ -67,7 +70,6 @@ rm_surv$survYear = as.factor(rm_surv$survYear)
 #                 "total_count_yr0")], use = "complete.obs")
 
 ### Most complex model
-# Scaling the count covariates using log10() to account for difference in magnitude 
 rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       rm_5m + conMycNS_5m * hetMyc_5m + 
                       log10(rm_Prior3_counts + 1) + 
@@ -83,7 +85,6 @@ r.squaredGLMM(rm_mod_5m)
 
 #################### 10-m radius
 ### Most complex model
-# Scaling the count covariates using log10() to account for difference in magnitude 
 rm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                      rm_10m + conMycNS_10m * hetMyc_10m + 
                      log10(rm_Prior3_counts + 1) + 
@@ -98,7 +99,6 @@ car::vif(rm_mod_10m)
 r.squaredGLMM(rm_mod_10m)
 
 #################### 15-m radius
-### Most complex model - not converging properly with all terms
 rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                      rm_15m + conMycNS_15m * hetMyc_15m + 
                      log10(rm_Prior3_counts + 1) + 
@@ -112,7 +112,34 @@ summary(rm_mod_15m)
 car::vif(rm_mod_15m)
 r.squaredGLMM(rm_mod_15m)
 
-############## PICK UP HERE
+#################### 15-m radius - no RE of site
+rm_mod_15m_NS <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      rm_15m + conMycNS_15m * hetMyc_15m + 
+                      log10(rm_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + (1 | survYear),
+                    family = binomial(link = "logit"), 
+                    data = rm_surv)
+summary(rm_mod_15m_NS)
+car::vif(rm_mod_15m_NS)
+r.squaredGLMM(rm_mod_15m_NS)
+
+############### RM Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_rm <- tibble(Model = c("rm_mod_5m", "rm_mod_10m", 
+                           "rm_mod_15m", "rm_mod_15m_NS"),
+                    AIC = sapply(list(rm_mod_5m, rm_mod_10m,
+                                      rm_mod_15m, rm_mod_15m_NS), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_rm) # Need RE of site
+
+### Highest R2 for fixed effects: 15-m radius
+### Lowest AIC: 15-m radius
+### Significance of terms: Some effects not significant at 5-m, present at 10-m and 15-m
+
 
 #################################################
 #################################################
@@ -149,22 +176,17 @@ sm_surv <- sm_surv_temp
 sm_surv$Site = as.factor(sm_surv$Site)
 sm_surv$survYear = as.factor(sm_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-sm_surv$percEMF_5m = (sm_surv$hetMyc_5m / (sm_surv$hetMyc_5m + sm_surv$conMyc_5m))
-# %EMF - 10m
-sm_surv$percEMF_10m = (sm_surv$hetMyc_10m / (sm_surv$hetMyc_10m + sm_surv$conMyc_10m))
-# %EMF - 15m
-sm_surv$percEMF_15m = (sm_surv$hetMyc_15m / (sm_surv$hetMyc_15m + sm_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-# cor(sm_surv[, c("sm_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "sm_Prior3_counts", "hetSp_Prior3_counts",
+# cor(sm_surv[, c("sm_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "sm_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
+
 ### Most complex model
 sm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     sm_5m * percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     sm_5m + conMycNS_5m * hetMyc_5m + 
                      log10(sm_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -172,14 +194,14 @@ sm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = sm_surv)
 summary(sm_mod_5m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all <2
 car::vif(sm_mod_5m)
+r.squaredGLMM(sm_mod_5m)
 
 #################### 10-m radius
 ### Most complex model
 sm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      sm_10m * percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
+                      sm_10m + conMycNS_10m * hetMyc_10m + 
                       log10(sm_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -187,15 +209,25 @@ sm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = sm_surv)
 summary(sm_mod_10m)
-# Variance inflation factors - all < 7
+# Variance inflation factors - all <2
 car::vif(sm_mod_10m)
+r.squaredGLMM(sm_mod_10m)
+
+#################### 10-m radius - no RE of Site
+sm_mod_10m_NS <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      sm_10m + conMycNS_10m * hetMyc_10m + 
+                      log10(sm_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + (1 | survYear),
+                    family = binomial(link = "logit"), 
+                    data = sm_surv)
+summary(sm_mod_10m_NS)
+car::vif(sm_mod_10m_NS)
+r.squaredGLMM(sm_mod_10m_NS)
 
 #################### 15-m radius
-### Most complex model - convergence issues
-sm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #sm_15m * percEMF_15m + 
-                      sm_15m + percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+sm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      sm_15m + conMycNS_15m * hetMyc_15m + 
                       log10(sm_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -203,8 +235,25 @@ sm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = sm_surv)
 summary(sm_mod_15m)
-# Variance inflation factors - all < 8, but questionable
+# Variance inflation factors - all < 3
 car::vif(sm_mod_15m)
+r.squaredGLMM(sm_mod_15m)
+
+############### SM Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_sm <- tibble(Model = c("sm_mod_5m", "sm_mod_10m", "sm_mod_15m", "sm_mod_10m_NS"),
+                 AIC = sapply(list(sm_mod_5m, sm_mod_10m,
+                                   sm_mod_15m, sm_mod_10m_NS), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_sm) # Need RE of site
+
+### Highest R2 for fixed effects: 10-m radius (close to 15-m)
+### Lowest AIC: 10-m radius
+### Significance of terms: Same at 10-m and 15-m
+
 
 #################################################
 #################################################
@@ -242,23 +291,22 @@ ab_surv <- ab_surv_temp
 ab_surv$Site = as.factor(ab_surv$Site)
 ab_surv$survYear = as.factor(ab_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-ab_surv$percEMF_5m = (ab_surv$hetMyc_5m / (ab_surv$hetMyc_5m + ab_surv$conMyc_5m))
-# %EMF - 10m
-ab_surv$percEMF_10m = (ab_surv$hetMyc_10m / (ab_surv$hetMyc_10m + ab_surv$conMyc_10m))
-# %EMF - 15m
-ab_surv$percEMF_15m = (ab_surv$hetMyc_15m / (ab_surv$hetMyc_15m + ab_surv$conMyc_15m))
+# ## Filter out sites with few observations
+# ab_surv <- ab_surv %>%
+#   dplyr::mutate(Site = as.character(Site)) %>%
+#   dplyr::filter(Site %in% c("6.45", "21.43", "24.45", "40.4"))
+
+###############################
+###############################
 
 #################### 5-m radius
-# cor(ab_surv[, c("ab_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "ab_Prior3_counts", "hetSp_Prior3_counts",
+# cor(ab_surv[, c("ab_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "ab_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
-### Most complex model - cannot include all terms
+
+### Most complex model
 ab_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     #ab_5m * percEMF_5m + 
-                     ab_5m + percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     ab_5m + conMycNS_5m * hetMyc_5m + 
                      log10(ab_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -267,16 +315,15 @@ ab_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = ab_surv)
 summary(ab_mod_5m)
-# Variance inflation factors - all < 6
+# Variance inflation factors - all <2
 car::vif(ab_mod_5m)
+r.squaredGLMM(ab_mod_5m)
 
 #################### 10-m radius
-### Most complex model - not working... 
+### Most complex model
+# Scaling the count covariates using log10() to account for difference in magnitude 
 ab_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      #ab_10m * percEMF_10m + 
-                      ab_10m + #percEMF_10m + 
-                      conMycNS_10m + 
-                      hetMyc_10m + 
+                      ab_10m + conMycNS_10m * hetMyc_10m + 
                       log10(ab_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -285,15 +332,14 @@ ab_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = ab_surv)
 summary(ab_mod_10m)
-# Variance inflation factors - some >10
+# Variance inflation factors - all <2
 car::vif(ab_mod_10m)
+r.squaredGLMM(ab_mod_10m)
 
 #################### 15-m radius
-### Most complex model - not working... 
-ab_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #ab_15m * percEMF_15m + 
-                      ab_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+### Most complex model - not converging properly with all teabs
+ab_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      ab_15m + conMycNS_15m * hetMyc_15m + 
                       log10(ab_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -302,8 +348,25 @@ ab_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = ab_surv)
 summary(ab_mod_15m)
-# Variance inflation factors - some >10
+# Variance inflation factors - one close to 10...
 car::vif(ab_mod_15m)
+r.squaredGLMM(ab_mod_15m)
+
+
+############### AB Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_ab <- tibble(Model = c("ab_mod_5m", "ab_mod_10m", "ab_mod_15m"),
+                 AIC = sapply(list(ab_mod_5m, ab_mod_10m,
+                                   ab_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_ab) 
+
+### Highest R2 for fixed effects: 15-m radius 
+### Lowest AIC: 15-m radius
+### Significance of terms: More terms emerge as significant at 15-m than at 10-m
 
 
 #################################################
@@ -342,22 +405,17 @@ wa_surv <- wa_surv_temp
 wa_surv$Site = as.factor(wa_surv$Site)
 wa_surv$survYear = as.factor(wa_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-wa_surv$percEMF_5m = (wa_surv$hetMyc_5m / (wa_surv$hetMyc_5m + wa_surv$conMyc_5m))
-# %EMF - 10m
-wa_surv$percEMF_10m = (wa_surv$hetMyc_10m / (wa_surv$hetMyc_10m + wa_surv$conMyc_10m))
-# %EMF - 15m
-wa_surv$percEMF_15m = (wa_surv$hetMyc_15m / (wa_surv$hetMyc_15m + wa_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-cor(wa_surv[, c("wa_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-                 "wa_Prior3_counts", "hetSp_Prior3_counts",
-                "total_count_yr0")], use = "complete.obs")
-### Most complex model 
+# cor(wa_surv[, c("wa_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "wa_Prior3_counts", "hetSp_Prior3_counts",
+#                 "total_count_yr0")], use = "complete.obs")
+
+### Most complex model
 wa_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     wa_5m * percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     wa_5m + conMycNS_5m * hetMyc_5m + 
                      log10(wa_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -365,30 +423,28 @@ wa_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = wa_surv)
 summary(wa_mod_5m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all <2
 car::vif(wa_mod_5m)
+r.squaredGLMM(wa_mod_5m)
 
 #################### 10-m radius
 ### Most complex model
 wa_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      wa_10m * percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
-                      log10(wa_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
+                      wa_10m + conMycNS_10m * hetMyc_10m + 
+                      log10(wa_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = wa_surv)
 summary(wa_mod_10m)
-# Variance inflation factors - all < 9 - questionable
+# Variance inflation factors - all <5
 car::vif(wa_mod_10m)
+r.squaredGLMM(wa_mod_10m)
 
 #################### 15-m radius
-### Most complex model
-wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #wa_15m * percEMF_15m + 
-                      wa_15m + #percEMF_15m + 
-                      conMycNS_15m * hetMyc_15m + 
+wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      wa_15m + conMycNS_15m * hetMyc_15m + 
                       log10(wa_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -396,8 +452,24 @@ wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = wa_surv)
 summary(wa_mod_15m)
-# Variance inflation factors - >10
+# Variance inflation factors - all < 5
 car::vif(wa_mod_15m)
+r.squaredGLMM(wa_mod_15m)
+
+############### WA Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_wa <- tibble(Model = c("wa_mod_5m", "wa_mod_10m", "wa_mod_15m"),
+                 AIC = sapply(list(wa_mod_5m, wa_mod_10m,
+                                   wa_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_wa) # Need RE of site
+
+### Highest R2 for fixed effects: 15-m radius (slightly)
+### Lowest AIC: 15-m radius
+### Significance of terms: More terms emerge as significant at 15-m than at 10-m
 
 
 #################################################
@@ -436,22 +508,17 @@ bc_surv <- bc_surv_temp
 bc_surv$Site = as.factor(bc_surv$Site)
 bc_surv$survYear = as.factor(bc_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-bc_surv$percEMF_5m = (bc_surv$hetMyc_5m / (bc_surv$hetMyc_5m + bc_surv$conMyc_5m))
-# %EMF - 10m
-bc_surv$percEMF_10m = (bc_surv$hetMyc_10m / (bc_surv$hetMyc_10m + bc_surv$conMyc_10m))
-# %EMF - 15m
-bc_surv$percEMF_15m = (bc_surv$hetMyc_15m / (bc_surv$hetMyc_15m + bc_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-# cor(bc_surv[, c("bc_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "bc_Prior3_counts", "hetSp_Prior3_counts",
+# cor(bc_surv[, c("bc_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "bc_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
-### Most complex model 
+
+### Most complex model
 bc_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     bc_5m * percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     bc_5m + conMycNS_5m * hetMyc_5m + 
                      log10(bc_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -459,31 +526,28 @@ bc_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = bc_surv)
 summary(bc_mod_5m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all < 3
 car::vif(bc_mod_5m)
+r.squaredGLMM(bc_mod_5m)
 
 #################### 10-m radius
-### Most complex model 
+### Most complex model
 bc_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      #bc_10m * percEMF_10m + 
-                      bc_10m + #percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
-                      log10(bc_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
+                      bc_10m + conMycNS_10m * hetMyc_10m + 
+                      log10(bc_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = bc_surv)
 summary(bc_mod_10m)
-# Variance inflation factors - all < 10 but questionable
+# Variance inflation factors - all < 4
 car::vif(bc_mod_10m)
+r.squaredGLMM(bc_mod_10m)
 
 #################### 15-m radius
-### Most complex model
-bc_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #bc_15m * percEMF_15m + 
-                      bc_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+bc_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      bc_15m + conMycNS_15m * hetMyc_15m + 
                       log10(bc_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -491,8 +555,24 @@ bc_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = bc_surv)
 summary(bc_mod_15m)
-# Variance inflation factors - all < 10, but questionable
+# Variance inflation factors - all < 4
 car::vif(bc_mod_15m)
+r.squaredGLMM(bc_mod_15m)
+
+############### BC Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_bc <- tibble(Model = c("bc_mod_5m", "bc_mod_10m", "bc_mod_15m"),
+                 AIC = sapply(list(bc_mod_5m, bc_mod_10m,
+                                   bc_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_bc) # Need RE of site
+
+### Highest R2 for fixed effects: 5-m radius (slightly, then 15-m)
+### Lowest AIC: 5-m radius
+### Significance: Same terms are significant at 5-m and 15-m, but slightly less at 15-m
 
 
 #################################################
@@ -531,23 +611,17 @@ nro_surv <- nro_surv_temp
 nro_surv$Site = as.factor(nro_surv$Site)
 nro_surv$survYear = as.factor(nro_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-nro_surv$percEMF_5m = (nro_surv$hetMyc_5m / (nro_surv$hetMyc_5m + nro_surv$conMyc_5m))
-# %EMF - 10m
-nro_surv$percEMF_10m = (nro_surv$hetMyc_10m / (nro_surv$hetMyc_10m + nro_surv$conMyc_10m))
-# %EMF - 15m
-nro_surv$percEMF_15m = (nro_surv$hetMyc_15m / (nro_surv$hetMyc_15m + nro_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-# cor(nro_surv[, c("nro_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "nro_Prior3_counts", "hetSp_Prior3_counts",
+# cor(nro_surv[, c("nro_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "nro_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
-### Most complex model 
+
+### Most complex model
 nro_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     #nro_5m * percEMF_5m +
-                      nro_5m + percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     nro_5m + conMycNS_5m * hetMyc_5m + 
                      log10(nro_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -555,31 +629,27 @@ nro_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = nro_surv)
 summary(nro_mod_5m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all <2
 car::vif(nro_mod_5m)
+r.squaredGLMM(nro_mod_5m)
 
 #################### 10-m radius
-### Most complex model - not working... 
 nro_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      #nro_10m * percEMF_10m + 
-                      nro_10m + percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
-                      log10(nro_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
+                      nro_10m + conMycNS_10m * hetMyc_10m + 
+                      log10(nro_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = nro_surv)
 summary(nro_mod_10m)
-# Variance inflation factors - all < 9, but questionable
+# Variance inflation factors - all < 5
 car::vif(nro_mod_10m)
+r.squaredGLMM(nro_mod_10m)
 
 #################### 15-m radius
-### Most complex model
-nro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #nro_15m * percEMF_15m + 
-                      nro_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+nro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      nro_15m + conMycNS_15m * hetMyc_15m + 
                       log10(nro_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -587,8 +657,24 @@ nro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = nro_surv)
 summary(nro_mod_15m)
-# Variance inflation factors - some >10
+# Variance inflation factors - all < 7
 car::vif(nro_mod_15m)
+r.squaredGLMM(nro_mod_15m)
+
+############### NRO Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_nro <- tibble(Model = c("nro_mod_5m", "nro_mod_10m", "nro_mod_15m"),
+                 AIC = sapply(list(nro_mod_5m, nro_mod_10m,
+                                   nro_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_nro) # Need RE of site
+
+### Highest R2 for fixed effects: 15-m radius (very slightly)
+### Lowest AIC: All are basically equal
+### Significance: More terms significant at 5-m radius
 
 
 #################################################
@@ -627,23 +713,17 @@ bonro_surv <- bonro_surv_temp
 bonro_surv$Site = as.factor(bonro_surv$Site)
 bonro_surv$survYear = as.factor(bonro_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-bonro_surv$percEMF_5m = (bonro_surv$hetMyc_5m / (bonro_surv$hetMyc_5m + bonro_surv$conMyc_5m))
-# %EMF - 10m
-bonro_surv$percEMF_10m = (bonro_surv$hetMyc_10m / (bonro_surv$hetMyc_10m + bonro_surv$conMyc_10m))
-# %EMF - 15m
-bonro_surv$percEMF_15m = (bonro_surv$hetMyc_15m / (bonro_surv$hetMyc_15m + bonro_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-# cor(bonro_surv[, c("bonro_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "bonro_Prior3_counts", "hetSp_Prior3_counts",
+# cor(bonro_surv[, c("bonro_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "bonro_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
+
 ### Most complex model
 bonro_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     #bonro_5m * percEMF_5m + 
-                     bonro_5m + percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     bonro_5m + conMycNS_5m * hetMyc_5m + 
                      log10(bonro_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -651,31 +731,28 @@ bonro_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) 
                    family = binomial(link = "logit"), 
                    data = bonro_surv)
 summary(bonro_mod_5m)
-# Variance inflation factors - all < 3
+# Variance inflation factors - all <2
 car::vif(bonro_mod_5m)
+r.squaredGLMM(bonro_mod_5m)
 
 #################### 10-m radius
-### Most complex model - not working... 
+### Most complex model
 bonro_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      #bonro_10m * percEMF_10m + 
-                      bonro_10m + #percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
-                      log10(bonro_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
+                      bonro_10m + conMycNS_10m * hetMyc_10m + 
+                      log10(bonro_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = bonro_surv)
 summary(bonro_mod_10m)
-# Variance inflation factors - all < 9, but questionable
+# Variance inflation factors - all < 3
 car::vif(bonro_mod_10m)
+r.squaredGLMM(bonro_mod_10m)
 
 #################### 15-m radius
-### Most complex model
-bonro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #bonro_15m * percEMF_15m + 
-                      bonro_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+bonro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      bonro_15m + conMycNS_15m * hetMyc_15m + 
                       log10(bonro_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -683,8 +760,24 @@ bonro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1)
                     family = binomial(link = "logit"), 
                     data = bonro_surv)
 summary(bonro_mod_15m)
-# Variance inflation factors - all < 10, but questionbonrole
+# Variance inflation factors - all < 7
 car::vif(bonro_mod_15m)
+r.squaredGLMM(bonro_mod_15m)
+
+############### BONRO Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_bonro <- tibble(Model = c("bonro_mod_5m", "bonro_mod_10m", "bonro_mod_15m"),
+                  AIC = sapply(list(bonro_mod_5m, bonro_mod_10m,
+                                    bonro_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_bonro) # Need RE of site
+
+### Highest R2 for fixed effects: 5-m radius 
+### Lowest AIC: 5-m radius (but not huge difference)
+### Significance: Terms only significant at 5-m radius
 
 
 #################################################
@@ -723,22 +816,17 @@ wo_surv <- wo_surv_temp
 wo_surv$Site = as.factor(wo_surv$Site)
 wo_surv$survYear = as.factor(wo_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-wo_surv$percEMF_5m = (wo_surv$hetMyc_5m / (wo_surv$hetMyc_5m + wo_surv$conMyc_5m))
-# %EMF - 10m
-wo_surv$percEMF_10m = (wo_surv$hetMyc_10m / (wo_surv$hetMyc_10m + wo_surv$conMyc_10m))
-# %EMF - 15m
-wo_surv$percEMF_15m = (wo_surv$hetMyc_15m / (wo_surv$hetMyc_15m + wo_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-# cor(wo_surv[, c("wo_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "wo_Prior3_counts", "hetSp_Prior3_counts",
+# cor(wo_surv[, c("wo_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "wo_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
-### Most complex model 
+
+### Most complex model
 wo_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     wo_5m * percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     wo_5m + conMycNS_5m * hetMyc_5m + 
                      log10(wo_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -746,31 +834,28 @@ wo_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = wo_surv)
 summary(wo_mod_5m)
-# Variance inflation factors - all < 3
+# Variance inflation factors - all < 2
 car::vif(wo_mod_5m)
+r.squaredGLMM(wo_mod_5m)
 
 #################### 10-m radius
-### Most complex model 
+### Most complex model
 wo_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      wo_10m * percEMF_10m + 
-                      #wo_10m + percEMF_10m + 
-                      conMycNS_10m + #hetMyc_10m + 
-                      log10(wo_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
+                      wo_10m + conMycNS_10m * hetMyc_10m + 
+                      log10(wo_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = wo_surv)
 summary(wo_mod_10m)
-# Variance inflation factors - all < 3 if hetMyc excluded
+# Variance inflation factors - all < 4
 car::vif(wo_mod_10m)
+r.squaredGLMM(wo_mod_10m)
 
 #################### 15-m radius
-### Most complex model
-wo_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      wo_15m * percEMF_15m + 
-                      #wo_15m + percEMF_15m + 
-                      conMycNS_15m + #hetMyc_15m + 
+wo_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      wo_15m + conMycNS_15m * hetMyc_15m + 
                       log10(wo_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -778,8 +863,24 @@ wo_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = wo_surv)
 summary(wo_mod_15m)
-# Variance inflation factors - all < 4 if hetMyc excluded
+# Variance inflation factors - all < 7
 car::vif(wo_mod_15m)
+r.squaredGLMM(wo_mod_15m)
+
+############### WO Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_wo <- tibble(Model = c("wo_mod_5m", "wo_mod_10m", "wo_mod_15m"),
+                    AIC = sapply(list(wo_mod_5m, wo_mod_10m,
+                                      wo_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_wo) 
+
+### Highest R2 for fixed effects: 10-m radius 
+### Lowest AIC: 10-m radius (by quite a bit)
+### Significance: Many more terms emerge as significant at 10-m radius
 
 
 #################################################
@@ -818,23 +919,17 @@ iw_surv <- iw_surv_temp
 iw_surv$Site = as.factor(iw_surv$Site)
 iw_surv$survYear = as.factor(iw_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-iw_surv$percEMF_5m = (iw_surv$hetMyc_5m / (iw_surv$hetMyc_5m + iw_surv$conMyc_5m))
-# %EMF - 10m
-iw_surv$percEMF_10m = (iw_surv$hetMyc_10m / (iw_surv$hetMyc_10m + iw_surv$conMyc_10m))
-# %EMF - 15m
-iw_surv$percEMF_15m = (iw_surv$hetMyc_15m / (iw_surv$hetMyc_15m + iw_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-# cor(iw_surv[, c("iw_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-#                  "iw_Prior3_counts", "hetSp_Prior3_counts",
+# cor(iw_surv[, c("iw_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "iw_Prior3_counts", "hetSp_Prior3_counts",
 #                 "total_count_yr0")], use = "complete.obs")
-### Most complex model - cannot include all terms
+
+### Most complex model
 iw_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     #iw_5m * percEMF_5m + 
-                     iw_5m + percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     iw_5m + conMycNS_5m * hetMyc_5m + 
                      log10(iw_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
@@ -842,42 +937,53 @@ iw_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                    family = binomial(link = "logit"), 
                    data = iw_surv)
 summary(iw_mod_5m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all < 3
 car::vif(iw_mod_5m)
+r.squaredGLMM(iw_mod_5m)
 
 #################### 10-m radius
-### Most complex model - not working... 
-iw_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      #iw_10m * percEMF_10m + 
-                      iw_10m + #percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
-                      log10(iw_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
-                      #(1 | Site) + 
-                      (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = iw_surv)
-summary(iw_mod_10m)
-# Variance inflation factors - all < 2 in simpler model
-car::vif(iw_mod_10m)
-
-#################### 15-m radius
 ### Most complex model
-iw_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                      #iw_15m * percEMF_15m + 
-                      iw_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+iw_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      iw_10m + conMycNS_10m * hetMyc_10m + 
                       log10(iw_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
-                      #(1 | Site) + 
-                      (1 | survYear),
+                      (1 | Site) + (1 | survYear),
+                    family = binomial(link = "logit"), 
+                    data = iw_surv)
+summary(iw_mod_10m)
+# Variance inflation factors - all < 4
+car::vif(iw_mod_10m)
+r.squaredGLMM(iw_mod_10m)
+
+#################### 15-m radius
+iw_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      iw_15m + conMycNS_15m * hetMyc_15m + 
+                      log10(iw_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
+                      (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = iw_surv)
 summary(iw_mod_15m)
-# Variance inflation factors - all < 2 in simpler model
+# Variance inflation factors - all < 5
 car::vif(iw_mod_15m)
+r.squaredGLMM(iw_mod_15m)
+
+############### IW Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_iw <- tibble(Model = c("iw_mod_5m", "iw_mod_10m", "iw_mod_15m"),
+                 AIC = sapply(list(iw_mod_5m, iw_mod_10m,
+                                   iw_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_iw) 
+
+### Highest R2 for fixed effects: 10-m radius 
+### Lowest AIC: 10-m radius (but nearly tied with 15-m and 5-m)
+### Significance: Many more terms emerge as significant at 10-m radius
 
 
 #################################################
@@ -916,57 +1022,47 @@ bs_surv <- bs_surv_temp
 bs_surv$Site = as.factor(bs_surv$Site)
 bs_surv$survYear = as.factor(bs_surv$survYear)
 
-#### Calculate the proportion of EMF hosts within each radius
-# %EMF - 5m
-bs_surv$percEMF_5m = (bs_surv$hetMyc_5m / (bs_surv$hetMyc_5m + bs_surv$conMyc_5m))
-# %EMF - 10m
-bs_surv$percEMF_10m = (bs_surv$hetMyc_10m / (bs_surv$hetMyc_10m + bs_surv$conMyc_10m))
-# %EMF - 15m
-bs_surv$percEMF_15m = (bs_surv$hetMyc_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
+###############################
+###############################
 
 #################### 5-m radius
-cor(bs_surv[, c("bs_5m", "percEMF_5m", "conMycNS_5m", "hetMyc_5m",
-                 "bs_Prior3_counts", "hetSp_Prior3_counts",
-                "total_count_yr0")], use = "complete.obs")
-### Most complex model - cannot include all terms
+# cor(bs_surv[, c("bs_5m", "conMycNS_5m", "hetMyc_5m",
+#                 "bs_Prior3_counts", "hetSp_Prior3_counts",
+#                 "total_count_yr0")], use = "complete.obs")
+
+### Most complex model
 bs_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     #bs_5m * percEMF_5m + 
-                     bs_5m + percEMF_5m + 
-                     conMycNS_5m + hetMyc_5m + 
+                     bs_5m + conMycNS_5m + hetMyc_5m + # also had to remove interaction
                      log10(bs_Prior3_counts + 1) + 
                      log10(hetSp_Prior3_counts + 1) + 
                      log10(total_count_yr0 + 1) + 
-                     #(1 | Site) + 
+                     #(1 | Site) +  excluded because explains almost no variance
                      (1 | survYear),
                    family = binomial(link = "logit"), 
                    data = bs_surv)
 summary(bs_mod_5m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all < 2
 car::vif(bs_mod_5m)
+r.squaredGLMM(bs_mod_5m)
 
 #################### 10-m radius
-### Most complex model - not working... 
 bs_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      #bs_10m * percEMF_10m + 
-                      bs_10m + #percEMF_10m + 
-                      conMycNS_10m + hetMyc_10m + 
-                      log10(bs_Prior3_counts + 1) +
-                      log10(hetSp_Prior3_counts + 1) +
-                      log10(total_count_yr0 + 1) +
+                      bs_10m + conMycNS_10m + hetMyc_10m + 
+                      log10(bs_Prior3_counts + 1) + 
+                      log10(hetSp_Prior3_counts + 1) + 
+                      log10(total_count_yr0 + 1) + 
                       #(1 | Site) + 
                       (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = bs_surv)
 summary(bs_mod_10m)
-# Variance inflation factors - all < 3
+# Variance inflation factors - all <2
 car::vif(bs_mod_10m)
+r.squaredGLMM(bs_mod_10m)
 
 #################### 15-m radius
-### Most complex model
-bs_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
-                     # bs_15m * percEMF_15m + 
-                      bs_15m + #percEMF_15m + 
-                      conMycNS_15m + hetMyc_15m + 
+bs_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
+                      bs_15m + conMycNS_15m + hetMyc_15m + 
                       log10(bs_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -975,9 +1071,25 @@ bs_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = bs_surv)
 summary(bs_mod_15m)
-# Variance inflation factors - all < 3 with simplified structure
+# Variance inflation factors - all < 3
 car::vif(bs_mod_15m)
+r.squaredGLMM(bs_mod_15m)
 
+
+############### BS Summary
+
+## Model selection/evaluation using AIC
+# Create a data frame with model names and AIC values
+aic_bs <- tibble(Model = c("bs_mod_5m", "bs_mod_10m", "bs_mod_15m"),
+                 AIC = sapply(list(bs_mod_5m, bs_mod_10m,
+                                   bs_mod_15m), AIC)) %>%
+  arrange(AIC)  # Sort by AIC
+# Print the sorted AIC values
+print(aic_bs) 
+
+### Highest R2 for fixed effects: 5-m radius, but almost tied with 15-m 
+### Lowest AIC: 5-m radius (but nearly tied with 10-m and 15-m)
+### Significance: More terms emerge as significant at 5-m radius
 
 
 ###############################
