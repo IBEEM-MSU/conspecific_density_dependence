@@ -12,8 +12,9 @@ library(MuMIn) # For AIC and R-squared values. Barton, K. and Barton, M.K., 2015
 library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christensen, R.H., 2017. lmerTest package: tests in linear mixed effects models. Journal of statistical software, 82, pp.1-26.
 library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
 library(dplyr)
+library(ggplot2)
 
-## Most complex model to fit (at 5-m, 10-m, and 15-m scales): 
+## Most complex model to fit (15-m radius)
 # glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ conSp_BA + 
 # conMycNS * hetMyc + log10(conSp_Prior3_counts + 1) + log10(hetSp_Prior3_counts + 1) + log10(total_count_yr0 + 1) + (1 | Site) + (1 | survYear), family = binomial(link = "logit"), data = data)
 
@@ -26,7 +27,7 @@ library(dplyr)
 ## WA - 15-m
 ## BC - 15-m 
 ## NRO - 15-m
-## BO - 15-m (but all similar)
+## BO - 15-m 
 ## WO - 10-m
 ## IW - 10-m
 ## BS - 15-m  (site excluded)
@@ -77,40 +78,6 @@ rm_surv$survYear = as.factor(rm_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(rm_surv[, c("rm_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "rm_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-rm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      rm_5m + conMycNS_5m * hetMyc_5m + 
-                      log10(rm_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                      family = binomial(link = "logit"), 
-                      data = rm_surv)
-summary(rm_mod_5m)
-# Variance inflation factors - all <2
-car::vif(rm_mod_5m)
-r.squaredGLMM(rm_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-rm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     rm_10m + conMycNS_10m * hetMyc_10m + 
-                     log10(rm_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = rm_surv)
-summary(rm_mod_10m)
-# Variance inflation factors - all <2
-car::vif(rm_mod_10m)
-r.squaredGLMM(rm_mod_10m)
-
 #################### 15-m radius
 rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                      rm_15m + conMycNS_15m * hetMyc_15m + 
@@ -123,35 +90,67 @@ rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
 summary(rm_mod_15m)
 # Variance inflation factors - all < 3
 car::vif(rm_mod_15m)
-r.squaredGLMM(rm_mod_15m)
+r.squaredGLMM(rm_mod_15m) 
+# Fixed effects: R2m = 0.05563300 
+# Fixed + random effects: R2c = 0.5629413
 
-#################### 15-m radius - no RE of site
-rm_mod_15m_NS <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      rm_15m + conMycNS_15m * hetMyc_15m + 
-                      log10(rm_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = rm_surv)
-summary(rm_mod_15m_NS)
-car::vif(rm_mod_15m_NS)
-r.squaredGLMM(rm_mod_15m_NS)
 
-############### RM Summary
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods
+##### Averaged across sites
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(rm_surv$rm_15m, rm_surv$conMycNS_15m, 
+              rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
 
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_rm <- tibble(Model = c("rm_mod_5m", "rm_mod_10m", 
-                           "rm_mod_15m", "rm_mod_15m_NS"),
-                    AIC = sapply(list(rm_mod_5m, rm_mod_10m,
-                                      rm_mod_15m, rm_mod_15m_NS), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_rm) # Need RE of site
+# Step 2: Set median values for the non-focal covariates
+median_vals <- rm_surv %>%
+  summarize(across(c(rm_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+          rm_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
 
-### Highest R2 for fixed effects: 15-m radius
-### Lowest AIC: 15-m radius
-### Significance of terms: Some effects not significant at 5-m, present at 10-m and 15-m
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    rm_15m = if (focal == "rm_15m") ba_seq else median_vals$rm_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    rm_Prior3_counts = median_vals$rm_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    # Choose any one site and year for valid factor levels
+    Site = rm_surv$Site[1],survYear = rm_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(
+  make_pred_data("rm_15m", "Conspecific BA"),
+  make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+  make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA")
+)
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(rm_mod_15m, newdata = new_data, 
+                      type = "response", re.form = NA)
+# re.form = NA ignores the RE and uses only the fixed effects (i.e., an “average” prediction across sites and years).
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+              ifelse(focal_label == "Conspecific BA", rm_15m,
+              ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", color = "") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 12, hjust = 0.5),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 10),
+        panel.grid.minor = element_blank(),
+        legend.position = "bottom")
 
 
 #################################################
@@ -192,52 +191,6 @@ sm_surv$survYear = as.factor(sm_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(sm_surv[, c("sm_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "sm_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-sm_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     sm_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(sm_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = sm_surv)
-summary(sm_mod_5m)
-# Variance inflation factors - all <2
-car::vif(sm_mod_5m)
-r.squaredGLMM(sm_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-sm_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      sm_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(sm_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = sm_surv)
-summary(sm_mod_10m)
-# Variance inflation factors - all <2
-car::vif(sm_mod_10m)
-r.squaredGLMM(sm_mod_10m)
-
-#################### 10-m radius - no RE of Site
-sm_mod_10m_NS <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      sm_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(sm_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = sm_surv)
-summary(sm_mod_10m_NS)
-car::vif(sm_mod_10m_NS)
-r.squaredGLMM(sm_mod_10m_NS)
-
 #################### 15-m radius
 sm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       sm_15m + conMycNS_15m * hetMyc_15m + 
@@ -251,21 +204,8 @@ summary(sm_mod_15m)
 # Variance inflation factors - all < 3
 car::vif(sm_mod_15m)
 r.squaredGLMM(sm_mod_15m)
-
-############### SM Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_sm <- tibble(Model = c("sm_mod_5m", "sm_mod_10m", "sm_mod_15m", "sm_mod_10m_NS"),
-                 AIC = sapply(list(sm_mod_5m, sm_mod_10m,
-                                   sm_mod_15m, sm_mod_10m_NS), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_sm) # Need RE of site
-
-### Highest R2 for fixed effects: 10-m radius (close to 15-m)
-### Lowest AIC: 10-m radius
-### Significance of terms: Same at 10-m and 15-m
+# Fixed effects: R2m = 0.03176506 
+# Fixed + random effects: R2c = 0.8307705
 
 
 #################################################
@@ -304,52 +244,10 @@ ab_surv <- ab_surv_temp
 ab_surv$Site = as.factor(ab_surv$Site)
 ab_surv$survYear = as.factor(ab_surv$survYear)
 
-# ## Filter out sites with few observations
-# ab_surv <- ab_surv %>%
-#   dplyr::mutate(Site = as.character(Site)) %>%
-#   dplyr::filter(Site %in% c("6.45", "21.43", "24.45", "40.4"))
-
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(ab_surv[, c("ab_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "ab_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-ab_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     ab_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(ab_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     #(1 | Site) + 
-                     (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = ab_surv)
-summary(ab_mod_5m)
-# Variance inflation factors - all <2
-car::vif(ab_mod_5m)
-r.squaredGLMM(ab_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-# Scaling the count covariates using log10() to account for difference in magnitude 
-ab_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      ab_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(ab_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      #(1 | Site) + 
-                      (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = ab_surv)
-summary(ab_mod_10m)
-# Variance inflation factors - all <2
-car::vif(ab_mod_10m)
-r.squaredGLMM(ab_mod_10m)
-
-#################### 15-m radius
+#################### 15-m radius - no RE of site
 ### Most complex model - not converging properly with all teabs
 ab_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       ab_15m + conMycNS_15m * hetMyc_15m + 
@@ -361,25 +259,11 @@ ab_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = ab_surv)
 summary(ab_mod_15m)
-# Variance inflation factors - one close to 10...
+# Variance inflation factors - <10
 car::vif(ab_mod_15m)
 r.squaredGLMM(ab_mod_15m)
-
-
-############### AB Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_ab <- tibble(Model = c("ab_mod_5m", "ab_mod_10m", "ab_mod_15m"),
-                 AIC = sapply(list(ab_mod_5m, ab_mod_10m,
-                                   ab_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_ab) 
-
-### Highest R2 for fixed effects: 15-m radius 
-### Lowest AIC: 15-m radius
-### Significance of terms: More terms emerge as significant at 15-m than at 10-m
+# Fixed effects: R2m = 0.03955228 
+# Fixed + random effects (survYear only): R2c = 0.4981347
 
 
 #################################################
@@ -421,40 +305,6 @@ wa_surv$survYear = as.factor(wa_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(wa_surv[, c("wa_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "wa_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-wa_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     wa_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(wa_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = wa_surv)
-summary(wa_mod_5m)
-# Variance inflation factors - all <2
-car::vif(wa_mod_5m)
-r.squaredGLMM(wa_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-wa_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      wa_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(wa_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = wa_surv)
-summary(wa_mod_10m)
-# Variance inflation factors - all <5
-car::vif(wa_mod_10m)
-r.squaredGLMM(wa_mod_10m)
-
 #################### 15-m radius
 wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       wa_15m + conMycNS_15m * hetMyc_15m + 
@@ -469,21 +319,8 @@ summary(wa_mod_15m) # we may need to account for the mortality more closely
 # Variance inflation factors - all < 5
 car::vif(wa_mod_15m)
 r.squaredGLMM(wa_mod_15m)
-
-############### WA Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_wa <- tibble(Model = c("wa_mod_5m", "wa_mod_10m", "wa_mod_15m"),
-                 AIC = sapply(list(wa_mod_5m, wa_mod_10m,
-                                   wa_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_wa) # Need RE of site
-
-### Highest R2 for fixed effects: 15-m radius (slightly)
-### Lowest AIC: 15-m radius
-### Significance of terms: More terms emerge as significant at 15-m than at 10-m
+# Fixed effects: R2m = 0.02632910 
+# Fixed + random effects: R2c = 0.8731862
 
 
 #################################################
@@ -525,40 +362,6 @@ bc_surv$survYear = as.factor(bc_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(bc_surv[, c("bc_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "bc_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-bc_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     bc_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(bc_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = bc_surv)
-summary(bc_mod_5m)
-# Variance inflation factors - all < 3
-car::vif(bc_mod_5m)
-r.squaredGLMM(bc_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-bc_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      bc_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(bc_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = bc_surv)
-summary(bc_mod_10m)
-# Variance inflation factors - all < 4
-car::vif(bc_mod_10m)
-r.squaredGLMM(bc_mod_10m)
-
 #################### 15-m radius
 bc_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       bc_15m + conMycNS_15m * hetMyc_15m + 
@@ -569,24 +372,11 @@ bc_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                     family = binomial(link = "logit"), 
                     data = bc_surv)
 summary(bc_mod_15m)
-# Variance inflation factors - all < 4
+# Variance inflation factors - all < 5
 car::vif(bc_mod_15m)
 r.squaredGLMM(bc_mod_15m)
-
-############### BC Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_bc <- tibble(Model = c("bc_mod_5m", "bc_mod_10m", "bc_mod_15m"),
-                 AIC = sapply(list(bc_mod_5m, bc_mod_10m,
-                                   bc_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_bc) # Need RE of site
-
-### Highest R2 for fixed effects: 5-m radius (slightly, then 15-m)
-### Lowest AIC: 5-m radius
-### Significance: Same terms are significant at 5-m and 15-m, but slightly less at 15-m
+# Fixed effects: R2m = 0.02266342 
+# Fixed + random effects: R2c = 0.4276095
 
 
 #################################################
@@ -628,39 +418,6 @@ nro_surv$survYear = as.factor(nro_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(nro_surv[, c("nro_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "nro_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-nro_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     nro_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(nro_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = nro_surv)
-summary(nro_mod_5m)
-# Variance inflation factors - all <2
-car::vif(nro_mod_5m)
-r.squaredGLMM(nro_mod_5m)
-
-#################### 10-m radius
-nro_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      nro_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(nro_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = nro_surv)
-summary(nro_mod_10m)
-# Variance inflation factors - all < 5
-car::vif(nro_mod_10m)
-r.squaredGLMM(nro_mod_10m)
-
 #################### 15-m radius
 nro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       nro_15m + conMycNS_15m * hetMyc_15m + 
@@ -674,21 +431,8 @@ summary(nro_mod_15m)
 # Variance inflation factors - all < 7
 car::vif(nro_mod_15m)
 r.squaredGLMM(nro_mod_15m)
-
-############### NRO Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_nro <- tibble(Model = c("nro_mod_5m", "nro_mod_10m", "nro_mod_15m"),
-                 AIC = sapply(list(nro_mod_5m, nro_mod_10m,
-                                   nro_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_nro) # Need RE of site
-
-### Highest R2 for fixed effects: 15-m radius (very slightly)
-### Lowest AIC: All are basically equal
-### Significance: More terms significant at 5-m radius
+# Fixed effects: R2m = 0.02860598 
+# Fixed + random effects: R2c = 0.4900101
 
 
 #################################################
@@ -730,40 +474,6 @@ bonro_surv$survYear = as.factor(bonro_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(bonro_surv[, c("bonro_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "bonro_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-bonro_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     bonro_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(bonro_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = bonro_surv)
-summary(bonro_mod_5m)
-# Variance inflation factors - all <2
-car::vif(bonro_mod_5m)
-r.squaredGLMM(bonro_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-bonro_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      bonro_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(bonro_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = bonro_surv)
-summary(bonro_mod_10m)
-# Variance inflation factors - all < 3
-car::vif(bonro_mod_10m)
-r.squaredGLMM(bonro_mod_10m)
-
 #################### 15-m radius
 bonro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       bonro_15m + conMycNS_15m * hetMyc_15m + 
@@ -777,21 +487,8 @@ summary(bonro_mod_15m)
 # Variance inflation factors - all < 7
 car::vif(bonro_mod_15m)
 r.squaredGLMM(bonro_mod_15m)
-
-############### BONRO Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_bonro <- tibble(Model = c("bonro_mod_5m", "bonro_mod_10m", "bonro_mod_15m"),
-                  AIC = sapply(list(bonro_mod_5m, bonro_mod_10m,
-                                    bonro_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_bonro) # Need RE of site
-
-### Highest R2 for fixed effects: 5-m radius 
-### Lowest AIC: 5-m radius (but not huge difference)
-### Significance: Terms only significant at 5-m radius
+# Fixed effects: R2m = 0.03257658 
+# Fixed + random effects: R2c = 0.4265718
 
 
 #################################################
@@ -833,40 +530,6 @@ wo_surv$survYear = as.factor(wo_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(wo_surv[, c("wo_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "wo_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-wo_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     wo_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(wo_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = wo_surv)
-summary(wo_mod_5m)
-# Variance inflation factors - all < 2
-car::vif(wo_mod_5m)
-r.squaredGLMM(wo_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-wo_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      wo_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(wo_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = wo_surv)
-summary(wo_mod_10m)
-# Variance inflation factors - all < 4
-car::vif(wo_mod_10m)
-r.squaredGLMM(wo_mod_10m)
-
 #################### 15-m radius
 wo_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       wo_15m + conMycNS_15m * hetMyc_15m + 
@@ -880,21 +543,8 @@ summary(wo_mod_15m)
 # Variance inflation factors - all < 7
 car::vif(wo_mod_15m)
 r.squaredGLMM(wo_mod_15m)
-
-############### WO Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_wo <- tibble(Model = c("wo_mod_5m", "wo_mod_10m", "wo_mod_15m"),
-                    AIC = sapply(list(wo_mod_5m, wo_mod_10m,
-                                      wo_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_wo) 
-
-### Highest R2 for fixed effects: 10-m radius 
-### Lowest AIC: 10-m radius (by quite a bit)
-### Significance: Many more terms emerge as significant at 10-m radius
+# Fixed effects: R2m = 0.09389812 
+# Fixed + random effects: R2c = 0.4235249
 
 
 #################################################
@@ -936,40 +586,6 @@ iw_surv$survYear = as.factor(iw_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(iw_surv[, c("iw_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "iw_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-iw_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     iw_5m + conMycNS_5m * hetMyc_5m + 
-                     log10(iw_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     (1 | Site) + (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = iw_surv)
-summary(iw_mod_5m)
-# Variance inflation factors - all < 3
-car::vif(iw_mod_5m)
-r.squaredGLMM(iw_mod_5m)
-
-#################### 10-m radius
-### Most complex model
-iw_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      iw_10m + conMycNS_10m * hetMyc_10m + 
-                      log10(iw_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      (1 | Site) + (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = iw_surv)
-summary(iw_mod_10m)
-# Variance inflation factors - all < 4
-car::vif(iw_mod_10m)
-r.squaredGLMM(iw_mod_10m)
-
 #################### 15-m radius
 iw_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       iw_15m + conMycNS_15m * hetMyc_15m + 
@@ -983,21 +599,8 @@ summary(iw_mod_15m)
 # Variance inflation factors - all < 5
 car::vif(iw_mod_15m)
 r.squaredGLMM(iw_mod_15m)
-
-############### IW Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_iw <- tibble(Model = c("iw_mod_5m", "iw_mod_10m", "iw_mod_15m"),
-                 AIC = sapply(list(iw_mod_5m, iw_mod_10m,
-                                   iw_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_iw) 
-
-### Highest R2 for fixed effects: 10-m radius 
-### Lowest AIC: 10-m radius (but nearly tied with 15-m and 5-m)
-### Significance: Many more terms emerge as significant at 10-m radius
+# Fixed effects: R2m = 0.01951896 
+# Fixed + random effects: R2c = 0.2874703
 
 
 #################################################
@@ -1039,44 +642,9 @@ bs_surv$survYear = as.factor(bs_surv$survYear)
 ###############################
 ###############################
 
-#################### 5-m radius
-# cor(bs_surv[, c("bs_5m", "conMycNS_5m", "hetMyc_5m",
-#                 "bs_Prior3_counts", "hetSp_Prior3_counts",
-#                 "total_count_yr0")], use = "complete.obs")
-
-### Most complex model
-bs_mod_5m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                     bs_5m + conMycNS_5m + hetMyc_5m + # also had to remove interaction
-                     log10(bs_Prior3_counts + 1) + 
-                     log10(hetSp_Prior3_counts + 1) + 
-                     log10(total_count_yr0 + 1) + 
-                     #(1 | Site) +  excluded because explains almost no variance
-                     (1 | survYear),
-                   family = binomial(link = "logit"), 
-                   data = bs_surv)
-summary(bs_mod_5m)
-# Variance inflation factors - all < 2
-car::vif(bs_mod_5m)
-r.squaredGLMM(bs_mod_5m)
-
-#################### 10-m radius
-bs_mod_10m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      bs_10m + conMycNS_10m + hetMyc_10m + 
-                      log10(bs_Prior3_counts + 1) + 
-                      log10(hetSp_Prior3_counts + 1) + 
-                      log10(total_count_yr0 + 1) + 
-                      #(1 | Site) + 
-                      (1 | survYear),
-                    family = binomial(link = "logit"), 
-                    data = bs_surv)
-summary(bs_mod_10m)
-# Variance inflation factors - all <2
-car::vif(bs_mod_10m)
-r.squaredGLMM(bs_mod_10m)
-
 #################### 15-m radius
 bs_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      bs_15m + conMycNS_15m + hetMyc_15m + 
+                      bs_15m + conMycNS_15m * hetMyc_15m + 
                       log10(bs_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -1088,22 +656,8 @@ summary(bs_mod_15m)
 # Variance inflation factors - all < 3
 car::vif(bs_mod_15m)
 r.squaredGLMM(bs_mod_15m)
-
-
-############### BS Summary
-
-## Model selection/evaluation using AIC
-# Create a data frame with model names and AIC values
-aic_bs <- tibble(Model = c("bs_mod_5m", "bs_mod_10m", "bs_mod_15m"),
-                 AIC = sapply(list(bs_mod_5m, bs_mod_10m,
-                                   bs_mod_15m), AIC)) %>%
-  arrange(AIC)  # Sort by AIC
-# Print the sorted AIC values
-print(aic_bs) 
-
-### Highest R2 for fixed effects: 5-m radius, but almost tied with 15-m 
-### Lowest AIC: 5-m radius (but nearly tied with 10-m and 15-m)
-### Significance: More terms emerge as significant at 5-m radius
+# Fixed effects: R2m = 0.01815265 
+# Fixed + random effects (survYear only): R2c = 0.6103411
 
 
 ###############################
@@ -1166,5 +720,74 @@ ggplot(rm_surv, aes(x = conMyc_5m, y = total_count_yr1 / total_count_yr0)) +
         panel.grid.minor = element_blank(),
         legend.position = "bottom")
 
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods
+##### Panel for each site!
 
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(rm_surv$rm_15m, rm_surv$conMycNS_15m, 
+                     rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- rm_surv %>%
+  summarize(across(c(rm_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     rm_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Get all site levels and choose a valid survYear
+site_levels <- unique(rm_surv$Site)
+surv_year_level <- rm_surv$survYear[1]  # just to ensure model structure is respected
+
+# Step 4: Function to generate prediction data across sites
+make_pred_data <- function(focal, label) {
+  expand.grid(
+    x_val = ba_seq,
+    Site = site_levels
+  ) %>%
+    mutate(
+      rm_15m = if (focal == "rm_15m") x_val else median_vals$rm_15m,
+      conMycNS_15m = if (focal == "conMycNS_15m") x_val else median_vals$conMycNS_15m,
+      hetMyc_15m = if (focal == "hetMyc_15m") x_val else median_vals$hetMyc_15m,
+      rm_Prior3_counts = median_vals$rm_Prior3_counts,
+      hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+      total_count_yr0 = median_vals$total_count_yr0,
+      survYear = surv_year_level,
+      focal_label = label
+    )
+}
+
+# Step 5: Combine prediction data for all three components
+new_data <- bind_rows(
+  make_pred_data("rm_15m", "Conspecific BA"),
+  make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+  make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA")
+)
+
+# Step 6: Predict survivorship (average effect, no REs)
+new_data$pred_surv <- predict(rm_mod_15m, newdata = new_data, 
+                              type = "response", re.form = ~(1 | Site))
+
+# Step 7: Add focal x-axis
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", rm_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Optional: Make Site a factor for consistent facet ordering
+new_data$Site <- factor(new_data$Site, levels = sort(unique(new_data$Site)))
+
+# Step 8: Plot with facets per site
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~ Site, ncol = 4) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", color = "") +
+  theme_bw() +
+  theme(
+    axis.text = element_text(colour = 'black', size = 10), 
+    axis.title = element_text(size = 12), 
+    legend.key = element_blank(), 
+    plot.title = element_text(size = 12, hjust = 0.5),
+    legend.text = element_text(size = 10),
+    legend.title = element_text(size = 10),
+    panel.grid.minor = element_blank(),
+    legend.position = "bottom"
+  )
 
