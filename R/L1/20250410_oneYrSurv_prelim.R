@@ -17,7 +17,20 @@ library(dplyr)
 # glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ conSp_BA + 
 # conMycNS * hetMyc + log10(conSp_Prior3_counts + 1) + log10(hetSp_Prior3_counts + 1) + log10(total_count_yr0 + 1) + (1 | Site) + (1 | survYear), family = binomial(link = "logit"), data = data)
 
-# For species with sufficient observations per site (n ≥ 10), we included a random effect of site to account for spatial clustering. For species with limited replication across sites, we excluded this term due to singular fits and lack of variance attributable to site.
+# For species with sufficient observations per site (n ≥ XX), we included a random effect of site to account for spatial clustering. For species with limited replication across sites, we excluded this term due to singular fits and lack of variance attributable to site.
+
+### Summary by species
+## RM - 15-m
+## SM - 10-m
+## AB - 15-m (site excluded)
+## WA - 15-m
+## BC - 15-m 
+## NRO - 15-m
+## BO - 15-m (but all similar)
+## WO - 10-m
+## IW - 10-m
+## BS - 15-m  (site excluded)
+#### Good justification to go with the 15-m radius
 
 #################################################
 #################################################
@@ -451,7 +464,8 @@ wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~
                       (1 | Site) + (1 | survYear),
                     family = binomial(link = "logit"), 
                     data = wa_surv)
-summary(wa_mod_15m)
+summary(wa_mod_15m) # we may need to account for the mortality more closely
+# Do an individual set of analyses from 2016 to present
 # Variance inflation factors - all < 5
 car::vif(wa_mod_15m)
 r.squaredGLMM(wa_mod_15m)
