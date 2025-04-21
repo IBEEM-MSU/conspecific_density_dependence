@@ -1,8 +1,8 @@
 
 #################################################
-####### Analyses of one-year survivorship of Red Maple WRT mature tree neighborhood (BA)
-####### Author: Bailey McNichol
-####### Date: 04 April 2025
+####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
+####### Author: Bailey McNichol and Andrew Eagar
+####### Date: 16 April 2025
 #################################################
 
 ## Read in packages
@@ -18,23 +18,8 @@ library(ggplot2)
 # glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ conSp_BA + 
 # conMycNS * hetMyc + log10(conSp_Prior3_counts + 1) + log10(hetSp_Prior3_counts + 1) + log10(total_count_yr0 + 1) + (1 | Site) + (1 | survYear), family = binomial(link = "logit"), data = data)
 
-# For species with sufficient observations per site (n ≥ XX), we included a random effect of site to account for spatial clustering. For species with limited replication across sites, we excluded this term due to singular fits and lack of variance attributable to site.
+# For species with sufficient observations, we included a random effect of site. For species with limited observations across sites, we excluded this term due to singular fits and lack of variance attributable to site.
 
-### Summary by species
-## RM - 15-m
-## SM - 10-m
-## AB - 15-m (site excluded)
-## WA - 15-m
-## BC - 15-m 
-## NRO - 15-m
-## BO - 15-m 
-## WO - 10-m
-## IW - 10-m
-## BS - 15-m  (site excluded)
-#### Good justification to go with the 15-m radius
-
-#################################################
-#################################################
 ##### Read in file that has the counts by species for every TransectID-ObsYear combination
 allSp_TI_ObsYear <- read.csv("./data/L1/allSp_prior_cohort_densities.csv")
 
@@ -75,9 +60,6 @@ rm_surv <- rm_surv_temp
 rm_surv$Site = as.factor(rm_surv$Site)
 rm_surv$survYear = as.factor(rm_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 rm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                      rm_15m + conMycNS_15m * hetMyc_15m + 
@@ -94,9 +76,8 @@ r.squaredGLMM(rm_mod_15m)
 # Fixed effects: R2m = 0.05563300 
 # Fixed + random effects: R2c = 0.5629413
 
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
 
-##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods
-##### Averaged across sites
 # Step 1: Create a sequence of basal area values
 ba_seq <- seq(0, max(rm_surv$rm_15m, rm_surv$conMycNS_15m, 
               rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
@@ -115,23 +96,20 @@ make_pred_data <- function(focal, label) {
     rm_Prior3_counts = median_vals$rm_Prior3_counts,
     hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
     total_count_yr0 = median_vals$total_count_yr0,
-    # Choose any one site and year for valid factor levels
     Site = rm_surv$Site[1],survYear = rm_surv$survYear[1],
     focal_label = label)
   df
 }
 
 # Step 4: Combine prediction data for all three components
-new_data <- bind_rows(
-  make_pred_data("rm_15m", "Conspecific BA"),
+new_data <- bind_rows(make_pred_data("rm_15m", "Conspecific BA"),
   make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
-  make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA")
-)
+  make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
 
 # Step 5: Predict survivorship without random effects (average effect)
 new_data$pred_surv <- predict(rm_mod_15m, newdata = new_data, 
                       type = "response", re.form = NA)
-# re.form = NA ignores the RE and uses only the fixed effects (i.e., an “average” prediction across sites and years).
+# re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
 
 # Step 6: Add x-axis for the focal BA value
 new_data$x_focal <- with(new_data, 
@@ -142,15 +120,18 @@ new_data$x_focal <- with(new_data,
 ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
   geom_line(linewidth = 1) +
   labs(x = "Basal Area in 15-m Radius (m²)", 
-       y = "Predicted Survivorship", color = "") +
+    y = "Predicted Survivorship", 
+    color = "",title = "Red Maple") +
   theme_bw() +
   theme(axis.text = element_text(colour = 'black', size = 10), 
-        axis.title = element_text(size = 12), legend.key = element_blank(), 
-        plot.title = element_text(size = 12, hjust = 0.5),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 10),
-        panel.grid.minor = element_blank(),
-        legend.position = "bottom")
+    axis.title = element_text(size = 12), legend.key = element_blank(), 
+    plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+    legend.text = element_text(size = 10), 
+    legend.title = element_text(size = 10), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.05, 0.05),  # Bottom left inside plot
+    legend.justification = c(0, 0))
+
 
 
 #################################################
@@ -188,9 +169,6 @@ sm_surv <- sm_surv_temp
 sm_surv$Site = as.factor(sm_surv$Site)
 sm_surv$survYear = as.factor(sm_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 sm_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       sm_15m + conMycNS_15m * hetMyc_15m + 
@@ -207,6 +185,62 @@ r.squaredGLMM(sm_mod_15m)
 # Fixed effects: R2m = 0.03176506 
 # Fixed + random effects: R2c = 0.8307705
 
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(sm_surv$sm_15m, sm_surv$conMycNS_15m, 
+                     sm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- sm_surv %>%
+  summarize(across(c(sm_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     sm_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    sm_15m = if (focal == "sm_15m") ba_seq else median_vals$sm_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    sm_Prior3_counts = median_vals$sm_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = sm_surv$Site[1],survYear = sm_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("sm_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(sm_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", sm_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "Sugar Maple") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.75),  # Bottom left inside plot
+        legend.justification = c(0, 0))
+
 
 #################################################
 #################################################
@@ -219,7 +253,6 @@ ab_surv_temp <- read.csv("./data/L1/ab_oneYrSurv_matureBA.csv", row.names = 1)
 ab_surv_temp <- dplyr::filter(ab_surv_temp, First.Year > 2000)
 
 # Add in conspecific and heterospecific species previous 3-year counts into the one-year survivorship data, using a concatenate and match 
-# Survivorship data
 ab_surv_temp$TI_FY = paste(ab_surv_temp$TransectID,ab_surv_temp$First.Year)
 
 # Calculate sum of heterospecific species previous 3-year counts for ab
@@ -244,8 +277,6 @@ ab_surv <- ab_surv_temp
 ab_surv$Site = as.factor(ab_surv$Site)
 ab_surv$survYear = as.factor(ab_surv$survYear)
 
-###############################
-###############################
 
 #################### 15-m radius - no RE of site
 ### Most complex model - not converging properly with all teabs
@@ -264,6 +295,62 @@ car::vif(ab_mod_15m)
 r.squaredGLMM(ab_mod_15m)
 # Fixed effects: R2m = 0.03955228 
 # Fixed + random effects (survYear only): R2c = 0.4981347
+
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(ab_surv$ab_15m, ab_surv$conMycNS_15m, 
+                     ab_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- ab_surv %>%
+  summarize(across(c(ab_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     ab_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    ab_15m = if (focal == "ab_15m") ba_seq else median_vals$ab_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    ab_Prior3_counts = median_vals$ab_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    survYear = ab_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("ab_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(ab_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects 
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", ab_15m,
+               ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "American Beech") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.75),  # Bottom left inside plot
+        legend.justification = c(0, 0))
 
 
 #################################################
@@ -302,9 +389,6 @@ wa_surv <- wa_surv_temp
 wa_surv$Site = as.factor(wa_surv$Site)
 wa_surv$survYear = as.factor(wa_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 wa_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       wa_15m + conMycNS_15m * hetMyc_15m + 
@@ -321,6 +405,62 @@ car::vif(wa_mod_15m)
 r.squaredGLMM(wa_mod_15m)
 # Fixed effects: R2m = 0.02632910 
 # Fixed + random effects: R2c = 0.8731862
+
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(wa_surv$wa_15m, wa_surv$conMycNS_15m, 
+                     wa_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- wa_surv %>%
+  summarize(across(c(wa_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     wa_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    wa_15m = if (focal == "wa_15m") ba_seq else median_vals$wa_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    wa_Prior3_counts = median_vals$wa_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = wa_surv$Site[1],survYear = wa_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("wa_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(wa_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", wa_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "White Ash") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.05),  # Bottom left inside plot
+        legend.justification = c(0, 0))
 
 
 #################################################
@@ -359,9 +499,6 @@ bc_surv <- bc_surv_temp
 bc_surv$Site = as.factor(bc_surv$Site)
 bc_surv$survYear = as.factor(bc_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 bc_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       bc_15m + conMycNS_15m * hetMyc_15m + 
@@ -377,6 +514,62 @@ car::vif(bc_mod_15m)
 r.squaredGLMM(bc_mod_15m)
 # Fixed effects: R2m = 0.02266342 
 # Fixed + random effects: R2c = 0.4276095
+
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(bc_surv$bc_15m, bc_surv$conMycNS_15m, 
+                     bc_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- bc_surv %>%
+  summarize(across(c(bc_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     bc_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    bc_15m = if (focal == "bc_15m") ba_seq else median_vals$bc_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    bc_Prior3_counts = median_vals$bc_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = bc_surv$Site[1],survYear = bc_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("bc_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(bc_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", bc_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "Black Cherry") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.05),  # Bottom left inside plot
+        legend.justification = c(0, 0))
 
 
 #################################################
@@ -415,9 +608,6 @@ nro_surv <- nro_surv_temp
 nro_surv$Site = as.factor(nro_surv$Site)
 nro_surv$survYear = as.factor(nro_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 nro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       nro_15m + conMycNS_15m * hetMyc_15m + 
@@ -434,6 +624,62 @@ r.squaredGLMM(nro_mod_15m)
 # Fixed effects: R2m = 0.02860598 
 # Fixed + random effects: R2c = 0.4900101
 
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(nro_surv$nro_15m, nro_surv$conMycNS_15m, 
+                     nro_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- nro_surv %>%
+  summarize(across(c(nro_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     nro_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    nro_15m = if (focal == "nro_15m") ba_seq else median_vals$nro_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    nro_Prior3_counts = median_vals$nro_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = nro_surv$Site[1],survYear = nro_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("nro_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(nro_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", nro_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "Northern Red Oak") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.75),  # Bottom left inside plot
+        legend.justification = c(0, 0))
+
 
 #################################################
 #################################################
@@ -446,7 +692,6 @@ bonro_surv_temp <- read.csv("./data/L1/bonro_oneYrSurv_matureBA.csv", row.names 
 bonro_surv_temp <- dplyr::filter(bonro_surv_temp, First.Year > 2000)
 
 # Add in conspecific and heterospecific species previous 3-year counts into the one-year survivorship data, using a concatenate and match 
-# Survivorship data
 bonro_surv_temp$TI_FY = paste(bonro_surv_temp$TransectID,bonro_surv_temp$First.Year)
 
 # Calculate sum of heterospecific species previous 3-year counts for bonro
@@ -471,9 +716,6 @@ bonro_surv <- bonro_surv_temp
 bonro_surv$Site = as.factor(bonro_surv$Site)
 bonro_surv$survYear = as.factor(bonro_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 bonro_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       bonro_15m + conMycNS_15m * hetMyc_15m + 
@@ -489,6 +731,62 @@ car::vif(bonro_mod_15m)
 r.squaredGLMM(bonro_mod_15m)
 # Fixed effects: R2m = 0.03257658 
 # Fixed + random effects: R2c = 0.4265718
+
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(bonro_surv$bonro_15m, bonro_surv$conMycNS_15m, 
+                     bonro_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- bonro_surv %>%
+  summarize(across(c(bonro_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     bonro_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    bonro_15m = if (focal == "bonro_15m") ba_seq else median_vals$bonro_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    bonro_Prior3_counts = median_vals$bonro_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = bonro_surv$Site[1],survYear = bonro_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("bonro_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(bonro_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", bonro_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "Black Oak") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.75),  # Bottom left inside plot
+        legend.justification = c(0, 0))
 
 
 #################################################
@@ -527,9 +825,6 @@ wo_surv <- wo_surv_temp
 wo_surv$Site = as.factor(wo_surv$Site)
 wo_surv$survYear = as.factor(wo_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 wo_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       wo_15m + conMycNS_15m * hetMyc_15m + 
@@ -545,6 +840,62 @@ car::vif(wo_mod_15m)
 r.squaredGLMM(wo_mod_15m)
 # Fixed effects: R2m = 0.09389812 
 # Fixed + random effects: R2c = 0.4235249
+
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(wo_surv$wo_15m, wo_surv$conMycNS_15m, 
+                     wo_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- wo_surv %>%
+  summarize(across(c(wo_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     wo_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    wo_15m = if (focal == "wo_15m") ba_seq else median_vals$wo_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    wo_Prior3_counts = median_vals$wo_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = wo_surv$Site[1],survYear = wo_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("wo_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(wo_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", wo_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "White Oak") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.05),  # Bottom left inside plot
+        legend.justification = c(0, 0))
 
 
 #################################################
@@ -583,9 +934,6 @@ iw_surv <- iw_surv_temp
 iw_surv$Site = as.factor(iw_surv$Site)
 iw_surv$survYear = as.factor(iw_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 iw_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
                       iw_15m + conMycNS_15m * hetMyc_15m + 
@@ -602,6 +950,63 @@ r.squaredGLMM(iw_mod_15m)
 # Fixed effects: R2m = 0.01951896 
 # Fixed + random effects: R2c = 0.2874703
 
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(iw_surv$iw_15m, iw_surv$conMycNS_15m, 
+                     iw_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- iw_surv %>%
+  summarize(across(c(iw_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     iw_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal variable
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    iw_15m = if (focal == "iw_15m") ba_seq else median_vals$iw_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    iw_Prior3_counts = median_vals$iw_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    Site = iw_surv$Site[1],survYear = iw_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("iw_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(iw_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", iw_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "Ironwood") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.75),  # Bottom left inside plot
+        legend.justification = c(0, 0))
+
+
 
 #################################################
 #################################################
@@ -614,7 +1019,6 @@ bs_surv_temp <- read.csv("./data/L1/bs_oneYrSurv_matureBA.csv", row.names = 1)
 bs_surv_temp <- dplyr::filter(bs_surv_temp, First.Year > 2000)
 
 # Add in conspecific and heterospecific species previous 3-year counts into the one-year survivorship data, using a concatenate and match 
-# Survivorship data
 bs_surv_temp$TI_FY = paste(bs_surv_temp$TransectID,bs_surv_temp$First.Year)
 
 # Calculate sum of heterospecific species previous 3-year counts for bs
@@ -639,12 +1043,9 @@ bs_surv <- bs_surv_temp
 bs_surv$Site = as.factor(bs_surv$Site)
 bs_surv$survYear = as.factor(bs_surv$survYear)
 
-###############################
-###############################
-
 #################### 15-m radius
 bs_mod_15m <- glmer(cbind(total_count_yr1, total_count_yr0 - total_count_yr1) ~ 
-                      bs_15m + conMycNS_15m * hetMyc_15m + 
+                      bs_15m + conMycNS_15m + hetMyc_15m + 
                       log10(bs_Prior3_counts + 1) + 
                       log10(hetSp_Prior3_counts + 1) + 
                       log10(total_count_yr0 + 1) + 
@@ -659,6 +1060,61 @@ r.squaredGLMM(bs_mod_15m)
 # Fixed effects: R2m = 0.01815265 
 # Fixed + random effects (survYear only): R2c = 0.6103411
 
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across years
+
+# Step 1: Create a sequence of basal area values
+ba_seq <- seq(0, max(bs_surv$bs_15m, bs_surv$conMycNS_15m, 
+                     bs_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+
+# Step 2: Set median values for the non-focal covariates
+median_vals <- bs_surv %>%
+  summarize(across(c(bs_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
+                     bs_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
+
+# Step 3: Create prediction datasets for each focal varibsle
+make_pred_data <- function(focal, label) {
+  df <- data.frame(
+    bs_15m = if (focal == "bs_15m") ba_seq else median_vals$bs_15m,
+    conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
+    hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
+    bs_Prior3_counts = median_vals$bs_Prior3_counts,
+    hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
+    total_count_yr0 = median_vals$total_count_yr0,
+    survYear = bs_surv$survYear[1],
+    focal_label = label)
+  df
+}
+
+# Step 4: Combine prediction data for all three components
+new_data <- bind_rows(make_pred_data("bs_15m", "Conspecific BA"),
+                      make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
+                      make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
+
+# Step 5: Predict survivorship without random effects (average effect)
+new_data$pred_surv <- predict(bs_mod_15m, newdata = new_data, 
+                              type = "response", re.form = NA)
+# re.form = NA ignores RE, uses only the fixed effects 
+
+# Step 6: Add x-axis for the focal BA value
+new_data$x_focal <- with(new_data, 
+                         ifelse(focal_label == "Conspecific BA", bs_15m,
+                                ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
+
+# Step 7: Plot
+ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
+  geom_line(linewidth = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)", 
+       y = "Predicted Survivorship", 
+       color = "",title = "Basswood") +
+  theme_bw() +
+  theme(axis.text = element_text(colour = 'black', size = 10), 
+        axis.title = element_text(size = 12), legend.key = element_blank(), 
+        plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
+        legend.text = element_text(size = 10), 
+        legend.title = element_text(size = 10), 
+        panel.grid.minor = element_blank(),
+        legend.position = c(0.05, 0.75),  # Bottom left inside plot
+        legend.justification = c(0, 0))
 
 ###############################
 ###############################
@@ -678,50 +1134,11 @@ r.squaredGLMM(bs_mod_15m)
 # r.squaredGLMM(hmcm_5m)
 # r.squaredGLMM(cm_5m)
 
-###### ###### ###### ###### ###### ###### ###### ###### 
-###### ###### ###### ###### ###### ###### ###### ###### 
-###### Plot survivorship versus TOTAL conmycorrhizal BA with fit lines from:
-# 1) cm_5m ; 2) cmNs_5m; 3) cs_5m
-# Extract model coefficients (logit scale)
-models <- data.frame(
-  Model = c("Con-Mycorrhizal - RM", "Con-Mycorrhizal - no RM", "RM"),
-  Intercept = c(fixef(cm_5m)[1], fixef(cmNs_5m)[1], fixef(cs_5m)[1]),
-  Slope = c(fixef(cm_5m)[2], fixef(cmNs_5m)[2], fixef(cs_5m)[2])
-)
 
-# Generate predictor values (common range for x-axis)
-x_values <- seq(min(rm_surv$conMyc_5m), max(rm_surv$conMyc_5m), length.out = 100)
-
-# Compute back-transformed survival probabilities
-fit_data <- do.call(rbind, lapply(1:nrow(models), function(i) {
-  logit_pred <- models$Intercept[i] + models$Slope[i] * x_values
-  prob_pred <- plogis(logit_pred)  # Transform logit to probability
-  data.frame(conMyc_5m = x_values, survivorship = prob_pred, Model = models$Model[i])
-}))
-
-## Re-order levels
-fit_data$Model <- factor(fit_data$Model, 
-                levels = c("Con-Mycorrhizal - RM", "Con-Mycorrhizal - no RM", "RM"))
-
-# Scatterplot with fitted lines from all models
-ggplot(rm_surv, aes(x = conMyc_5m, y = total_count_yr1 / total_count_yr0)) +
-  geom_point(alpha = 0.5) +  # Observed survivorship
-  geom_line(data = fit_data, aes(x = conMyc_5m, y = survivorship, color = Model), linewidth = 1) +
-  scale_color_manual(values = c("blue", "red", "gold")) +  # Custom colors
-  labs(x = "Con-Mycorrhizal Basal Area in 5-m Neighborhood", 
-       y = "Seedling Survivorship", 
-       title = "RM Seedling Survivorship") +
-  theme_bw() +
-  theme(axis.text = element_text(colour = 'black', size = 10), 
-        axis.title = element_text(size = 12), legend.key = element_blank(), 
-        plot.title = element_text(size = 12, hjust = 0.5),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 10),
-        panel.grid.minor = element_blank(),
-        legend.position = "bottom")
 
 ##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods
 ##### Panel for each site!
+# All this really does is change the intercept by site - not super informative
 
 # Step 1: Create a sequence of basal area values
 ba_seq <- seq(0, max(rm_surv$rm_15m, rm_surv$conMycNS_15m, 
