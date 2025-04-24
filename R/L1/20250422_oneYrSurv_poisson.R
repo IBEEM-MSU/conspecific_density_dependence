@@ -13,6 +13,7 @@ library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christense
 library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
 library(dplyr)
 library(ggplot2)
+library(DHARMa)
 
 ## Most complex model to fit (15-m radius)
 # (#1 yr) ~ Consp BA:log(#0 yr) + % EMF hosts:log(#0 yr) + Con-myc BA:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + (1 | Site) + (1 | Year)
@@ -21,6 +22,10 @@ library(ggplot2)
 
 ##### Read in file that has the counts by species for every TransectID-ObsYear combination
 allSp_TI_ObsYear <- read.csv("./data/L1/allSp_prior_cohort_densities.csv")
+
+## Create TI_FY concatenated variable
+allSp_TI_ObsYear$TI_FY = paste(allSp_TI_ObsYear$TransectID,
+                               allSp_TI_ObsYear$Obs.Year)
 
 ##### Going to bring in the total_count_yr0 counts for each species, matching by Obs.Year (First.Year) and Transect ID
 ###### rm
@@ -159,6 +164,11 @@ rm_mod_15m <- glmer(total_count_yr1 ~ rm_15m:log0yr +
     family = poisson(link = "log"), data = rm_surv)
 summary(rm_mod_15m)
 
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = rm_mod_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
+
 ## Just main effects - consp, %EMF, conmyc, hetspCounts, and log0yr
 rm_mod_15m1 <- glmer(total_count_yr1 ~ rm_15m + 
                        percEMF_15m + 
@@ -166,7 +176,7 @@ rm_mod_15m1 <- glmer(total_count_yr1 ~ rm_15m +
                        log(hetSp_Prior3_counts + 1) +
                        log0yr +
                        (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = rm_surv)
+                     family = poisson(), data = rm_surv)
 summary(rm_mod_15m1)
 
 ## Version 2 - interactions between consp:log0yr, %EMF:log0yr, conmyc:log0yr, and hetspCounts:log0yr, plus main effects of consp, %EMF, conmyc, and hetspCounts
@@ -310,6 +320,41 @@ sm_mod_15m <- glmer(total_count_yr1 ~ sm_15m:log0yr +
                       (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = sm_surv)
 summary(sm_mod_15m)
+
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = sm_mod_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
+
+# Simulate residuals from your model
+sim_res <- simulateResiduals(fittedModel = sm_mod_15m, n = 1000)
+
+# Plot residual diagnostics
+par(mfrow=c(2,2))
+plot(sim_res)
+
+testDispersion(sim_res)      # Should not be significant
+testZeroInflation(sim_res)   # Should not be significant
+
+# Extract Pearson residuals
+resid_pearson <- residuals(sm_mod_15m, type = "pearson")
+overdispersion_ratio <- sum(resid_pearson^2) / df.residual(sm_mod_15m)
+print(overdispersion_ratio)
+
+fitted_vals <- fitted(sm_mod_15m)
+resid_vals <- residuals(sm_mod_15m, type = "pearson")
+
+plot(fitted_vals, resid_vals)
+abline(h = 0, col = "red")
+
+
+
+
+
+#Q_Q <- lm(Zero ~ as.numeric(Perc_ECM_BA), data = Soil)
+plot(sm_mod_15m)
+
+
 
 ## Just main effects - consp, %EMF, conmyc, hetspCounts, and log0yr
 sm_mod_15m1 <- glmer(total_count_yr1 ~ sm_15m + 
@@ -683,7 +728,7 @@ nro_surv$log0yr <- log(nro_surv$total_count_yr0)
 #################### 15-m radius
 ## Just interactions between consp:log0yr, %EMF:log0yr, conmyc:log0yr, and hetspCounts:log0yr
 nro_mod_15m <- glmer(total_count_yr1 ~ nro_15m:log0yr + 
-                      percEMF_15m:log0yr + 
+                      #percEMF_15m:log0yr + 
                       conMycNS_15m:log0yr + 
                       log(hetSp_Prior3_counts + 1):log0yr +
                       (1 | Site) + (1 | survYear),
@@ -778,7 +823,7 @@ bonro_surv$log0yr <- log(bonro_surv$total_count_yr0)
 #################### 15-m radius - removing Site RE
 ## Just interactions between consp:log0yr, %EMF:log0yr, conmyc:log0yr, and hetspCounts:log0yr
 bonro_mod_15m <- glmer(total_count_yr1 ~ bonro_15m:log0yr + 
-                       percEMF_15m:log0yr + 
+                       #percEMF_15m:log0yr + 
                        conMycNS_15m:log0yr + 
                        log(hetSp_Prior3_counts + 1):log0yr +
                        (1 | survYear),
@@ -873,7 +918,7 @@ wo_surv$log0yr <- log(wo_surv$total_count_yr0)
 #################### 15-m radius
 ## Just interactions between consp:log0yr, %EMF:log0yr, conmyc:log0yr, and hetspCounts:log0yr
 wo_mod_15m <- glmer(total_count_yr1 ~ wo_15m:log0yr + 
-                       percEMF_15m:log0yr + 
+                       #percEMF_15m:log0yr + 
                        conMycNS_15m:log0yr + 
                        log(hetSp_Prior3_counts + 1):log0yr +
                        (1 | Site) + (1 | survYear),
@@ -1062,7 +1107,7 @@ bs_surv$log0yr <- log(bs_surv$total_count_yr0)
 #################### 15-m radius - no RE of site, and excluding %emf
 ### NONE OF THE BASSWOOD MODELS ARE CONVERGING
 ## Just interactions between consp:log0yr, %EMF:log0yr, conmyc:log0yr, and hetspCounts:log0yr
-bs_mod_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr + 
+bs_mod_15m <- glmer(total_count_yr1 ~ #bs_15m:log0yr + 
                       #percEMF_15m:log0yr + 
                       conMycNS_15m:log0yr + 
                       log(hetSp_Prior3_counts + 1):log0yr +
@@ -1071,7 +1116,7 @@ bs_mod_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr +
 summary(bs_mod_15m)
 
 ## Just main effects - consp, %EMF, conmyc, hetspCounts, and log0yr
-bs_mod_15m1 <- glmer(total_count_yr1 ~ bs_15m + 
+bs_mod_15m1 <- glmer(total_count_yr1 ~ #bs_15m + 
                        #percEMF_15m + 
                        conMycNS_15m + 
                        log(hetSp_Prior3_counts + 1) +
