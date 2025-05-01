@@ -1,4 +1,3 @@
-
 #################################################
 ####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
@@ -21,7 +20,11 @@ library(DHARMa)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 # (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
-  
+
+
+## Most complex model to fit (15-m radius)
+# (#1 yr) ~ Consp BA:log(#0 yr) + % EMF hosts:log(#0 yr) + Con-myc BA:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + (1 | Site) + (1 | Year)
+
 # For species with sufficient observations, we included a random effect of site. For species with limited observations across sites, we excluded this term due to singular fits and lack of variance attributable to site.
 
 ##### Read in file that has the counts by species for every TransectID-ObsYear combination
@@ -85,7 +88,7 @@ nro_surv_temp$TI_FY = paste(nro_surv_temp$TransectID,nro_surv_temp$First.Year)
 # Bring over 0-yr counts from species' data using match
 allSp_TI_ObsYear$nro_0yr_count = 
   nro_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     nro_surv_temp$TI_FY)]
+                                      nro_surv_temp$TI_FY)]
 ###### bonro
 ## Read in data file from the R/L1 folder 
 bonro_surv_temp <- read.csv("./data/L1/bonro_oneYrSurv_matureBA.csv", row.names = 1)
@@ -94,7 +97,7 @@ bonro_surv_temp$TI_FY = paste(bonro_surv_temp$TransectID,bonro_surv_temp$First.Y
 # Bring over 0-yr counts from species' data using match
 allSp_TI_ObsYear$bonro_0yr_count = 
   bonro_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     bonro_surv_temp$TI_FY)]
+                                        bonro_surv_temp$TI_FY)]
 ###### wo
 ## Read in data file from the R/L1 folder 
 wo_surv_temp <- read.csv("./data/L1/wo_oneYrSurv_matureBA.csv", row.names = 1)
@@ -131,13 +134,25 @@ allSp_TI_ObsYear$bs_0yr_count =
 ### Filter to include 2001 as first First.Year
 rm_surv_temp <- dplyr::filter(rm_surv_temp, First.Year > 2000)
 
-# Add in conspecific and heterospecific species previous 3-year counts into the one-year survivorship data
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
 allSp_TI_ObsYear$Prior3_counts = 
   rowSums(allSp_TI_ObsYear[,c(5:14,17:25)], na.rm = TRUE)
 # Heterospecific
 rm_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(rm_surv_temp$TI_FY,
+  allSp_TI_ObsYear$Prior3_counts[match(rm_surv_temp$TI_FY,allSp_TI_ObsYear$TI_FY)]
+
+# Calculate sum of heterospecific species previous 3-year and current year counts for RM
+allSp_TI_ObsYear$hetSp_Prior3_counts = 
+  rowSums(allSp_TI_ObsYear[,c(6:14,17:25)], na.rm = TRUE)
+# Conspecific
+rm_surv_temp$rm_Prior3_counts = 
+  allSp_TI_ObsYear$rm_Prior3_counts[match(rm_surv_temp$TI_FY,
+                                          allSp_TI_ObsYear$TI_FY)]
+# Convert NAs to 0s
+rm_surv_temp$rm_Prior3_counts[is.na(rm_surv_temp$rm_Prior3_counts)]<- 0
+# Heterospecific
+rm_surv_temp$hetSp_Prior3_counts = 
+  allSp_TI_ObsYear$hetSp_Prior3_counts[match(rm_surv_temp$TI_FY,
                                              allSp_TI_ObsYear$TI_FY)]
 
 rm_surv <- rm_surv_temp
@@ -147,6 +162,7 @@ rm_surv$propEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc
 
 #### Calculate the relative proportion of conspecific adults in 15-m radius
 rm_surv$propRM_15m = (rm_surv$rm_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
+rm_surv$percEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
 
 #### Make site and year into factors
 rm_surv$Site = as.factor(rm_surv$Site)
@@ -165,14 +181,14 @@ rmBA_15m <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr +
                     rm_15m:log0yr:hetMyc_15m + 
                     hetMyc_15m:log0yr:conMycNS_15m +
                     (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = rm_surv)
+                  family = poisson(link = "log"), data = rm_surv)
 summary(rmBA_15m)
 
 ## Simplified to exclude 3-way interactions
 rmBA_15m2 <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = rm_surv)
+                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                     (1 | Site) + (1 | survYear),
+                   family = poisson(link = "log"), data = rm_surv)
 summary(rmBA_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -192,19 +208,19 @@ print(aic_values[order(aic_values$AIC), ]) # rm_mod_15m1 is best
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 # (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(Prior3_counts + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
- 
+
 rmProp_15m <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
-                    log(Prior3_counts + 1):log0yr +
-                    propRM_15m:log0yr:propEMF_15m +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = rm_surv)
+                      log(Prior3_counts + 1):log0yr +
+                      propRM_15m:log0yr:propEMF_15m +
+                      (1 | Site) + (1 | survYear),
+                    family = poisson(link = "log"), data = rm_surv)
 summary(rmProp_15m)
 
 ## Simplified to exclude 3-way interactions
 rmProp_15m2 <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = rm_surv)
+                       log(Prior3_counts + 1):log0yr +
+                       (1 | Site) + (1 | survYear),
+                     family = poisson(link = "log"), data = rm_surv)
 summary(rmProp_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -350,7 +366,7 @@ summary(abBA_15m)
 ## Simplified to exclude 3-way interactions
 abBA_15m2 <- glmer(total_count_yr1 ~ ab_15m:log0yr + conMycNS_15m:log0yr + 
                      hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    (1 | survYear),
+                     (1 | survYear),
                    family = poisson(link = "log"), data = ab_surv)
 summary(abBA_15m2)
 
@@ -606,19 +622,19 @@ nro_surv$log0yr <- log(nro_surv$total_count_yr0)
 #################### 15-m radius
 ## Full model - DOES NOT CONVERGE
 nroBA_15m <- glmer(total_count_yr1 ~ nro_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    nro_15m:log0yr:conMycNS_15m + 
-                    nro_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = nro_surv)
+                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                     nro_15m:log0yr:conMycNS_15m + 
+                     nro_15m:log0yr:hetMyc_15m + 
+                     hetMyc_15m:log0yr:conMycNS_15m +
+                     (1 | Site) + (1 | survYear),
+                   family = poisson(link = "log"), data = nro_surv)
 summary(nroBA_15m)
 
 ## Simplified to exclude 3-way interactions
 nroBA_15m2 <- glmer(total_count_yr1 ~ nro_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = nro_surv)
+                      hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                      (1 | Site) + (1 | survYear),
+                    family = poisson(link = "log"), data = nro_surv)
 summary(nroBA_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -638,17 +654,17 @@ r.squaredGLMM(nroBA_15m2)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 nroProp_15m <- glmer(total_count_yr1 ~ propnro_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      propnro_15m:log0yr:propEMF_15m +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = nro_surv)
+                       log(Prior3_counts + 1):log0yr +
+                       propnro_15m:log0yr:propEMF_15m +
+                       (1 | Site) + (1 | survYear),
+                     family = poisson(link = "log"), data = nro_surv)
 summary(nroProp_15m)
 
 ## Simplified to exclude 3-way interactions - strong correlation btwn propnro_15m and propEMF_15m 
 nroProp_15m2 <- glmer(total_count_yr1 ~ propnro_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = nro_surv)
+                        log(Prior3_counts + 1):log0yr +
+                        (1 | Site) + (1 | survYear),
+                      family = poisson(link = "log"), data = nro_surv)
 summary(nroProp_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -695,19 +711,19 @@ bonro_surv$log0yr <- log(bonro_surv$total_count_yr0)
 #################### 15-m radius
 ## Full model - DOES NOT CONVERGE
 bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     bonro_15m:log0yr:conMycNS_15m + 
-                     bonro_15m:log0yr:hetMyc_15m + 
-                     hetMyc_15m:log0yr:conMycNS_15m +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = bonro_surv)
+                       hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                       bonro_15m:log0yr:conMycNS_15m + 
+                       bonro_15m:log0yr:hetMyc_15m + 
+                       hetMyc_15m:log0yr:conMycNS_15m +
+                       (1 | Site) + (1 | survYear),
+                     family = poisson(link = "log"), data = bonro_surv)
 summary(bonroBA_15m)
 
 ## Simplified to exclude 3-way interactions
 bonroBA_15m2 <- glmer(total_count_yr1 ~ bonro_15m:log0yr + conMycNS_15m:log0yr + 
-                      hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = bonro_surv)
+                        hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                        (1 | Site) + (1 | survYear),
+                      family = poisson(link = "log"), data = bonro_surv)
 summary(bonroBA_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -727,17 +743,17 @@ r.squaredGLMM(bonroBA_15m2)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 bonroProp_15m <- glmer(total_count_yr1 ~ propbonro_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       propbonro_15m:log0yr:propEMF_15m +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = bonro_surv)
+                         log(Prior3_counts + 1):log0yr +
+                         propbonro_15m:log0yr:propEMF_15m +
+                         (1 | Site) + (1 | survYear),
+                       family = poisson(link = "log"), data = bonro_surv)
 summary(bonroProp_15m)
 
 ## Simplified to exclude 3-way interactions 
 bonroProp_15m2 <- glmer(total_count_yr1 ~ propbonro_15m:log0yr + propEMF_15m:log0yr + 
-                        log(Prior3_counts + 1):log0yr +
-                        (1 | Site) + (1 | survYear),
-                      family = poisson(link = "log"), data = bonro_surv)
+                          log(Prior3_counts + 1):log0yr +
+                          (1 | Site) + (1 | survYear),
+                        family = poisson(link = "log"), data = bonro_surv)
 summary(bonroProp_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -784,19 +800,19 @@ wo_surv$log0yr <- log(wo_surv$total_count_yr0)
 #################### 15-m radius
 ## Full model - DOES NOT CONVERGE
 woBA_15m <- glmer(total_count_yr1 ~ wo_15m:log0yr + conMycNS_15m:log0yr + 
-                       hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                       wo_15m:log0yr:conMycNS_15m + 
-                       wo_15m:log0yr:hetMyc_15m + 
-                       hetMyc_15m:log0yr:conMycNS_15m +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = wo_surv)
+                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    wo_15m:log0yr:conMycNS_15m + 
+                    wo_15m:log0yr:hetMyc_15m + 
+                    hetMyc_15m:log0yr:conMycNS_15m +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = wo_surv)
 summary(woBA_15m)
 
 ## Simplified to exclude 3-way interactions
 woBA_15m2 <- glmer(total_count_yr1 ~ wo_15m:log0yr + conMycNS_15m:log0yr + 
-                        hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                        (1 | Site) + (1 | survYear),
-                      family = poisson(link = "log"), data = wo_surv)
+                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                     (1 | Site) + (1 | survYear),
+                   family = poisson(link = "log"), data = wo_surv)
 summary(woBA_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -816,17 +832,17 @@ r.squaredGLMM(woBA_15m2)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 woProp_15m <- glmer(total_count_yr1 ~ propwo_15m:log0yr + propEMF_15m:log0yr + 
-                         log(Prior3_counts + 1):log0yr +
-                         propwo_15m:log0yr:propEMF_15m +
-                         (1 | Site) + (1 | survYear),
-                       family = poisson(link = "log"), data = wo_surv)
+                      log(Prior3_counts + 1):log0yr +
+                      propwo_15m:log0yr:propEMF_15m +
+                      (1 | Site) + (1 | survYear),
+                    family = poisson(link = "log"), data = wo_surv)
 summary(woProp_15m)
 
 ## Simplified to exclude 3-way interactions - correlation btwn propwo_15m and propEMF_15m
 woProp_15m2 <- glmer(total_count_yr1 ~ propwo_15m:log0yr + propEMF_15m:log0yr + 
-                          log(Prior3_counts + 1):log0yr +
-                          (1 | Site) + (1 | survYear),
-                        family = poisson(link = "log"), data = wo_surv)
+                       log(Prior3_counts + 1):log0yr +
+                       (1 | Site) + (1 | survYear),
+                     family = poisson(link = "log"), data = wo_surv)
 summary(woProp_15m2)
 
 ## VIFs and pseudo r-squared values
@@ -1016,7 +1032,6 @@ r.squaredGLMM(bsProp_15m2)
 aic_values <- AIC(bsProp_15m, bsProp_15m2)
 # Sort AIC values from lowest to highest and show
 print(aic_values[order(aic_values$AIC), ])
-
 
 
 
