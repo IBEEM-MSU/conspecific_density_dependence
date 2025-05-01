@@ -1,7 +1,7 @@
 #################################################
 ####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
-####### Date: 16 April 2025
+####### Date: 1 May 2025
 #################################################
 
 ## Read in packages
@@ -20,10 +20,6 @@ library(DHARMa)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 # (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
-
-
-## Most complex model to fit (15-m radius)
-# (#1 yr) ~ Consp BA:log(#0 yr) + % EMF hosts:log(#0 yr) + Con-myc BA:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + (1 | Site) + (1 | Year)
 
 # For species with sufficient observations, we included a random effect of site. For species with limited observations across sites, we excluded this term due to singular fits and lack of variance attributable to site.
 
