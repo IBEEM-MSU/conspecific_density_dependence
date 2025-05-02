@@ -168,9 +168,6 @@ rm_surv$survYear = as.factor(rm_surv$survYear)
 rm_surv$log0yr <- log(rm_surv$total_count_yr0)  
 
 #################### 15-m radius
-###  Biotic model of one-year survivorship - with adult densities (BA)
-# (#1 yr) ~ Consp BA:log(#0 yr) + Con-myc BA:log(#0 yr) + Het-myc BA:log(#0 yr) + log(Prior3_counts + 1):log(#0 yr) + Consp BA:log(#0 yr):Con-myc BA + Consp BA:log(#0 yr):Het-myc BA + Het-myc BA:log(#0 yr):Con-myc BA + (1 | Site) + (1 | Year)
-
 rmBA_15m <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
                     rm_15m:log0yr:conMycNS_15m + 
@@ -195,7 +192,7 @@ r.squaredGLMM(rmBA_15m2)
 ## AIC
 aic_values <- AIC(rmBA_15m, rmBA_15m2)
 # Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) # rm_mod_15m1 is best
+print(aic_values[order(aic_values$AIC), ]) 
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = rmBA_15m, n = 1000)
@@ -204,7 +201,6 @@ print(aic_values[order(aic_values$AIC), ]) # rm_mod_15m1 is best
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 # (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(Prior3_counts + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
-
 rmProp_15m <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
                       propRM_15m:log0yr:propEMF_15m +
@@ -220,14 +216,14 @@ rmProp_15m2 <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr +
 summary(rmProp_15m2)
 
 ## VIFs and pseudo r-squared values
-car::vif(rmProp_15m) 
+car::vif(rmProp_15m) # All < 9
 r.squaredGLMM(rmProp_15m) 
-car::vif(rmProp_15m2) 
+car::vif(rmProp_15m2) # All < 2
 r.squaredGLMM(rmProp_15m2) 
 ## AIC
 aic_values <- AIC(rmProp_15m, rmProp_15m2)
 # Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) # rm_mod_15m1 is best
+print(aic_values[order(aic_values$AIC), ]) 
 
 
 #################################################
@@ -286,7 +282,7 @@ r.squaredGLMM(smBA_15m2)
 ## AIC
 aic_values <- AIC(smBA_15m, smBA_15m2)
 # Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) # sm_mod_15m1 is best
+print(aic_values[order(aic_values$AIC), ]) 
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = smBA_15m, n = 1000)
@@ -374,11 +370,10 @@ r.squaredGLMM(abBA_15m2)
 ## AIC
 aic_values <- AIC(abBA_15m, abBA_15m2)
 # Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) # ab_mod_15m1 is best
+print(aic_values[order(aic_values$AIC), ]) 
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = abBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
@@ -467,7 +462,6 @@ print(aic_values[order(aic_values$AIC), ]) # wa_mod_15m1 is best
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = waBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
@@ -549,14 +543,9 @@ summary(bcBA_15m2)
 # r.squaredGLMM(bcBA_15m) 
 car::vif(bcBA_15m2) # all < 5
 r.squaredGLMM(bcBA_15m2) 
-## AIC
-# aic_values <- AIC(bcBA_15m, bcBA_15m2)
-# # Sort AIC values from lowest to highest and show
-# print(aic_values[order(aic_values$AIC), ]) # bc_mod_15m1 is best
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = bcBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
@@ -567,7 +556,7 @@ bcProp_15m <- glmer(total_count_yr1 ~ propbc_15m:log0yr + propEMF_15m:log0yr +
                     family = poisson(link = "log"), data = bc_surv)
 summary(bcProp_15m)
 
-## Simplified to exclude 3-bcy interactions
+## Simplified to exclude 3-way interactions
 bcProp_15m2 <- glmer(total_count_yr1 ~ propbc_15m:log0yr + propEMF_15m:log0yr + 
                        log(Prior3_counts + 1):log0yr +
                        (1 | Site) + (1 | survYear),
@@ -638,14 +627,9 @@ summary(nroBA_15m2)
 # r.squaredGLMM(nroBA_15m) 
 car::vif(nroBA_15m2) # all < 3
 r.squaredGLMM(nroBA_15m2) 
-## AIC
-# aic_values <- AIC(nroBA_15m, nroBA_15m2)
-# # Sort AIC values from lowest to highest and show
-# print(aic_values[order(aic_values$AIC), ]) # nro_mod_15m1 is best
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = nroBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
@@ -727,14 +711,9 @@ summary(bonroBA_15m2)
 # r.squaredGLMM(bonroBA_15m) 
 car::vif(bonroBA_15m2) # all < 6
 r.squaredGLMM(bonroBA_15m2) 
-## AIC
-# aic_values <- AIC(bonroBA_15m, bonroBA_15m2)
-# # Sort AIC values from lowest to highest and show
-# print(aic_values[order(aic_values$AIC), ]) # bonro_mod_15m1 is best
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = bonroBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
@@ -816,14 +795,9 @@ summary(woBA_15m2)
 # r.squaredGLMM(woBA_15m) 
 car::vif(woBA_15m2) # all < 3
 r.squaredGLMM(woBA_15m2) 
-## AIC
-# aic_values <- AIC(woBA_15m, woBA_15m2)
-# # Sort AIC values from lowest to highest and show
-# print(aic_values[order(aic_values$AIC), ]) # wo_mod_15m1 is best
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = woBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
@@ -905,17 +879,12 @@ summary(iwBA_15m2)
 # r.squaredGLMM(iwBA_15m) 
 car::vif(iwBA_15m2) # all < 9
 r.squaredGLMM(iwBA_15m2) 
-## AIC
-# aic_values <- AIC(iwBA_15m, iwBA_15m2)
-# # Sort AIC values from lowest to highest and show
-# print(aic_values[order(aic_values$AIC), ]) 
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = iwBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
+### Biotic model of one-year survivorship - with adult proportions (%ECM) - NEARLY UNIDENTIFIABLE - NOT TRUSTWORTHY
 iwProp_15m <- glmer(total_count_yr1 ~ propiw_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
                       propiw_15m:log0yr:propEMF_15m +
@@ -931,14 +900,10 @@ iwProp_15m2 <- glmer(total_count_yr1 ~ propiw_15m:log0yr + propEMF_15m:log0yr +
 summary(iwProp_15m2)
 
 ## VIFs and pseudo r-squared values
-car::vif(iwProp_15m) # all < 2
-r.squaredGLMM(iwProp_15m) 
+# car::vif(iwProp_15m) # all < 2
+# r.squaredGLMM(iwProp_15m) 
 car::vif(iwProp_15m2) # all < 2
 r.squaredGLMM(iwProp_15m2) 
-## AIC
-aic_values <- AIC(iwProp_15m, iwProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 
 #################################################
@@ -992,16 +957,11 @@ summary(bsBA_15m2)
 ## VIFs and pseudo r-squared values
 # car::vif(bsBA_15m) 
 # r.squaredGLMM(bsBA_15m) 
-car::vif(bsBA_15m2) # all < 9
+car::vif(bsBA_15m2) # all < 9 - but not identifiable
 r.squaredGLMM(bsBA_15m2) 
-## AIC
-# aic_values <- AIC(bsBA_15m, bsBA_15m2)
-# # Sort AIC values from lowest to highest and show
-# print(aic_values[order(aic_values$AIC), ]) 
 
 # # Simulate residuals
 # sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
-# # QQ plot of residuals
 # plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM) - does not converge
@@ -1020,14 +980,10 @@ bsProp_15m2 <- glmer(total_count_yr1 ~ propbs_15m:log0yr + propEMF_15m:log0yr +
 summary(bsProp_15m2)
 
 ## VIFs and pseudo r-squared values
-car::vif(bsProp_15m) # all < 2
-r.squaredGLMM(bsProp_15m) 
+# car::vif(bsProp_15m) # all < 2
+# r.squaredGLMM(bsProp_15m) 
 car::vif(bsProp_15m2) # all < 2
 r.squaredGLMM(bsProp_15m2) 
-## AIC
-aic_values <- AIC(bsProp_15m, bsProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 
 
