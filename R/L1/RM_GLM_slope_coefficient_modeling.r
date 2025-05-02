@@ -1,4 +1,4 @@
-# Andrew C. Eagar 2025
+# Authors: A Eagar & B McNichol 5-2025
 
 # GLM slope coefficient modeling
 
@@ -10,16 +10,24 @@ library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Pa
 
 # Import data for GLM slope coefficient modeling
 
-RM_GLM_slopes <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_GLM_slopes.csv")
+RM_GLM_slopes <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_GLM_slopes.csv") %>%
+					mutate(Joiner = paste(SiteID,".", quadrat,".",Cohort.Year))
 
-RM_prior_cohort_densities <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_prior_cohort_densities.csv")
+RM_prior_cohort_densities <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_prior_cohort_densities.csv") %>%
+					mutate(Joiner = paste(SiteID,".", quadrat,".",Cohort.Year))
+
+RM_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_count_demography.csv") %>%
+					mutate(Joiner = paste(SiteID,".", quadrat,".",First.Year))
+
+All_cohort_densities <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/allSp_prior_cohort_densities.csv") %>% 
+					mutate(Transect_joiner = paste(TransectID,".",Obs.Year))
 
 Site_BA <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/MNF_ba_radii_allCensuses.csv")
 
 Site_BA_quads <- Site_BA %>%
-					mutate(quadrat = as.numeric(X) + 0.5) %>%
-					mutate(Transect_quad_year_unifier = paste(TransectID, quadrat, Year)) %>%
-					select(-c(1, 2, 4, 5, 6, 7, 63))
+					mutate(quadrat = as.numeric(X) + 0.5, ba_joiner = paste(TransectID,".",Year)) %>%
+					select(-c(X.1, X, Y, Midpoint_X, Midpoint_Y)) %>%
+					replace(is.na(.), 0)
 
 ## Calculate conmycorrhizal, heterospecific, and heteromycorrhizal BA for RM
 # AM Species: sugar maple (sm), American elm (ae), white ash (wa), red maple (rm), black cherry (bc), serviceberry (svb)
@@ -78,15 +86,96 @@ Site_BA_quads$hetMyc_15m = rowSums(Site_BA_quads[, c("ab_15m", "bs_15m", "qa_15m
                         ifelse(RM_GLM_slopes$Cohort.Year == "2023", "2022",
                                "2022")))))))))))))))))))))))))
 } 
-							   
-RM_GLM_slopes_spread <- RM_GLM_slopes %>%
-				spread(key = "Time.Since.First.Year", value = "Count")	
+
+# Join all data together. Will export .csv file for final upload.
+
+RM_slope_modeling_data <- RM_GLM_slopes %>%
+					mutate(ba_joiner = paste(TransectID,".",baYear), Transect_joiner = paste(TransectID,".",Cohort.Year)) %>%
+					left_join(RM_prior_cohort_densities, by = "Joiner") %>%
+					left_join(RM_demography, by = "Joiner") %>%
+					left_join(Site_BA_quads, by = "ba_joiner") %>%
+					left_join(All_cohort_densities, by = "Transect_joiner") %>%
+					select(SiteID.x, quadrat.x, Cohort.Year.x, ba_joiner, GLM.Slope.Estimate, Count, Prior_3_year_cohorts_counts, Prior_2_year_cohorts_and_new_1st_year_counts,  Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts, rm_15m, conMycNS_15m, hetMyc_15m) %>%
+					rename("SiteID" = c(1), "quadrat" = c(2), "Cohort.Year" = c(3)) %>%
+					unique() %>% 
+					mutate(ECM_prop_15 = hetMyc_15m/(rm_15m + conMycNS_15m + hetMyc_15m), rm_prop_15 = rm_15m/(rm_15m + conMycNS_15m + hetMyc_15m))
+
+	# write.csv(RM_slope_modeling_data, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/RM_slope_modeling_data.csv", row.names = FALSE)
+
+# Non-parametric permutation testing
+
+nperm <- 999
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 4 terms to test in this model.
+	Rand_results_con_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for 999 randomized F-values
+{
+
+	RM_slope_modeling_data <- RM_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n()))
+
+		# Test_data <- RM_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	rm_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ rm_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
+                    hetMyc_15m:log10(Count + 1) + log(Prior_3_year_cohorts_counts + 1):log10(Count + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = RM_slope_modeling_data)
 					
-RM_GLM_slopes_spread$Starting_counts <- RM_GLM_slopes_spread$'0' 
+	Rand_aov <- anova(rm_mod_BA_rand)
+					
+					Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
+					Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
+					Rand_results_het_myc[i] <- Rand_aov$"F value"[3]
+					Rand_results_other_seedlings[i] <- Rand_aov$"F value"[4]
+					
+}
 
-RM_GLM_slopes_BA <- RM_GLM_slopes_spread %>%
-				gather(c(6:9), key = "Time.Since.First.Year", value = "Count") %>%
-				mutate(Transect_quad_year_unifier = paste(TransectID, quadrat, baYear)) %>%
-				left_join(Site_BA_quads, by = "Transect_quad_year_unifier")
+	# Permutation test with real data
+			
+	rm_mod_BA_true <- lmer(GLM.Slope.Estimate ~ rm_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
+                    hetMyc_15m:log10(Count + 1) + log(Prior_3_year_cohorts_counts + 1):log10(Count + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = RM_slope_modeling_data)
+					
+	Obs_aov <- anova(rm_mod_BA_true)
 
-(#1 yr / #0 yr) ~ Conspecific BA * % EMF hosts + Con-myc BA + Hetero-myc BA + (total # RM present at 0 yr - #0 yr seedlings) + #0 yr seedlings + (1| Site + survYear)
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+
+			Ranks_con_den <- rank(All_results_con_den)
+
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+
+		Obs_results_con_myc <- as.vector(Obs_aov[2,5])
+		
+			All_results_con_myc <- rbind(Rand_results_con_myc, Obs_results_con_myc)
+
+			Ranks_con_myc <- rank(All_results_con_myc)
+
+			P_values_con_myc <- 1-Ranks_con_myc[nperm+1]/(nperm+1)
+		
+		Obs_results_het_myc <- as.vector(Obs_aov[3,5])
+		
+			All_results_het_myc <- rbind(Rand_results_het_myc, Obs_results_het_myc)
+
+			Ranks_het_myc <- rank(All_results_het_myc)
+
+			P_values_het_myc <- 1-Ranks_het_myc[nperm+1]/(nperm+1)
+		
+		
+		Obs_results_other_seedlings <- as.vector(Obs_aov[4,5])
+		
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+
+			Ranks_con_den <- rank(All_results_con_den)
+
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)

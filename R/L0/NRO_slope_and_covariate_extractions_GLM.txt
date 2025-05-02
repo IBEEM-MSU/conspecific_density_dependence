@@ -6,6 +6,9 @@ library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and
 
 # Obstacle 1: Determine a standard timeperiod to analyze cohorts over. Group quadrats at entire plot (or larger) area and (maybe) across time. Calculate a central tendency from an entire plot's cohort to compare against quadrat cohorts & the density of adult trees surrounding @m radius
 
+Test <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_oneYrSurv_matureBA.csv") %>%
+					mutate(Perc_ECM_BA = hetMyc_15m / (conMyc_15m + hetMyc_15m) * 100)
+
 Red_oak_demography <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L0/nro_allCohortsSites.csv") %>%
 					replace(is.na(.), 0) # This replaces the NA parings in the matrix with 0s. E.g., cohort 2000 was not born prior to 2000; the pairing (2000, 1999) was recorded as NAs and is replaced by 0s 
 	
