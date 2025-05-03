@@ -148,34 +148,39 @@ for(i in 1:nperm) # For loop for 999 randomized F-values
 	Obs_aov <- anova(rm_mod_BA_true)
 
 		Obs_results_con_den <- as.vector(Obs_aov[1,5])
-
 			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
-
 			Ranks_con_den <- rank(All_results_con_den)
-
 			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
 
 		Obs_results_con_myc <- as.vector(Obs_aov[2,5])
-		
 			All_results_con_myc <- rbind(Rand_results_con_myc, Obs_results_con_myc)
-
 			Ranks_con_myc <- rank(All_results_con_myc)
-
 			P_values_con_myc <- 1-Ranks_con_myc[nperm+1]/(nperm+1)
 		
 		Obs_results_het_myc <- as.vector(Obs_aov[3,5])
-		
 			All_results_het_myc <- rbind(Rand_results_het_myc, Obs_results_het_myc)
-
 			Ranks_het_myc <- rank(All_results_het_myc)
-
 			P_values_het_myc <- 1-Ranks_het_myc[nperm+1]/(nperm+1)
 		
-		
 		Obs_results_other_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+	
+	P_values_con_myc
+		hist(All_results_con_myc) # vs
+		Obs_results_con_myc
 		
-			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
-
-			Ranks_con_den <- rank(All_results_con_den)
-
-			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+	P_values_het_myc
+		hist(All_results_het_myc) # vs
+		All_results_het_myc
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+	
+	
