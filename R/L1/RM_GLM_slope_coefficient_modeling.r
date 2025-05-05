@@ -1,6 +1,6 @@
 # Authors: A Eagar & B McNichol 5-2025
 
-# GLM slope coefficient modeling
+# GLM slope coefficient modeling script. This conducts a non-parametric test on the quadrat-level slope values representing a seedling cohort's mortality rate over three years. This method follows Anderson, M. and Braak, C.T., 2003. Permutation tests for multi-factorial analysis of variance. Journal of statistical computation and simulation, 73(2), pp.85-113.
 
 library(tidyverse) # For data manipulation & graphing. Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M, Pedersen TL, Miller E, Bache SM, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo K, Yutani H (2019). “Welcome to the tidyverse.” Journal of Open Source Software, 4(43), 1686. doi:10.21105/joss.01686. 
 library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and Walker, S., 2014. Fitting linear mixed-effects models using lme4. arXiv preprint arXiv:1406.5823
@@ -8,7 +8,7 @@ library(MuMIn) # For AIC and R-squared values. Barton, K. and Barton, M.K., 2015
 library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christensen, R.H., 2017. lmerTest package: tests in linear mixed effects models. Journal of statistical software, 82, pp.1-26.
 library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
 
-# Import data for GLM slope coefficient modeling
+# Import data for LM slope coefficient modeling
 
 RM_GLM_slopes <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_GLM_slopes.csv") %>%
 					mutate(Joiner = paste(SiteID,".", quadrat,".",Cohort.Year))
@@ -98,25 +98,25 @@ RM_slope_modeling_data <- RM_GLM_slopes %>%
 					select(SiteID.x, quadrat.x, Cohort.Year.x, ba_joiner, GLM.Slope.Estimate, Count, Prior_3_year_cohorts_counts, Prior_2_year_cohorts_and_new_1st_year_counts,  Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts, rm_15m, conMycNS_15m, hetMyc_15m) %>%
 					rename("SiteID" = c(1), "quadrat" = c(2), "Cohort.Year" = c(3)) %>%
 					unique() %>% 
-					mutate(ECM_prop_15 = hetMyc_15m/(rm_15m + conMycNS_15m + hetMyc_15m), rm_prop_15 = rm_15m/(rm_15m + conMycNS_15m + hetMyc_15m))
+					mutate(ECM_prop_15 = hetMyc_15m/(rm_15m + conMycNS_15m + hetMyc_15m), rm_prop_15 = rm_15m/(rm_15m + conMycNS_15m + hetMyc_15m), Avg_3_yr_prior_cohort_counts = replace_na((Prior_3_year_cohorts_counts + Prior_2_year_cohorts_and_new_1st_year_counts + Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts)/3, 0))
 
 	# write.csv(RM_slope_modeling_data, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/RM_slope_modeling_data.csv", row.names = FALSE)
 
 # Non-parametric permutation testing
 
-nperm <- 999
+nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutations, this code takes about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM.
 
-Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 4 terms to test in this model.
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 4 terms to test in this model, so we'll need 4 dataframes to store the randomized F-value test results.
 	Rand_results_con_myc <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
 
-for(i in 1:nperm) # For loop for 999 randomized F-values
+for(i in 1:nperm) # For loop for randomized F-values
 {
 
 	RM_slope_modeling_data <- RM_slope_modeling_data %>%
 					group_by(Cohort.Year, SiteID) %>%
-					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n()))
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
 
 		# Test_data <- RM_slope_modeling_data %>%
 							# filter(Cohort.Year == 2002, SiteID == 3) %>%
@@ -125,11 +125,11 @@ for(i in 1:nperm) # For loop for 999 randomized F-values
 			# as.data.frame(Test_data)
 	
 	rm_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ rm_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
-                    hetMyc_15m:log10(Count + 1) + log(Prior_3_year_cohorts_counts + 1):log10(Count + 1) +
+                    hetMyc_15m:log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1):log10(Count + 1) +
                     (1 | SiteID) + (1 | Cohort.Year),
 					data = RM_slope_modeling_data)
 					
-	Rand_aov <- anova(rm_mod_BA_rand)
+	Rand_aov <- anova(rm_mod_BA_rand) # Save results to store F-values below
 					
 					Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
 					Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
@@ -138,7 +138,7 @@ for(i in 1:nperm) # For loop for 999 randomized F-values
 					
 }
 
-	# Permutation test with real data
+	# LM test with real data. We will compare these F-values to those from the permutations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
 			
 	rm_mod_BA_true <- lmer(GLM.Slope.Estimate ~ rm_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
                     hetMyc_15m:log10(Count + 1) + log(Prior_3_year_cohorts_counts + 1):log10(Count + 1) +
@@ -177,10 +177,12 @@ for(i in 1:nperm) # For loop for 999 randomized F-values
 		
 	P_values_het_myc
 		hist(All_results_het_myc) # vs
-		All_results_het_myc
+		Obs_results_het_myc
 		
 	P_values_other_seedlings
 		hist(All_results_other_seedlings)
 		Obs_results_other_seedlings
 	
+	r.squaredGLMM(rm_mod_BA_true)
 	
+# Plotting - WIP	
