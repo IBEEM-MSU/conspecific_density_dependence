@@ -1,3 +1,4 @@
+
 #################################################
 ####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
@@ -13,6 +14,7 @@ library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Pa
 library(dplyr)
 library(ggplot2)
 library(DHARMa)
+library(broom.mixed)
 
 ### Most complex model to fit (15-m radius)
 ###  Biotic model of one-year survivorship - with adult densities (BA)
@@ -169,61 +171,30 @@ rm_surv$log0yr <- log(rm_surv$total_count_yr0)
 
 #################### 15-m radius
 rmBA_15m <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    rm_15m:log0yr:conMycNS_15m + 
-                    rm_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = rm_surv)
-summary(rmBA_15m)
-
-## Simplified to exclude 3-way interactions
-rmBA_15m2 <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr + 
                      hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
                      (1 | Site) + (1 | survYear),
                    family = poisson(link = "log"), data = rm_surv)
-summary(rmBA_15m2)
+summary(rmBA_15m)
 
 ## VIFs and pseudo r-squared values
-car::vif(rmBA_15m) # all < 10
+car::vif(rmBA_15m) # all < 2
 r.squaredGLMM(rmBA_15m) 
-car::vif(rmBA_15m2) # all < 2
-r.squaredGLMM(rmBA_15m2) 
-## AIC
-aic_values <- AIC(rmBA_15m, rmBA_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = rmBA_15m, n = 1000)
-# # QQ plot of residuals
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = rmBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
-# (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(Prior3_counts + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
 rmProp_15m <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      propRM_15m:log0yr:propEMF_15m +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = rm_surv)
-summary(rmProp_15m)
-
-## Simplified to exclude 3-way interactions
-rmProp_15m2 <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
                        log(Prior3_counts + 1):log0yr +
                        (1 | Site) + (1 | survYear),
                      family = poisson(link = "log"), data = rm_surv)
-summary(rmProp_15m2)
+summary(rmProp_15m)
 
 ## VIFs and pseudo r-squared values
-car::vif(rmProp_15m) # All < 9
+car::vif(rmProp_15m) # All < 2
 r.squaredGLMM(rmProp_15m) 
-car::vif(rmProp_15m2) # All < 2
-r.squaredGLMM(rmProp_15m2) 
-## AIC
-aic_values <- AIC(rmProp_15m, rmProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) 
 
 
 #################################################
@@ -257,62 +228,31 @@ sm_surv$survYear = as.factor(sm_surv$survYear)
 sm_surv$log0yr <- log(sm_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model
 smBA_15m <- glmer(total_count_yr1 ~ sm_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    sm_15m:log0yr:conMycNS_15m + 
-                    sm_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = sm_surv)
 summary(smBA_15m)
 
-## Simplified to exclude 3-way interactions
-smBA_15m2 <- glmer(total_count_yr1 ~ sm_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = sm_surv)
-summary(smBA_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(smBA_15m) # some >10
+car::vif(smBA_15m) # all < 2
 r.squaredGLMM(smBA_15m) 
-car::vif(smBA_15m2) # all < 2
-r.squaredGLMM(smBA_15m2) 
-## AIC
-aic_values <- AIC(smBA_15m, smBA_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = smBA_15m, n = 1000)
-# # QQ plot of residuals
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = smBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 smProp_15m <- glmer(total_count_yr1 ~ propsm_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propsm_15m:log0yr:propEMF_15m +
                       (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = sm_surv)
 summary(smProp_15m)
 
-## Simplified to exclude 3-way interactions
-smProp_15m2 <- glmer(total_count_yr1 ~ propsm_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = sm_surv)
-summary(smProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(smProp_15m) # all < 3
+car::vif(smProp_15m) # All < 2
 r.squaredGLMM(smProp_15m) 
-car::vif(smProp_15m2) # all < 2
-r.squaredGLMM(smProp_15m2) 
-## AIC
-aic_values <- AIC(smProp_15m, smProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 #################################################
 #################################################
@@ -344,62 +284,32 @@ ab_surv$survYear = as.factor(ab_surv$survYear)
 #### Log transfoab the count of 0-yr old seedlings
 ab_surv$log0yr <- log(ab_surv$total_count_yr0)  
 
-#################### 15-m radius
-## Full model - no RE of Site
+#################### 15-m radius - no RE of site
 abBA_15m <- glmer(total_count_yr1 ~ ab_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    ab_15m:log0yr:conMycNS_15m + 
-                    ab_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
-                    (1 | survYear),
+                     (1 | survYear),
                   family = poisson(link = "log"), data = ab_surv)
 summary(abBA_15m)
 
-## Simplified to exclude 3-way interactions
-abBA_15m2 <- glmer(total_count_yr1 ~ ab_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | survYear),
-                   family = poisson(link = "log"), data = ab_surv)
-summary(abBA_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(abBA_15m) # some >10
+car::vif(abBA_15m) # all < 5
 r.squaredGLMM(abBA_15m) 
-car::vif(abBA_15m2) # all < 5
-r.squaredGLMM(abBA_15m2) 
-## AIC
-aic_values <- AIC(abBA_15m, abBA_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = abBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = abBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 abProp_15m <- glmer(total_count_yr1 ~ propab_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propab_15m:log0yr:propEMF_15m +
                       (1 | survYear),
                     family = poisson(link = "log"), data = ab_surv)
 summary(abProp_15m)
 
-## Simplified to exclude 3-way interactions
-abProp_15m2 <- glmer(total_count_yr1 ~ propab_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | survYear),
-                     family = poisson(link = "log"), data = ab_surv)
-summary(abProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(abProp_15m) # some >10
+car::vif(abProp_15m) # All < 2
 r.squaredGLMM(abProp_15m) 
-car::vif(abProp_15m2) # all < 4
-r.squaredGLMM(abProp_15m2) 
-## AIC
-aic_values <- AIC(abProp_15m, abProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) 
 
 
 #################################################
@@ -433,61 +343,31 @@ wa_surv$survYear = as.factor(wa_surv$survYear)
 wa_surv$log0yr <- log(wa_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model
 waBA_15m <- glmer(total_count_yr1 ~ wa_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    wa_15m:log0yr:conMycNS_15m + 
-                    wa_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = wa_surv)
 summary(waBA_15m)
 
-## Simplified to exclude 3-way interactions
-waBA_15m2 <- glmer(total_count_yr1 ~ wa_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = wa_surv)
-summary(waBA_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(waBA_15m) # some >10
+car::vif(waBA_15m) # all < 2
 r.squaredGLMM(waBA_15m) 
-car::vif(waBA_15m2) # all < 2
-r.squaredGLMM(waBA_15m2) 
-## AIC
-aic_values <- AIC(waBA_15m, waBA_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ]) # wa_mod_15m1 is best
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = waBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = waBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 waProp_15m <- glmer(total_count_yr1 ~ propwa_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propwa_15m:log0yr:propEMF_15m +
                       (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = wa_surv)
 summary(waProp_15m)
 
-## Simplified to exclude 3-way interactions
-waProp_15m2 <- glmer(total_count_yr1 ~ propwa_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = wa_surv)
-summary(waProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(waProp_15m) # all < 7
+car::vif(waProp_15m) # All < 2
 r.squaredGLMM(waProp_15m) 
-car::vif(waProp_15m2) # all < 2
-r.squaredGLMM(waProp_15m2) 
-## AIC
-aic_values <- AIC(waProp_15m, waProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 
 #################################################
@@ -521,57 +401,31 @@ bc_surv$survYear = as.factor(bc_surv$survYear)
 bc_surv$log0yr <- log(bc_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model - DOES NOT CONVERGE
 bcBA_15m <- glmer(total_count_yr1 ~ bc_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    bc_15m:log0yr:conMycNS_15m + 
-                    bc_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = bc_surv)
 summary(bcBA_15m)
 
-## Simplified to exclude 3-way interactions
-bcBA_15m2 <- glmer(total_count_yr1 ~ bc_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = bc_surv)
-summary(bcBA_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(bcBA_15m) # some >10
-# r.squaredGLMM(bcBA_15m) 
-car::vif(bcBA_15m2) # all < 5
-r.squaredGLMM(bcBA_15m2) 
+car::vif(bcBA_15m) # all < 5
+r.squaredGLMM(bcBA_15m) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = bcBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = bcBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 bcProp_15m <- glmer(total_count_yr1 ~ propbc_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propbc_15m:log0yr:propEMF_15m +
                       (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = bc_surv)
 summary(bcProp_15m)
 
-## Simplified to exclude 3-way interactions
-bcProp_15m2 <- glmer(total_count_yr1 ~ propbc_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = bc_surv)
-summary(bcProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(bcProp_15m) # one > 10
+car::vif(bcProp_15m) # All < 2
 r.squaredGLMM(bcProp_15m) 
-car::vif(bcProp_15m2) # all < 4
-r.squaredGLMM(bcProp_15m2) 
-## AIC
-aic_values <- AIC(bcProp_15m, bcProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 
 #################################################
@@ -605,58 +459,31 @@ nro_surv$survYear = as.factor(nro_surv$survYear)
 nro_surv$log0yr <- log(nro_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model - DOES NOT CONVERGE
 nroBA_15m <- glmer(total_count_yr1 ~ nro_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     nro_15m:log0yr:conMycNS_15m + 
-                     nro_15m:log0yr:hetMyc_15m + 
-                     hetMyc_15m:log0yr:conMycNS_15m +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = nro_surv)
+                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = nro_surv)
 summary(nroBA_15m)
 
-## Simplified to exclude 3-way interactions
-nroBA_15m2 <- glmer(total_count_yr1 ~ nro_15m:log0yr + conMycNS_15m:log0yr + 
-                      hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = nro_surv)
-summary(nroBA_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(nroBA_15m) # some >10
-# r.squaredGLMM(nroBA_15m) 
-car::vif(nroBA_15m2) # all < 3
-r.squaredGLMM(nroBA_15m2) 
+car::vif(nroBA_15m) # all < 3
+r.squaredGLMM(nroBA_15m) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = nroBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = nroBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 nroProp_15m <- glmer(total_count_yr1 ~ propnro_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       propnro_15m:log0yr:propEMF_15m +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = nro_surv)
+                      log(Prior3_counts + 1):log0yr +
+                      (1 | Site) + (1 | survYear),
+                    family = poisson(link = "log"), data = nro_surv)
 summary(nroProp_15m)
 
-## Simplified to exclude 3-way interactions - strong correlation btwn propnro_15m and propEMF_15m 
-nroProp_15m2 <- glmer(total_count_yr1 ~ propnro_15m:log0yr + propEMF_15m:log0yr + 
-                        log(Prior3_counts + 1):log0yr +
-                        (1 | Site) + (1 | survYear),
-                      family = poisson(link = "log"), data = nro_surv)
-summary(nroProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(nroProp_15m) # many > 15
+car::vif(nroProp_15m) # High - bad model
 r.squaredGLMM(nroProp_15m) 
-car::vif(nroProp_15m2) # some >10
-r.squaredGLMM(nroProp_15m2) 
-## AIC
-aic_values <- AIC(nroProp_15m, nroProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
-
 
 #################################################
 #################################################
@@ -689,57 +516,31 @@ bonro_surv$survYear = as.factor(bonro_surv$survYear)
 bonro_surv$log0yr <- log(bonro_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model - DOES NOT CONVERGE
 bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m:log0yr + conMycNS_15m:log0yr + 
-                       hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                       bonro_15m:log0yr:conMycNS_15m + 
-                       bonro_15m:log0yr:hetMyc_15m + 
-                       hetMyc_15m:log0yr:conMycNS_15m +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = bonro_surv)
+                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = bonro_surv)
 summary(bonroBA_15m)
 
-## Simplified to exclude 3-way interactions
-bonroBA_15m2 <- glmer(total_count_yr1 ~ bonro_15m:log0yr + conMycNS_15m:log0yr + 
-                        hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                        (1 | Site) + (1 | survYear),
-                      family = poisson(link = "log"), data = bonro_surv)
-summary(bonroBA_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(bonroBA_15m) # some >10
-# r.squaredGLMM(bonroBA_15m) 
-car::vif(bonroBA_15m2) # all < 6
-r.squaredGLMM(bonroBA_15m2) 
+car::vif(bonroBA_15m) # all < 6
+r.squaredGLMM(bonroBA_15m) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = bonroBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = bonroBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 bonroProp_15m <- glmer(total_count_yr1 ~ propbonro_15m:log0yr + propEMF_15m:log0yr + 
-                         log(Prior3_counts + 1):log0yr +
-                         propbonro_15m:log0yr:propEMF_15m +
-                         (1 | Site) + (1 | survYear),
-                       family = poisson(link = "log"), data = bonro_surv)
+                      log(Prior3_counts + 1):log0yr +
+                      (1 | Site) + (1 | survYear),
+                    family = poisson(link = "log"), data = bonro_surv)
 summary(bonroProp_15m)
 
-## Simplified to exclude 3-way interactions 
-bonroProp_15m2 <- glmer(total_count_yr1 ~ propbonro_15m:log0yr + propEMF_15m:log0yr + 
-                          log(Prior3_counts + 1):log0yr +
-                          (1 | Site) + (1 | survYear),
-                        family = poisson(link = "log"), data = bonro_surv)
-summary(bonroProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(bonroProp_15m) # many > 20
+car::vif(bonroProp_15m) # High - bad model
 r.squaredGLMM(bonroProp_15m) 
-car::vif(bonroProp_15m2) # some >15
-r.squaredGLMM(bonroProp_15m2) 
-## AIC
-aic_values <- AIC(bonroProp_15m, bonroProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 
 #################################################
@@ -773,57 +574,31 @@ wo_surv$survYear = as.factor(wo_surv$survYear)
 wo_surv$log0yr <- log(wo_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model - DOES NOT CONVERGE
 woBA_15m <- glmer(total_count_yr1 ~ wo_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    wo_15m:log0yr:conMycNS_15m + 
-                    wo_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = wo_surv)
 summary(woBA_15m)
 
-## Simplified to exclude 3-way interactions
-woBA_15m2 <- glmer(total_count_yr1 ~ wo_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = wo_surv)
-summary(woBA_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(woBA_15m) # some >10
-# r.squaredGLMM(woBA_15m) 
-car::vif(woBA_15m2) # all < 3
-r.squaredGLMM(woBA_15m2) 
+car::vif(woBA_15m) # all < 3
+r.squaredGLMM(woBA_15m) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = woBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = woBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
 ### Biotic model of one-year survivorship - with adult proportions (%ECM)
 woProp_15m <- glmer(total_count_yr1 ~ propwo_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propwo_15m:log0yr:propEMF_15m +
                       (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = wo_surv)
 summary(woProp_15m)
 
-## Simplified to exclude 3-way interactions - correlation btwn propwo_15m and propEMF_15m
-woProp_15m2 <- glmer(total_count_yr1 ~ propwo_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = wo_surv)
-summary(woProp_15m2)
-
 ## VIFs and pseudo r-squared values
-car::vif(woProp_15m) # many > 19
+car::vif(woProp_15m) # Very high
 r.squaredGLMM(woProp_15m) 
-car::vif(woProp_15m2) # some >19
-r.squaredGLMM(woProp_15m2) 
-## AIC
-aic_values <- AIC(woProp_15m, woProp_15m2)
-# Sort AIC values from lowest to highest and show
-print(aic_values[order(aic_values$AIC), ])
 
 
 #################################################
@@ -857,53 +632,31 @@ iw_surv$survYear = as.factor(iw_surv$survYear)
 iw_surv$log0yr <- log(iw_surv$total_count_yr0)  
 
 #################### 15-m radius
-## Full model - no RE of Site - DOES NOT CONVERGE
 iwBA_15m <- glmer(total_count_yr1 ~ iw_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    iw_15m:log0yr:conMycNS_15m + 
-                    iw_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
-                    (1 | survYear),
+                    (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = iw_surv)
 summary(iwBA_15m)
 
-## Simplified to exclude 3-way interactions
-iwBA_15m2 <- glmer(total_count_yr1 ~ iw_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | survYear),
-                   family = poisson(link = "log"), data = iw_surv)
-summary(iwBA_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(iwBA_15m) 
-# r.squaredGLMM(iwBA_15m) 
-car::vif(iwBA_15m2) # all < 9
-r.squaredGLMM(iwBA_15m2) 
+car::vif(iwBA_15m) # all < 8
+r.squaredGLMM(iwBA_15m) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = iwBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = iwBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
-### Biotic model of one-year survivorship - with adult proportions (%ECM) - NEARLY UNIDENTIFIABLE - NOT TRUSTWORTHY
+### Biotic model of one-year survivorship - with adult proportions (%ECM)
 iwProp_15m <- glmer(total_count_yr1 ~ propiw_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propiw_15m:log0yr:propEMF_15m +
-                      (1 | survYear),
+                      (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = iw_surv)
 summary(iwProp_15m)
 
-## Simplified to exclude 3-way interactions
-iwProp_15m2 <- glmer(total_count_yr1 ~ propiw_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | survYear),
-                     family = poisson(link = "log"), data = iw_surv)
-summary(iwProp_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(iwProp_15m) # all < 2
-# r.squaredGLMM(iwProp_15m) 
-car::vif(iwProp_15m2) # all < 2
-r.squaredGLMM(iwProp_15m2) 
+car::vif(iwProp_15m) # All < 2
+r.squaredGLMM(iwProp_15m) 
 
 
 #################################################
@@ -936,55 +689,63 @@ bs_surv$survYear = as.factor(bs_surv$survYear)
 #### Log transfobs the count of 0-yr old seedlings
 bs_surv$log0yr <- log(bs_surv$total_count_yr0)  
 
-#################### 15-m radius
-## Full model - no RE of Site - DOES NOT CONVERGE
+#################### 15-m radius - DOES NOT RUN
 bsBA_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr + conMycNS_15m:log0yr + 
                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    bs_15m:log0yr:conMycNS_15m + 
-                    bs_15m:log0yr:hetMyc_15m + 
-                    hetMyc_15m:log0yr:conMycNS_15m +
                     (1 | survYear),
                   family = poisson(link = "log"), data = bs_surv)
 summary(bsBA_15m)
 
-## Simplified to exclude 3-way interactions - also does not converge...
-bsBA_15m2 <- glmer(total_count_yr1 ~ bs_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                     (1 | survYear),
-                   family = poisson(link = "log"), data = bs_surv)
-summary(bsBA_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(bsBA_15m) 
-# r.squaredGLMM(bsBA_15m) 
-car::vif(bsBA_15m2) # all < 9 - but not identifiable
-r.squaredGLMM(bsBA_15m2) 
+car::vif(bsBA_15m) # all < 2
+r.squaredGLMM(bsBA_15m) 
 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
-# plotQQunif(sim_res)
+# Simulate residuals
+sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
+# QQ plot of residuals
+plotQQunif(sim_res)
 
-### Biotic model of one-year survivorship - with adult proportions (%ECM) - does not converge
+### Biotic model of one-year survivorship - with adult proportions (%ECM) - NOT WORKING
 bsProp_15m <- glmer(total_count_yr1 ~ propbs_15m:log0yr + propEMF_15m:log0yr + 
                       log(Prior3_counts + 1):log0yr +
-                      propbs_15m:log0yr:propEMF_15m +
-                      (1 | survYear),
+                      (1 | Site) + (1 | survYear),
                     family = poisson(link = "log"), data = bs_surv)
 summary(bsProp_15m)
 
-## Simplified to exclude 3-way interactions - does not converge
-bsProp_15m2 <- glmer(total_count_yr1 ~ propbs_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | survYear),
-                     family = poisson(link = "log"), data = bs_surv)
-summary(bsProp_15m2)
-
 ## VIFs and pseudo r-squared values
-# car::vif(bsProp_15m) # all < 2
-# r.squaredGLMM(bsProp_15m) 
-car::vif(bsProp_15m2) # all < 2
-r.squaredGLMM(bsProp_15m2) 
+car::vif(bsProp_15m) # All < 2
+r.squaredGLMM(bsProp_15m) 
 
+
+
+
+
+
+
+######## Plotting
+
+# Extract fixed effects and exclude intercept
+fixed_effects <- broom.mixed::tidy(rmBA_15m, 
+                                   effects = "fixed", conf.int = FALSE) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    estimate_exp = exp(estimate),
+    se_exp = estimate_exp * std.error,  # SE on exp scale via delta method
+    lower = estimate_exp - se_exp,
+    upper = estimate_exp + se_exp
+  )
+
+# Plot
+ggplot(fixed_effects, aes(x = reorder(term, estimate_exp), y = estimate_exp)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2) +
+  coord_flip() +
+  labs(
+    title = "Exponentiated Fixed Effects (±1 SE)",
+    y = "Multiplicative Effect on Expected Count",
+    x = NULL
+  ) +
+  theme_minimal()
 
 
 # ##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
