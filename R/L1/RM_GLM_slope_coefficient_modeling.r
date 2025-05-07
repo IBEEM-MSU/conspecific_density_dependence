@@ -98,7 +98,8 @@ RM_slope_modeling_data <- RM_GLM_slopes %>%
 					select(SiteID.x, quadrat.x, Cohort.Year.x, ba_joiner, GLM.Slope.Estimate, Count, Prior_3_year_cohorts_counts, Prior_2_year_cohorts_and_new_1st_year_counts,  Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts, rm_15m, conMycNS_15m, hetMyc_15m) %>%
 					rename("SiteID" = c(1), "quadrat" = c(2), "Cohort.Year" = c(3)) %>%
 					unique() %>% 
-					mutate(ECM_prop_15 = hetMyc_15m/(rm_15m + conMycNS_15m + hetMyc_15m), rm_prop_15 = rm_15m/(rm_15m + conMycNS_15m + hetMyc_15m), Avg_3_yr_prior_cohort_counts = replace_na((Prior_3_year_cohorts_counts + Prior_2_year_cohorts_and_new_1st_year_counts + Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts)/3, 0))
+					mutate(ECM_prop_15 = hetMyc_15m/(rm_15m + conMycNS_15m + hetMyc_15m), rm_prop_15 = rm_15m/(rm_15m + conMycNS_15m + hetMyc_15m), Avg_3_yr_prior_cohort_counts = replace_na((Prior_3_year_cohorts_counts + Prior_2_year_cohorts_and_new_1st_year_counts + Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts)/3, 0)) %>%
+					replace(is.na(.), 0)
 
 	# write.csv(RM_slope_modeling_data, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/RM_slope_modeling_data.csv", row.names = FALSE)
 
