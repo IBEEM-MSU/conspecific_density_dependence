@@ -15,6 +15,8 @@ library(dplyr)
 library(ggplot2)
 library(DHARMa)
 library(broom.mixed)
+library(tibble)
+
 
 ### Most complex model to fit (15-m radius)
 ###  Biotic model of one-year survivorship - with adult densities (BA)
@@ -168,10 +170,12 @@ rm_surv$survYear = as.factor(rm_surv$survYear)
 
 #### Log transform the count of 0-yr old seedlings
 rm_surv$log0yr <- log(rm_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+rm_surv$logPrior = log(rm_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 rmBA_15m <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr + 
-                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                     hetMyc_15m:log0yr + logPrior:log0yr +
                      (1 | Site) + (1 | survYear),
                    family = poisson(link = "log"), data = rm_surv)
 summary(rmBA_15m)
@@ -224,12 +228,14 @@ sm_surv$propsm_15m = (sm_surv$sm_15m / (sm_surv$hetMyc_15m + sm_surv$conMyc_15m)
 sm_surv$Site = as.factor(sm_surv$Site)
 sm_surv$survYear = as.factor(sm_surv$survYear)
 
-#### Log transfosm the count of 0-yr old seedlings
+#### Log transform the count of 0-yr old seedlings
 sm_surv$log0yr <- log(sm_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+sm_surv$logPrior = log(sm_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 smBA_15m <- glmer(total_count_yr1 ~ sm_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = sm_surv)
 summary(smBA_15m)
@@ -281,8 +287,10 @@ ab_surv$propab_15m = (ab_surv$ab_15m / (ab_surv$hetMyc_15m + ab_surv$conMyc_15m)
 ab_surv$Site = as.factor(ab_surv$Site)
 ab_surv$survYear = as.factor(ab_surv$survYear)
 
-#### Log transfoab the count of 0-yr old seedlings
-ab_surv$log0yr <- log(ab_surv$total_count_yr0)  
+#### Log transform the count of 0-yr old seedlings
+ab_surv$log0yr <- log(ab_surv$total_count_yr0) 
+## Calculate the log-transformed prior 3 year count variable + 1
+ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
 
 #################### 15-m radius - no RE of site
 abBA_15m <- glmer(total_count_yr1 ~ ab_15m:log0yr + conMycNS_15m:log0yr + 
@@ -339,8 +347,10 @@ wa_surv$propwa_15m = (wa_surv$wa_15m / (wa_surv$hetMyc_15m + wa_surv$conMyc_15m)
 wa_surv$Site = as.factor(wa_surv$Site)
 wa_surv$survYear = as.factor(wa_surv$survYear)
 
-#### Log transfowa the count of 0-yr old seedlings
+#### Log transform the count of 0-yr old seedlings
 wa_surv$log0yr <- log(wa_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 waBA_15m <- glmer(total_count_yr1 ~ wa_15m:log0yr + conMycNS_15m:log0yr + 
@@ -689,117 +699,370 @@ bs_surv$survYear = as.factor(bs_surv$survYear)
 #### Log transfobs the count of 0-yr old seedlings
 bs_surv$log0yr <- log(bs_surv$total_count_yr0)  
 
-#################### 15-m radius - DOES NOT RUN
-bsBA_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-                    (1 | survYear),
-                  family = poisson(link = "log"), data = bs_surv)
-summary(bsBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bsBA_15m) # all < 2
-r.squaredGLMM(bsBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM) - NOT WORKING
-bsProp_15m <- glmer(total_count_yr1 ~ propbs_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = bs_surv)
-summary(bsProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bsProp_15m) # All < 2
-r.squaredGLMM(bsProp_15m) 
-
-
+# #################### 15-m radius - DOES NOT RUN
+# bsBA_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr + conMycNS_15m:log0yr + 
+#                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+#                     (1 | survYear),
+#                   family = poisson(link = "log"), data = bs_surv)
+# summary(bsBA_15m)
+# 
+# ## VIFs and pseudo r-squared values
+# car::vif(bsBA_15m) # all < 2
+# r.squaredGLMM(bsBA_15m) 
+# 
+# # Simulate residuals
+# sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
+# # QQ plot of residuals
+# plotQQunif(sim_res)
+# 
+# ### Biotic model of one-year survivorship - with adult proportions (%ECM) - NOT WORKING
+# bsProp_15m <- glmer(total_count_yr1 ~ propbs_15m:log0yr + propEMF_15m:log0yr + 
+#                       log(Prior3_counts + 1):log0yr +
+#                       (1 | Site) + (1 | survYear),
+#                     family = poisson(link = "log"), data = bs_surv)
+# summary(bsProp_15m)
+# 
+# ## VIFs and pseudo r-squared values
+# car::vif(bsProp_15m) # All < 2
+# r.squaredGLMM(bsProp_15m) 
 
 
+################################################ 
+######## Plotting model coefficients +/- SE
+# Function to pull out relevant terms
+extract_model_summary <- function(model, species_abbrev) {
+  broom.mixed::tidy(model, effects = "fixed") %>%
+    filter(term != "(Intercept)") %>%
+    mutate(species = species_abbrev) %>%
+    select(species, term, estimate, std.error, statistic, p.value)
+}
+
+# Create a list of our models
+models <- list(rm = rmBA_15m, sm = smBA_15m, ab = abBA_15m, wa = waBA_15m,
+               bc = bcBA_15m, nro = nroBA_15m, bonro = bonroBA_15m,
+               wo = woBA_15m, iw = iwBA_15m)
+
+# Map terms by model
+allSp_results <- purrr::imap_dfr(models, extract_model_summary)
+
+# Add uniform names for covariates across species
+allSp_results <- allSp_results %>%
+  rowwise() %>%
+  mutate(component = case_when(
+    term == "log0yr:conMycNS_15m" ~ "Conmycorrhizal_BA",
+    term == "log0yr:hetMyc_15m" ~ "Heteromycorrhizal_BA",
+    term == "log0yr:log(Prior3_counts + 1)" ~ "Seedling_Density",
+    grepl(paste0("^", species, "_15m:log0yr$"), term) ~ "Conspecific_BA",
+    TRUE ~ NA_character_
+  )) %>%
+  ungroup()
+# Make into an ordered factor
+allSp_results$component = factor(allSp_results$component,
+                        levels = c( "Seedling_Density",
+                        "Heteromycorrhizal_BA",
+                        "Conmycorrhizal_BA",
+                        "Conspecific_BA"))
+
+# Add AM or ECM to each row by species
+allSp_results$Myc_Type = ifelse(allSp_results$species == "rm", "AM",
+                         ifelse(allSp_results$species == "sm", "AM",
+                         ifelse(allSp_results$species == "wa", "AM",
+                         ifelse(allSp_results$species == "bc", "AM","ECM"))))
+
+# Add column for significance of parameter estimate
+allSp_results$Significant = ifelse(allSp_results$p.value <= 0.05, "yes", "no")
+
+View(allSp_results)
+
+######################
+## Create a color vector with red shades for AM and blue shades for ECM
+species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
+  nro = "#1F74B1", wo = "#244D7F",
+  bc = "#FEB1A3", rm = "#F77964",  
+  sm = "#D2241F", wa = "#AE123A")
+
+# Create ordered factor for species by Myc_Type group and alphabetical within each
+allSp_results <- allSp_results %>%
+  mutate(species_label = factor(
+      species,levels = c(
+        sort(unique(species[Myc_Type == "AM"])),
+        sort(unique(species[Myc_Type == "ECM"])))),
+    component = factor(component, levels = c(
+      "Seedling_Density", "Heteromycorrhizal_BA", 
+      "Conmycorrhizal_BA", "Conspecific_BA")),
+    Significant = factor(Significant, levels = c("yes", "no")))
+
+# Filter to exclude one outlier
+allSp_results2 = dplyr::filter(allSp_results, estimate >= -5)
+
+## Calculate mean parameter estimates for AM versus ECM
+group_means <- allSp_results2 %>%
+  group_by(Myc_Type, component) %>%
+  summarise(
+    mean_estimate = mean(estimate, na.rm = TRUE),
+    std.error = sd(estimate, na.rm = TRUE) / sqrt(n()),  
+    .groups = "drop")
+
+# Plot - All Species
+ggplot(allSp_results2, aes(x = estimate,  y = component, 
+                  color = species_label,  shape = Significant)) +
+  geom_point(size = 2.5, position = position_dodge(width = 0.3)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
+  geom_errorbarh(aes(xmin = estimate - std.error, 
+                     xmax = estimate + std.error), 
+                 height = 0, position = position_dodge(width = 0.3)) +
+  ## Add ECM and AM group means
+  geom_point(data = group_means, 
+             aes(x = mean_estimate, y = component, shape = Myc_Type), 
+             color = "black", size = 3, inherit.aes = FALSE) +
+  geom_errorbarh(data = group_means,
+                 aes(xmin = mean_estimate - std.error, 
+                     xmax = mean_estimate + std.error, y = component),
+                 color = "black", height = 0, inherit.aes = FALSE) +
+  scale_color_manual(values = species_cols) +
+  scale_shape_manual(values = c("yes" = 16, "no" = 1, 
+              "AM" = 17, "ECM" = 15)) +  # triangle and square for means
+  theme_bw() +
+  labs(x = "Effect Size ± SE (Log Count Scale)", 
+       y = "", color = "Species", shape = "Significant / Group Mean") +
+  theme(legend.position = "right",
+        axis.title.x = element_text(size=12,color = "black"),
+        axis.text.x = element_text(size=10,color = "black"),
+        axis.text.y = element_text(size=11,color = "black"))
 
 
 
-######## Plotting
+# Plot - ECM only
+allSp_results2 %>% filter(., Myc_Type == "ECM")  %>% 
+ggplot(., aes(x = estimate,  y = component, 
+                           color = species_label,  shape = Significant)) +
+  geom_point(size = 2.5, position = position_dodge(width = 0.3)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
+  geom_errorbarh(aes(xmin = estimate - std.error, 
+                     xmax = estimate + std.error), 
+                 height = 0, position = position_dodge(width = 0.3)) +
+  ## Add ECM and AM group means
+  geom_point(data = group_means, 
+             aes(x = mean_estimate, y = component, shape = Myc_Type), 
+             color = "black", size = 3, inherit.aes = FALSE) +
+  geom_errorbarh(data = group_means,
+                 aes(xmin = mean_estimate - std.error, 
+                     xmax = mean_estimate + std.error, y = component),
+                 color = "black", height = 0, inherit.aes = FALSE) +
+  scale_color_manual(values = species_cols) +
+  scale_shape_manual(values = c("yes" = 16, "no" = 1, 
+                                "AM" = 17, "ECM" = 15)) + 
+  theme_bw() +
+  labs(x = "Effect Size ± SE (Log Count Scale)", 
+       y = "", color = "Species", shape = "Significant / Group Mean") +
+  theme(legend.position = "right",
+        axis.title.x = element_text(size=12,color = "black"),
+        axis.text.x = element_text(size=10,color = "black"),
+        axis.text.y = element_text(size=11,color = "black"))
 
-# Extract fixed effects and exclude intercept
-fixed_effects <- broom.mixed::tidy(rmBA_15m, 
-                                   effects = "fixed", conf.int = FALSE) %>%
-  filter(term != "(Intercept)") %>%
-  mutate(
-    estimate_exp = exp(estimate),
-    se_exp = estimate_exp * std.error,  # SE on exp scale via delta method
-    lower = estimate_exp - se_exp,
-    upper = estimate_exp + se_exp
+# Plot - AM only
+allSp_results2 %>% filter(., Myc_Type == "AM")  %>% 
+  ggplot(., aes(x = estimate,  y = component, 
+                color = species_label,  shape = Significant)) +
+  geom_point(size = 2.5, position = position_dodge(width = 0.3)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
+  geom_errorbarh(aes(xmin = estimate - std.error, 
+                     xmax = estimate + std.error), 
+                 height = 0, position = position_dodge(width = 0.3)) +
+  ## Add ECM and AM group means
+  geom_point(data = group_means, 
+             aes(x = mean_estimate, y = component, shape = Myc_Type), 
+             color = "black", size = 3, inherit.aes = FALSE) +
+  geom_errorbarh(data = group_means,
+                 aes(xmin = mean_estimate - std.error, 
+                     xmax = mean_estimate + std.error, y = component),
+                 color = "black", height = 0, inherit.aes = FALSE) +
+  scale_color_manual(values = species_cols) +
+  scale_shape_manual(values = c("yes" = 16, "no" = 1, 
+                                "AM" = 17, "ECM" = 15)) + 
+  theme_bw() +
+  labs(x = "Effect Size ± SE (Log Count Scale)", 
+       y = "", color = "Species", shape = "Significant / Group Mean") +
+  theme(legend.position = "right",
+        axis.title.x = element_text(size=12,color = "black"),
+        axis.text.x = element_text(size=10,color = "black"),
+        axis.text.y = element_text(size=11,color = "black"))
+
+
+########################################################################
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
+########################################################################
+########################################################################
+######### RED MAPLE EXAMPLE
+######### Median only
+# Step 1: Create a sequence of basal area values
+ba_seq_list <- list(
+  rm_15m = seq(0, max(rm_surv$rm_15m, na.rm = TRUE), length.out = 100),
+  conMycNS_15m = seq(0, max(rm_surv$conMycNS_15m, na.rm = TRUE), length.out = 100),
+  hetMyc_15m = seq(0, max(rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
+)
+
+# Step 2: Get median values of other covariates
+med_vals <- list(
+  log0yr = median(rm_surv$log0yr, na.rm = TRUE),
+  logPrior = median(rm_surv$logPrior, na.rm = TRUE),
+  rm_15m = median(rm_surv$rm_15m, na.rm = TRUE),
+  conMycNS_15m = median(rm_surv$conMycNS_15m, na.rm = TRUE),
+  hetMyc_15m = median(rm_surv$hetMyc_15m, na.rm = TRUE)
+)
+
+# Step 3: Prediction data function
+make_pred_data_median <- function(focal_var, ba_seq) {
+  n <- length(ba_seq)
+  
+  data.frame(
+    rm_15m = if (focal_var == "rm_15m") ba_seq else 
+      rep(med_vals$rm_15m, n),
+    conMycNS_15m = if (focal_var == "conMycNS_15m") ba_seq else 
+      rep(med_vals$conMycNS_15m, n),
+    hetMyc_15m = if (focal_var == "hetMyc_15m") ba_seq else 
+      rep(med_vals$hetMyc_15m, n),
+    log0yr = rep(med_vals$log0yr, n),
+    logPrior = rep(med_vals$logPrior, n),
+    Site = rep(rm_surv$Site[1], n),
+    survYear = rep(rm_surv$survYear[1], n),
+    focal_label = rep(focal_var, n)
   )
+}
 
-# Plot
-ggplot(fixed_effects, aes(x = reorder(term, estimate_exp), y = estimate_exp)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2) +
-  coord_flip() +
-  labs(
-    title = "Exponentiated Fixed Effects (±1 SE)",
-    y = "Multiplicative Effect on Expected Count",
-    x = NULL
-  ) +
-  theme_minimal()
+# Step 4: Generate prediction data
+pred_data <- bind_rows(
+  make_pred_data_median("rm_15m", ba_seq_list$rm_15m),
+  make_pred_data_median("conMycNS_15m", ba_seq_list$conMycNS_15m),
+  make_pred_data_median("hetMyc_15m", ba_seq_list$hetMyc_15m)
+)
+
+# Step 5: Predict using only fixed effects (re.form = NA)
+pred_data$pred_count <- predict(rmBA_15m, newdata = pred_data, type = "response", re.form = NA)
+
+# Add x-axis variable
+pred_data$x_focal <- with(pred_data,
+                          ifelse(focal_label == "rm_15m", rm_15m,
+                                 ifelse(focal_label == "conMycNS_15m", conMycNS_15m, hetMyc_15m)))
+
+# Make sure focal_label is a factor with levels matching the color manual
+pred_data$focal_label <- factor(pred_data$focal_label,
+                 levels = c("rm_15m", "conMycNS_15m", "hetMyc_15m"),
+                labels = c("Conspecific BA", "Conmycorrhizal BA", "Heteromycorrhizal BA"))
+
+# Step 6: Plot
+ggplot(pred_data, aes(x = x_focal, y = pred_count, color = focal_label)) +
+  geom_line(size = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)",
+       y = "Predicted 1-Year Seedling Count",
+       color = "Neighborhood Type") +
+  scale_color_manual(values = c("Conspecific BA" = "black", 
+                                "Conmycorrhizal BA" = "#DA3742", 
+                                "Heteromycorrhizal BA" = "#3885B6")) +
+  theme_bw() +
+  theme(axis.text = element_text(color = "black"),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11))
+
+########################################################################
+######### 25% and 75% quantiles
+# Step 1: Create sequence of focal BA values
+ba_seq_list <- list(
+  rm_15m = seq(0, max(rm_surv$rm_15m, na.rm = TRUE), length.out = 100),
+  conMycNS_15m = seq(0, max(rm_surv$conMycNS_15m, na.rm = TRUE), length.out = 100),
+  hetMyc_15m = seq(0, max(rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100))
+
+# Step 2: Get quantile values of all covariates
+q_vals <- list(
+  q25 = list(
+    log0yr = quantile(rm_surv$log0yr, 0.25, na.rm = TRUE),
+    logPrior = quantile(rm_surv$logPrior, 0.25, na.rm = TRUE),
+    rm_15m = quantile(rm_surv$rm_15m, 0.25, na.rm = TRUE),
+    conMycNS_15m = quantile(rm_surv$conMycNS_15m, 0.25, na.rm = TRUE),
+    hetMyc_15m = quantile(rm_surv$hetMyc_15m, 0.25, na.rm = TRUE)
+  ),
+  q75 = list(
+    log0yr = quantile(rm_surv$log0yr, 0.75, na.rm = TRUE),
+    logPrior = quantile(rm_surv$logPrior, 0.75, na.rm = TRUE),
+    rm_15m = quantile(rm_surv$rm_15m, 0.75, na.rm = TRUE),
+    conMycNS_15m = quantile(rm_surv$conMycNS_15m, 0.75, na.rm = TRUE),
+    hetMyc_15m = quantile(rm_surv$hetMyc_15m, 0.75, na.rm = TRUE)
+  )
+)
+
+# Step 3: Prediction data function
+make_pred_data_conditional <- function(focal_var, ba_seq, qval) {
+  n <- length(ba_seq)
+  data.frame(
+    rm_15m = if (focal_var == "rm_15m") ba_seq else 
+      rep(qval$rm_15m, n),
+    conMycNS_15m = if (focal_var == "conMycNS_15m") ba_seq else 
+      rep(qval$conMycNS_15m, n),
+    hetMyc_15m = if (focal_var == "hetMyc_15m") ba_seq else 
+      rep(qval$hetMyc_15m, n),
+    log0yr = rep(qval$log0yr, n),
+    logPrior = rep(qval$logPrior, n),
+    Site = rep(rm_surv$Site[1], n),
+    survYear = rep(rm_surv$survYear[1], n),
+    focal_label = rep(focal_var, n))
+}
+
+# Step 4: Generate prediction datasets
+pred_data_25 <- bind_rows(
+  make_pred_data_conditional("rm_15m", ba_seq_list$rm_15m, q_vals$q25),
+  make_pred_data_conditional("conMycNS_15m", ba_seq_list$conMycNS_15m, q_vals$q25),
+  make_pred_data_conditional("hetMyc_15m", ba_seq_list$hetMyc_15m, q_vals$q25)
+)
+
+pred_data_75 <- bind_rows(
+  make_pred_data_conditional("rm_15m", ba_seq_list$rm_15m, q_vals$q75),
+  make_pred_data_conditional("conMycNS_15m", ba_seq_list$conMycNS_15m, q_vals$q75),
+  make_pred_data_conditional("hetMyc_15m", ba_seq_list$hetMyc_15m, q_vals$q75)
+)
+
+# Step 5: Predict using model (fixed effects only)
+pred_data_25$pred_count <- predict(rmBA_15m, newdata = pred_data_25, type = "response", re.form = NA)
+pred_data_75$pred_count <- predict(rmBA_15m, newdata = pred_data_75, type = "response", re.form = NA)
+
+# Step 6: Format for plotting
+for (df_name in c("pred_data_25", "pred_data_75")) {
+  df <- get(df_name)
+  
+  df$x_focal <- with(df,
+          ifelse(focal_label == "rm_15m", rm_15m,
+          ifelse(focal_label == "conMycNS_15m", conMycNS_15m, hetMyc_15m)))
+  
+  df$focal_label <- factor(df$focal_label,
+          levels = c("rm_15m", "conMycNS_15m", "hetMyc_15m"),
+    labels = c("Conspecific BA", "Conmycorrhizal BA", "Heteromycorrhizal BA"))
+  
+  assign(df_name, df)  # Re-assign updated data frame
+}
+
+# Step 7: Plot for 25th percentile
+ggplot(pred_data_25, aes(x = x_focal, y = pred_count, color = focal_label)) +
+  geom_line(size = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)",
+       y = "Predicted 1-Year Seedling Count",
+       color = "Neighborhood Type",
+       title = "Predictions at 25th Percentile of All Other Covariates") +
+  scale_color_manual(values = c("Conspecific BA" = "black", 
+                                "Conmycorrhizal BA" = "#DA3742", 
+"Heteromycorrhizal BA" = "#3885B6")) +
+  theme_bw()
+
+# Step 8: Plot for 75th percentile
+ggplot(pred_data_75, aes(x = x_focal, y = pred_count, color = focal_label)) +
+  geom_line(size = 1) +
+  labs(x = "Basal Area in 15-m Radius (m²)",
+       y = "Predicted 1-Year Seedling Count",
+       color = "Neighborhood Type",
+       title = "Predictions at 75th Percentile of All Other Covariates") +
+  scale_color_manual(values = c("Conspecific BA" = "black", 
+                                "Conmycorrhizal BA" = "#DA3742", 
+                                "Heteromycorrhizal BA" = "#3885B6")) +
+  theme_bw()
 
 
-# ##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
-# 
-# # Step 1: Create a sequence of basal area values
-# ba_seq <- seq(0, max(rm_surv$rm_15m, rm_surv$conMycNS_15m, 
-#               rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
-# 
-# # Step 2: Set median values for the non-focal covariates
-# median_vals <- rm_surv %>%
-#   summarize(across(c(rm_Prior3_counts, hetSp_Prior3_counts, total_count_yr0,
-#           rm_15m, conMycNS_15m, hetMyc_15m), ~ median(.x, na.rm = TRUE)))
-# 
-# # Step 3: Create prediction datasets for each focal variable
-# make_pred_data <- function(focal, label) {
-#   df <- data.frame(
-#     rm_15m = if (focal == "rm_15m") ba_seq else median_vals$rm_15m,
-#     conMycNS_15m = if (focal == "conMycNS_15m") ba_seq else median_vals$conMycNS_15m,
-#     hetMyc_15m = if (focal == "hetMyc_15m") ba_seq else median_vals$hetMyc_15m,
-#     rm_Prior3_counts = median_vals$rm_Prior3_counts,
-#     hetSp_Prior3_counts = median_vals$hetSp_Prior3_counts,
-#     total_count_yr0 = median_vals$total_count_yr0,
-#     Site = rm_surv$Site[1],survYear = rm_surv$survYear[1],
-#     focal_label = label)
-#   df
-# }
-# 
-# # Step 4: Combine prediction data for all three components
-# new_data <- bind_rows(make_pred_data("rm_15m", "Conspecific BA"),
-#   make_pred_data("conMycNS_15m", "Con-mycorrhizal BA"),
-#   make_pred_data("hetMyc_15m", "Hetero-mycorrhizal BA"))
-# 
-# # Step 5: Predict survivorship without random effects (average effect)
-# new_data$pred_surv <- predict(rm_mod_15m, newdata = new_data, 
-#                       type = "response", re.form = NA)
-# # re.form = NA ignores RE, uses only the fixed effects (i.e., an “average” prediction across sites and years).
-# 
-# # Step 6: Add x-axis for the focal BA value
-# new_data$x_focal <- with(new_data, 
-#               ifelse(focal_label == "Conspecific BA", rm_15m,
-#               ifelse(focal_label == "Con-mycorrhizal BA", conMycNS_15m, hetMyc_15m)))
-# 
-# # Step 7: Plot
-# ggplot(new_data, aes(x = x_focal, y = pred_surv, color = focal_label)) +
-#   geom_line(linewidth = 1) +
-#   labs(x = "Basal Area in 15-m Radius (m²)", 
-#     y = "Predicted Survivorship", 
-#     color = "",title = "Red Maple") +
-#   theme_bw() +
-#   theme(axis.text = element_text(colour = 'black', size = 10), 
-#     axis.title = element_text(size = 12), legend.key = element_blank(), 
-#     plot.title = element_text(size = 14, hjust = 0.5),  # Slightly larger title
-#     legend.text = element_text(size = 10), 
-#     legend.title = element_text(size = 10), 
-#     panel.grid.minor = element_blank(),
-#     legend.position = c(0.05, 0.05),  # Bottom left inside plot
-#     legend.justification = c(0, 0))
+
