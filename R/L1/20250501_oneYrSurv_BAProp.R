@@ -17,7 +17,6 @@ library(DHARMa)
 library(broom.mixed)
 library(tibble)
 
-
 ### Most complex model to fit (15-m radius)
 ###  Biotic model of one-year survivorship - with adult densities (BA)
 # (#1 yr) ~ Consp BA:log(#0 yr) + Con-myc BA:log(#0 yr) + Het-myc BA:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + Consp BA:log(#0 yr):Con-myc BA + Consp BA:log(#0 yr):Het-myc BA + Het-myc BA:log(#0 yr):Con-myc BA + (1 | Site) + (1 | Year)
@@ -141,20 +140,7 @@ allSp_TI_ObsYear$Prior3_counts =
 rm_surv_temp$Prior3_counts = 
   allSp_TI_ObsYear$Prior3_counts[match(rm_surv_temp$TI_FY,allSp_TI_ObsYear$TI_FY)]
 
-# Calculate sum of heterospecific species previous 3-year and current year counts for RM
-allSp_TI_ObsYear$hetSp_Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(6:14,17:25)], na.rm = TRUE)
-# Conspecific
-rm_surv_temp$rm_Prior3_counts = 
-  allSp_TI_ObsYear$rm_Prior3_counts[match(rm_surv_temp$TI_FY,
-                                          allSp_TI_ObsYear$TI_FY)]
-# Convert NAs to 0s
-rm_surv_temp$rm_Prior3_counts[is.na(rm_surv_temp$rm_Prior3_counts)]<- 0
-# Heterospecific
-rm_surv_temp$hetSp_Prior3_counts = 
-  allSp_TI_ObsYear$hetSp_Prior3_counts[match(rm_surv_temp$TI_FY,
-                                             allSp_TI_ObsYear$TI_FY)]
-
+# Rename data
 rm_surv <- rm_surv_temp
 
 #### Calculate the proportion of EMF hosts in 15-m radius
@@ -180,25 +166,36 @@ rmBA_15m <- glmer(total_count_yr1 ~ rm_15m:log0yr + conMycNS_15m:log0yr +
                    family = poisson(link = "log"), data = rm_surv)
 summary(rmBA_15m)
 
+## Adding in main effects
+rmBA_15m2 <- glmer(total_count_yr1 ~ rm_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + rm_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = rm_surv)
+summary(rmBA_15m2)
+
 ## VIFs and pseudo r-squared values
 car::vif(rmBA_15m) # all < 2
 r.squaredGLMM(rmBA_15m) 
+car::vif(rmBA_15m2) # all < 2
+r.squaredGLMM(rmBA_15m2) 
 
 # Simulate residuals
 sim_res <- simulateResiduals(fittedModel = rmBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-rmProp_15m <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
-                       log(Prior3_counts + 1):log0yr +
-                       (1 | Site) + (1 | survYear),
-                     family = poisson(link = "log"), data = rm_surv)
-summary(rmProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(rmProp_15m) # All < 2
-r.squaredGLMM(rmProp_15m) 
+# ### Biotic model of one-year survivorship - with adult proportions (%ECM)
+# rmProp_15m <- glmer(total_count_yr1 ~ propRM_15m:log0yr + propEMF_15m:log0yr + 
+#                        log(Prior3_counts + 1):log0yr +
+#                        (1 | Site) + (1 | survYear),
+#                      family = poisson(link = "log"), data = rm_surv)
+# summary(rmProp_15m)
+# 
+# ## VIFs and pseudo r-squared values
+# car::vif(rmProp_15m) # All < 2
+# r.squaredGLMM(rmProp_15m) 
 
 
 #################################################
@@ -240,25 +237,25 @@ smBA_15m <- glmer(total_count_yr1 ~ sm_15m:log0yr + conMycNS_15m:log0yr +
                   family = poisson(link = "log"), data = sm_surv)
 summary(smBA_15m)
 
+# Adding in main effects
+smBA_15m2 <- glmer(total_count_yr1 ~ sm_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + sm_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = sm_surv)
+summary(smBA_15m2)
+
 ## VIFs and pseudo r-squared values
 car::vif(smBA_15m) # all < 2
 r.squaredGLMM(smBA_15m) 
+car::vif(smBA_15m2) # all < 7
+r.squaredGLMM(smBA_15m2) 
 
 # Simulate residuals
 sim_res <- simulateResiduals(fittedModel = smBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-smProp_15m <- glmer(total_count_yr1 ~ propsm_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = sm_surv)
-summary(smProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(smProp_15m) # All < 2
-r.squaredGLMM(smProp_15m) 
 
 #################################################
 #################################################
@@ -294,10 +291,19 @@ ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
 
 #################### 15-m radius - no RE of site
 abBA_15m <- glmer(total_count_yr1 ~ ab_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                      (1 | survYear),
                   family = poisson(link = "log"), data = ab_surv)
 summary(abBA_15m)
+
+# Adding in main effects - nope
+abBA_15m2 <- glmer(total_count_yr1 ~ ab_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + ab_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | survYear),
+                  family = poisson(link = "log"), data = ab_surv)
+summary(abBA_15m2)
 
 ## VIFs and pseudo r-squared values
 car::vif(abBA_15m) # all < 5
@@ -307,17 +313,6 @@ r.squaredGLMM(abBA_15m)
 sim_res <- simulateResiduals(fittedModel = abBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-abProp_15m <- glmer(total_count_yr1 ~ propab_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | survYear),
-                    family = poisson(link = "log"), data = ab_surv)
-summary(abProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(abProp_15m) # All < 2
-r.squaredGLMM(abProp_15m) 
 
 
 #################################################
@@ -350,14 +345,23 @@ wa_surv$survYear = as.factor(wa_surv$survYear)
 #### Log transform the count of 0-yr old seedlings
 wa_surv$log0yr <- log(wa_surv$total_count_yr0)  
 ## Calculate the log-transformed prior 3 year count variable + 1
-ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
+wa_surv$logPrior = log(wa_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 waBA_15m <- glmer(total_count_yr1 ~ wa_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = wa_surv)
 summary(waBA_15m)
+
+# Nope
+waBA_15m2 <- glmer(total_count_yr1 ~ wa_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + wa_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = wa_surv)
+summary(waBA_15m2)
 
 ## VIFs and pseudo r-squared values
 car::vif(waBA_15m) # all < 2
@@ -367,17 +371,6 @@ r.squaredGLMM(waBA_15m)
 sim_res <- simulateResiduals(fittedModel = waBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-waProp_15m <- glmer(total_count_yr1 ~ propwa_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = wa_surv)
-summary(waProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(waProp_15m) # All < 2
-r.squaredGLMM(waProp_15m) 
 
 
 #################################################
@@ -407,36 +400,37 @@ bc_surv$propbc_15m = (bc_surv$bc_15m / (bc_surv$hetMyc_15m + bc_surv$conMyc_15m)
 bc_surv$Site = as.factor(bc_surv$Site)
 bc_surv$survYear = as.factor(bc_surv$survYear)
 
-#### Log transfobc the count of 0-yr old seedlings
+#### Log transform the count of 0-yr old seedlings
 bc_surv$log0yr <- log(bc_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+bc_surv$logPrior = log(bc_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 bcBA_15m <- glmer(total_count_yr1 ~ bc_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = bc_surv)
 summary(bcBA_15m)
 
+# Main effects added
+bcBA_15m2 <- glmer(total_count_yr1 ~ bc_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + bc_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = bc_surv)
+summary(bcBA_15m2)
+
 ## VIFs and pseudo r-squared values
 car::vif(bcBA_15m) # all < 5
 r.squaredGLMM(bcBA_15m) 
+car::vif(bcBA_15m2) # all < 6
+r.squaredGLMM(bcBA_15m2) 
 
 # Simulate residuals
 sim_res <- simulateResiduals(fittedModel = bcBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-bcProp_15m <- glmer(total_count_yr1 ~ propbc_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = bc_surv)
-summary(bcProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bcProp_15m) # All < 2
-r.squaredGLMM(bcProp_15m) 
-
 
 #################################################
 #################################################
@@ -465,35 +459,37 @@ nro_surv$propnro_15m = (nro_surv$nro_15m / (nro_surv$hetMyc_15m + nro_surv$conMy
 nro_surv$Site = as.factor(nro_surv$Site)
 nro_surv$survYear = as.factor(nro_surv$survYear)
 
-#### Log transfonro the count of 0-yr old seedlings
+#### Log transform the count of 0-yr old seedlings
 nro_surv$log0yr <- log(nro_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+nro_surv$logPrior = log(nro_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 nroBA_15m <- glmer(total_count_yr1 ~ nro_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = nro_surv)
 summary(nroBA_15m)
 
+# With main effects
+nroBA_15m2 <- glmer(total_count_yr1 ~ nro_15m + conMycNS_15m + 
+                     hetMyc_15m + logPrior + nro_15m:log0yr + 
+                      conMycNS_15m:log0yr + 
+                      hetMyc_15m:log0yr + logPrior:log0yr +
+                     (1 | Site) + (1 | survYear),
+                   family = poisson(link = "log"), data = nro_surv)
+summary(nroBA_15m2)
+
 ## VIFs and pseudo r-squared values
 car::vif(nroBA_15m) # all < 3
 r.squaredGLMM(nroBA_15m) 
+car::vif(nroBA_15m2) # all < 5
+r.squaredGLMM(nroBA_15m2) 
 
 # Simulate residuals
 sim_res <- simulateResiduals(fittedModel = nroBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-nroProp_15m <- glmer(total_count_yr1 ~ propnro_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = nro_surv)
-summary(nroProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(nroProp_15m) # High - bad model
-r.squaredGLMM(nroProp_15m) 
 
 #################################################
 #################################################
@@ -522,15 +518,26 @@ bonro_surv$propbonro_15m = (bonro_surv$bonro_15m / (bonro_surv$hetMyc_15m + bonr
 bonro_surv$Site = as.factor(bonro_surv$Site)
 bonro_surv$survYear = as.factor(bonro_surv$survYear)
 
-#### Log transfobonro the count of 0-yr old seedlings
-bonro_surv$log0yr <- log(bonro_surv$total_count_yr0)  
+#### Log transform the count of 0-yr old seedlings
+bonro_surv$log0yr <- log(bonro_surv$total_count_yr0) 
+## Calculate the log-transformed prior 3 year count variable + 1
+bonro_surv$logPrior = log(bonro_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = bonro_surv)
 summary(bonroBA_15m)
+
+# Add in main effects - nope
+bonroBA_15m2 <- glmer(total_count_yr1 ~ bonro_15m + conMycNS_15m + 
+                       hetMyc_15m + logPrior + bonro_15m:log0yr + 
+                        conMycNS_15m:log0yr + 
+                        hetMyc_15m:log0yr + logPrior:log0yr +
+                       (1 | Site) + (1 | survYear),
+                     family = poisson(link = "log"), data = bonro_surv)
+summary(bonroBA_15m2)
 
 ## VIFs and pseudo r-squared values
 car::vif(bonroBA_15m) # all < 6
@@ -540,17 +547,6 @@ r.squaredGLMM(bonroBA_15m)
 sim_res <- simulateResiduals(fittedModel = bonroBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-bonroProp_15m <- glmer(total_count_yr1 ~ propbonro_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = bonro_surv)
-summary(bonroProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bonroProp_15m) # High - bad model
-r.squaredGLMM(bonroProp_15m) 
 
 
 #################################################
@@ -580,35 +576,37 @@ wo_surv$propwo_15m = (wo_surv$wo_15m / (wo_surv$hetMyc_15m + wo_surv$conMyc_15m)
 wo_surv$Site = as.factor(wo_surv$Site)
 wo_surv$survYear = as.factor(wo_surv$survYear)
 
-#### Log transfowo the count of 0-yr old seedlings
+#### Log transform the count of 0-yr old seedlings
 wo_surv$log0yr <- log(wo_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+wo_surv$logPrior = log(wo_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 woBA_15m <- glmer(total_count_yr1 ~ wo_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = wo_surv)
 summary(woBA_15m)
 
+# Add main effects
+woBA_15m2 <- glmer(total_count_yr1 ~ wo_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + wo_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = wo_surv)
+summary(woBA_15m2)
+
 ## VIFs and pseudo r-squared values
 car::vif(woBA_15m) # all < 3
 r.squaredGLMM(woBA_15m) 
+car::vif(woBA_15m2) # all < 5
+r.squaredGLMM(woBA_15m2) 
 
 # Simulate residuals
 sim_res <- simulateResiduals(fittedModel = woBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-woProp_15m <- glmer(total_count_yr1 ~ propwo_15m:log0yr + propEMF_15m:log0yr + 
-                      log(Prior3_counts + 1):log0yr +
-                      (1 | Site) + (1 | survYear),
-                    family = poisson(link = "log"), data = wo_surv)
-summary(woProp_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(woProp_15m) # Very high
-r.squaredGLMM(woProp_15m) 
 
 
 #################################################
@@ -638,15 +636,26 @@ iw_surv$propiw_15m = (iw_surv$iw_15m / (iw_surv$hetMyc_15m + iw_surv$conMyc_15m)
 iw_surv$Site = as.factor(iw_surv$Site)
 iw_surv$survYear = as.factor(iw_surv$survYear)
 
-#### Log transfoiw the count of 0-yr old seedlings
+#### Log transform the count of 0-yr old seedlings
 iw_surv$log0yr <- log(iw_surv$total_count_yr0)  
+## Calculate the log-transformed prior 3 year count variable + 1
+iw_surv$logPrior = log(iw_surv$Prior3_counts + 1)
 
 #################### 15-m radius
 iwBA_15m <- glmer(total_count_yr1 ~ iw_15m:log0yr + conMycNS_15m:log0yr + 
-                    hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
+                    hetMyc_15m:log0yr + logPrior:log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = iw_surv)
 summary(iwBA_15m)
+
+# Add in main effects
+iwBA_15m2 <- glmer(total_count_yr1 ~ iw_15m + conMycNS_15m + 
+                    hetMyc_15m + logPrior + iw_15m:log0yr + 
+                     conMycNS_15m:log0yr + 
+                     hetMyc_15m:log0yr + logPrior:log0yr +
+                    (1 | Site) + (1 | survYear),
+                  family = poisson(link = "log"), data = iw_surv)
+summary(iwBA_15m2)
 
 ## VIFs and pseudo r-squared values
 car::vif(iwBA_15m) # all < 8
@@ -673,31 +682,31 @@ r.squaredGLMM(iwProp_15m)
 #################################################
 ##### American Basswood
 
-### Filter to include 2001 as first First.Year
-bs_surv_temp <- dplyr::filter(bs_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:24)], na.rm = TRUE)
-# Heterospecific
-bs_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(bs_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-bs_surv <- bs_surv_temp
-
-#### Calculate the proportion of EMF hosts in 15-m radius
-bs_surv$propEMF_15m = (bs_surv$conMyc_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
-
-#### Calculate the relative proportion of conspecific adults in 15-m radius
-bs_surv$propbs_15m = (bs_surv$bs_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
-
-#### Make site and year into factors
-bs_surv$Site = as.factor(bs_surv$Site)
-bs_surv$survYear = as.factor(bs_surv$survYear)
-
-#### Log transfobs the count of 0-yr old seedlings
-bs_surv$log0yr <- log(bs_surv$total_count_yr0)  
+# ### Filter to include 2001 as first First.Year
+# bs_surv_temp <- dplyr::filter(bs_surv_temp, First.Year > 2000)
+# 
+# # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
+# allSp_TI_ObsYear$Prior3_counts = 
+#   rowSums(allSp_TI_ObsYear[,c(5:14,16:24)], na.rm = TRUE)
+# # Heterospecific
+# bs_surv_temp$Prior3_counts = 
+#   allSp_TI_ObsYear$Prior3_counts[match(bs_surv_temp$TI_FY,
+#                                        allSp_TI_ObsYear$TI_FY)]
+# 
+# bs_surv <- bs_surv_temp
+# 
+# #### Calculate the proportion of EMF hosts in 15-m radius
+# bs_surv$propEMF_15m = (bs_surv$conMyc_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
+# 
+# #### Calculate the relative proportion of conspecific adults in 15-m radius
+# bs_surv$propbs_15m = (bs_surv$bs_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
+# 
+# #### Make site and year into factors
+# bs_surv$Site = as.factor(bs_surv$Site)
+# bs_surv$survYear = as.factor(bs_surv$survYear)
+# 
+# #### Log transfobs the count of 0-yr old seedlings
+# bs_surv$log0yr <- log(bs_surv$total_count_yr0)  
 
 # #################### 15-m radius - DOES NOT RUN
 # bsBA_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr + conMycNS_15m:log0yr + 
@@ -1064,5 +1073,122 @@ ggplot(pred_data_75, aes(x = x_focal, y = pred_count, color = focal_label)) +
                                 "Heteromycorrhizal BA" = "#3885B6")) +
   theme_bw()
 
+
+
+########################################################################
+########################################################################
+##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods on the 1-yr seedling counts for each species together!
+
+# Your model list
+models <- list(rm = rmBA_15m, sm = smBA_15m, ab = abBA_15m, wa = waBA_15m,
+               bc = bcBA_15m, nro = nroBA_15m, bonro = bonroBA_15m,
+               wo = woBA_15m, iw = iwBA_15m)
+
+# Your datasets (must match model order)
+data_list <- list(rm = rm_surv, sm = sm_surv, ab = ab_surv, wa = wa_surv,
+                  bc = bc_surv, nro = nro_surv, bonro = bonro_surv,
+                  wo = wo_surv, iw = iw_surv)
+
+# Your color vector
+species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
+                  nro = "#1F74B1", wo = "#244D7F", bc = "#FEB1A3",
+                  rm = "#F77964", sm = "#D2241F", wa = "#AE123A")
+
+# Define conspecific BA variables per species
+conspecific_vars <- c(rm = "rm_15m", sm = "sm_15m", ab = "ab_15m", wa = "wa_15m",
+                      bc = "bc_15m", nro = "nro_15m", bonro = "bonro_15m",
+                      wo = "wo_15m", iw = "iw_15m")
+
+# Main function to generate predictions per focal variable
+make_species_predictions <- function(focal_var) {
+  pred_list <- list()
+  
+  for (sp in names(models)) {
+    mod <- models[[sp]]
+    dat <- data_list[[sp]]
+    conspecific_var <- conspecific_vars[[sp]]
+    
+    # Set actual variable name to use
+    var_map <- list(
+      conspecific = conspecific_var,
+      conMycNS_15m = "conMycNS_15m",
+      hetMyc_15m = "hetMyc_15m",
+      logPrior = "logPrior"
+    )
+    var_name <- var_map[[focal_var]]
+    
+    # Skip if that variable isn't present or all NA
+    if (!var_name %in% names(dat) || all(is.na(dat[[var_name]]))) next
+    
+    # Create sequence for focal variable
+    max_val <- max(dat[[var_name]], na.rm = TRUE)
+    if (!is.finite(max_val)) next  # skip species with no usable data for var
+    
+    seq_vals <- seq(0, max_val, length.out = 100)
+    
+    # Median values for covariates
+    med_vals <- list(
+      log0yr = median(dat$log0yr, na.rm = TRUE),
+      logPrior = median(dat$logPrior, na.rm = TRUE),
+      conMycNS_15m = median(dat$conMycNS_15m, na.rm = TRUE),
+      hetMyc_15m = median(dat$hetMyc_15m, na.rm = TRUE),
+      conspecific = median(dat[[conspecific_var]], na.rm = TRUE)
+    )
+    
+    # Build base prediction data
+    pred_data <- data.frame(
+      log0yr = med_vals$log0yr,
+      logPrior = med_vals$logPrior,
+      conMycNS_15m = med_vals$conMycNS_15m,
+      hetMyc_15m = med_vals$hetMyc_15m,
+      stringsAsFactors = FALSE
+    )
+    pred_data[[conspecific_var]] <- med_vals$conspecific
+    
+    # Repeat rows for prediction sequence
+    newdata <- pred_data[rep(1, length(seq_vals)), ]
+    newdata[[var_name]] <- seq_vals
+    newdata$Site <- dat$Site[1]
+    newdata$survYear <- dat$survYear[1]
+    
+    # Predict
+    newdata$pred_count <- predict(mod, newdata = newdata, type = "response", re.form = NA)
+    newdata$x_focal <- seq_vals
+    newdata$species <- sp
+    pred_list[[sp]] <- newdata
+  }
+  
+  bind_rows(pred_list)
+  
+  all_preds <- bind_rows(pred_list)
+  all_preds$species <- factor(all_preds$species, levels = names(species_cols))
+  return(all_preds)
+  
+}
+
+
+# Labels for the x-axis
+plot_titles <- c("Conspecific Basal Area", "Conmycorrhizal Basal Area",
+                 "Heteromycorrhizal Basal Area", "Log(Prior Seedling Count + 1)")
+focal_vars <- c("conspecific", "conMycNS_15m", "hetMyc_15m", "logPrior")
+
+for (i in seq_along(focal_vars)) {
+  focal_var <- focal_vars[i]
+  pred_df <- make_species_predictions(focal_var)
+  
+  p <- ggplot(pred_df, aes(x = x_focal, y = pred_count, color = species)) +
+    geom_line(size = 1) +
+    labs(x = plot_titles[i],
+         y = "Predicted 1-Year Seedling Count",
+         color = "Species") +
+    scale_color_manual(values = species_cols) +
+    theme_bw() +
+    theme(axis.text = element_text(color = "black"),
+          axis.title = element_text(size = 12),
+          legend.text = element_text(size = 10),
+          legend.title = element_text(size = 11))
+  
+  print(p)
+}
 
 
