@@ -943,6 +943,26 @@ allSp_results2 %>% filter(., Myc_Type == "AM")  %>%
 ########################################################################
 ########################################################################
 ##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods on the 1-yr seedling counts for each species together!
+# Your model list
+models <- list(rm = rmBA_15m, sm = smBA_15m, ab = abBA_15m, wa = waBA_15m,
+               bc = bcBA_15m, nro = nroBA_15m, bonro = bonroBA_15m,
+               wo = woBA_15m, iw = iwBA_15m)
+
+# Your datasets (must match model order)
+data_list <- list(rm = rm_surv, sm = sm_surv, ab = ab_surv, wa = wa_surv,
+                  bc = bc_surv, nro = nro_surv, bonro = bonro_surv,
+                  wo = wo_surv, iw = iw_surv)
+
+# Your color vector
+species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
+                  nro = "#1F74B1", wo = "#244D7F", bc = "#FEB1A3",
+                  rm = "#F77964", sm = "#D2241F", wa = "#AE123A")
+
+# Define conspecific BA variables per species
+conspecific_vars <- c(rm = "rm_15m", sm = "sm_15m", ab = "ab_15m", wa = "wa_15m",
+                      bc = "bc_15m", nro = "nro_15m", bonro = "bonro_15m",
+                      wo = "wo_15m", iw = "iw_15m")
+
 
 make_species_predictions <- function(focal_var) {
   pred_list <- list()
@@ -1082,28 +1102,170 @@ for (i in seq_along(focal_vars)) {
   print(p)
 }
 
+##########
+
+# 1. Mycorrhizal type classification
+am_species <- c("bc", "rm", "sm", "wa")  # example AM species codes
+ecm_species <- c("ab", "bonro", "iw", "nro", "wo")  # example ECM species codes
+
+# 2. Prediction function (unchanged)
+make_species_predictions <- function(focal_var) {
+  pred_list <- list()
+  
+  for (sp in names(models)) {
+    mod <- models[[sp]]
+    dat <- data_list[[sp]]
+    conspecific_var <- conspecific_vars[[sp]]
+    
+    # Define x-axis variable and interaction handling
+    interacting_var <- NULL
+    if (focal_var == "conspecific") {
+      x_var <- conspecific_var
+      x_label <- x_var
+    } else if (focal_var == "conspecific:hetMyc_15m") {
+      interaction_term <- paste0(conspecific_var, ":hetMyc_15m")
+      if (!grepl(interaction_term, paste(deparse(formula(mod)), collapse = ""))) next
+      x_var <- "hetMyc_15m"
+      interacting_var <- conspecific_var
+      x_label <- interaction_term
+    } else if (focal_var == "conMycNS_15m:hetMyc_15m") {
+      interaction_term <- "conMycNS_15m:hetMyc_15m"
+      if (!grepl(interaction_term, paste(deparse(formula(mod)), collapse = ""))) next
+      x_var <- "conMycNS_15m"
+      interacting_var <- "hetMyc_15m"
+      x_label <- interaction_term
+    } else {
+      x_var <- focal_var
+      x_label <- focal_var
+    }
+    
+    if (!x_var %in% names(dat) || all(is.na(dat[[x_var]]))) next
+    if (!is.null(interacting_var) && (!interacting_var %in% names(dat) || all(is.na(dat[[interacting_var]])))) next
+    
+    max_val <- max(dat[[x_var]], na.rm = TRUE)
+    if (!is.finite(max_val)) next
+    seq_vals <- seq(0, max_val, length.out = 100)
+    
+    med_vals <- list(
+      log0yr = median(dat$log0yr, na.rm = TRUE),
+      logPrior = median(dat$logPrior, na.rm = TRUE),
+      conMycNS_15m = median(dat$conMycNS_15m, na.rm = TRUE),
+      hetMyc_15m = median(dat$hetMyc_15m, na.rm = TRUE),
+      conspecific = median(dat[[conspecific_var]], na.rm = TRUE)
+    )
+    
+    pred_data <- data.frame(
+      log0yr = med_vals$log0yr,
+      logPrior = med_vals$logPrior,
+      conMycNS_15m = med_vals$conMycNS_15m,
+      hetMyc_15m = med_vals$hetMyc_15m,
+      stringsAsFactors = FALSE
+    )
+    pred_data[[conspecific_var]] <- med_vals$conspecific
+    
+    newdata <- pred_data[rep(1, length(seq_vals)), ]
+    
+    if (focal_var == "conspecific:hetMyc_15m") {
+      newdata[[x_var]] <- seq_vals
+      newdata[[interacting_var]] <- med_vals$conspecific
+    } else if (focal_var == "conMycNS_15m:hetMyc_15m") {
+      newdata[[x_var]] <- seq_vals
+      newdata[[interacting_var]] <- seq_vals
+    } else {
+      newdata[[x_var]] <- seq_vals
+    }
+    
+    newdata$Site <- dat$Site[1]
+    newdata$survYear <- dat$survYear[1]
+    newdata$pred_count <- suppressWarnings(predict(mod, newdata = newdata, type = "response", re.form = NA))
+    newdata$x_focal <- newdata[[x_var]]
+    newdata$species <- sp
+    pred_list[[sp]] <- newdata
+  }
+  
+  all_preds <- bind_rows(pred_list)
+  all_preds$species <- factor(all_preds$species, levels = names(species_cols))
+  return(all_preds)
+}
+
+# 3. Plot labels and variables
+plot_titles <- c(
+  "Conspecific Basal Area", 
+  "Conmycorrhizal Basal Area", 
+  "Heteromycorrhizal Basal Area", 
+  "Log(Prior Seedling Count + 1)",
+  "Log(Recruit Seedling Count)", 
+  "Conmyc × Heteromyc Basal Area", 
+  "Conspecific × Heteromyc Basal Area"
+)
+
+focal_vars <- c(
+  "conspecific", 
+  "conMycNS_15m", 
+  "hetMyc_15m", 
+  "logPrior", 
+  "log0yr", 
+  "conMycNS_15m:hetMyc_15m", 
+  "conspecific:hetMyc_15m"
+)
+
+# 4. Plotting loop (AM and ECM separated)
+for (i in seq_along(focal_vars)) {
+  focal_var <- focal_vars[i]
+  pred_df <- make_species_predictions(focal_var)
+  
+  if (nrow(pred_df) == 0) next
+  
+  # AM species plot
+  am_df <- pred_df %>% filter(species %in% am_species)
+  if (nrow(am_df) > 0) {
+    p_am <- ggplot(am_df, aes(x = x_focal, y = pred_count, color = species)) +
+      geom_line(size = 1) +
+      labs(
+        x = plot_titles[i],
+        y = "Predicted 1-Year Seedling Count",
+        title = paste0(plot_titles[i], " — AM Species"),
+        color = "Species"
+      ) +
+      scale_color_manual(values = species_cols[am_species]) +
+      theme_bw() +
+      theme(
+        axis.text = element_text(color = "black"),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.position = "right"
+      )
+    print(p_am)
+  }
+  
+  # ECM species plot
+  ecm_df <- pred_df %>% filter(species %in% ecm_species)
+  if (nrow(ecm_df) > 0) {
+    p_ecm <- ggplot(ecm_df, aes(x = x_focal, y = pred_count, color = species)) +
+      geom_line(size = 1) +
+      labs(
+        x = plot_titles[i],
+        y = "Predicted 1-Year Seedling Count",
+        title = paste0(plot_titles[i], " — ECM Species"),
+        color = "Species"
+      ) +
+      scale_color_manual(values = species_cols[ecm_species]) +
+      theme_bw() +
+      theme(
+        axis.text = element_text(color = "black"),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.position = "right"
+      )
+    print(p_ecm)
+  }
+}
 
 
 ######################################################
-# Your model list
-models <- list(rm = rmBA_15m, sm = smBA_15m, ab = abBA_15m, wa = waBA_15m,
-               bc = bcBA_15m, nro = nroBA_15m, bonro = bonroBA_15m,
-               wo = woBA_15m, iw = iwBA_15m)
 
-# Your datasets (must match model order)
-data_list <- list(rm = rm_surv, sm = sm_surv, ab = ab_surv, wa = wa_surv,
-                  bc = bc_surv, nro = nro_surv, bonro = bonro_surv,
-                  wo = wo_surv, iw = iw_surv)
-
-# Your color vector
-species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
-                  nro = "#1F74B1", wo = "#244D7F", bc = "#FEB1A3",
-                  rm = "#F77964", sm = "#D2241F", wa = "#AE123A")
-
-# Define conspecific BA variables per species
-conspecific_vars <- c(rm = "rm_15m", sm = "sm_15m", ab = "ab_15m", wa = "wa_15m",
-                      bc = "bc_15m", nro = "nro_15m", bonro = "bonro_15m",
-                      wo = "wo_15m", iw = "iw_15m")
 
 # Main function to generate predictions per focal variable
 make_species_predictions <- function(focal_var) {
