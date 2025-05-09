@@ -427,7 +427,7 @@ bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m + conMycNS_15m +
                     hetMyc_15m + #bonro_15m:hetMyc_15m +
                     conMycNS_15m:hetMyc_15m +
                     logPrior + log0yr +
-                    (1 | Site) + 
+                    #(1 | Site) + 
                     (1 | survYear),
                   family = poisson(link = "log"), data = bonro_surv)
 summary(bonroBA_15m)
@@ -518,7 +518,7 @@ iwBA_15m <- glmer(total_count_yr1 ~ iw_15m + conMycNS_15m +
                        hetMyc_15m + #iw_15m:hetMyc_15m +
                        conMycNS_15m:hetMyc_15m +
                        logPrior + log0yr +
-                       (1 | Site) + 
+                       #(1 | Site) + 
                        (1 | survYear),
                      family = poisson(link = "log"), data = iw_surv)
 summary(iwBA_15m)
@@ -531,63 +531,6 @@ r.squaredGLMM(iwBA_15m)
 sim_res <- simulateResiduals(fittedModel = iwBA_15m, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
-#################################################
-#################################################
-##### American Basswood
-
-# ### Filter to include 2001 as first First.Year
-# bs_surv_temp <- dplyr::filter(bs_surv_temp, First.Year > 2000)
-# 
-# # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-# allSp_TI_ObsYear$Prior3_counts = 
-#   rowSums(allSp_TI_ObsYear[,c(5:14,16:24)], na.rm = TRUE)
-# # Heterospecific
-# bs_surv_temp$Prior3_counts = 
-#   allSp_TI_ObsYear$Prior3_counts[match(bs_surv_temp$TI_FY,
-#                                        allSp_TI_ObsYear$TI_FY)]
-# 
-# bs_surv <- bs_surv_temp
-# 
-# #### Calculate the proportion of EMF hosts in 15-m radius
-# bs_surv$propEMF_15m = (bs_surv$conMyc_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
-# 
-# #### Calculate the relative proportion of conspecific adults in 15-m radius
-# bs_surv$propbs_15m = (bs_surv$bs_15m / (bs_surv$hetMyc_15m + bs_surv$conMyc_15m))
-# 
-# #### Make site and year into factors
-# bs_surv$Site = as.factor(bs_surv$Site)
-# bs_surv$survYear = as.factor(bs_surv$survYear)
-# 
-# #### Log transfobs the count of 0-yr old seedlings
-# bs_surv$log0yr <- log(bs_surv$total_count_yr0)  
-
-# #################### 15-m radius - DOES NOT RUN
-# bsBA_15m <- glmer(total_count_yr1 ~ bs_15m:log0yr + conMycNS_15m:log0yr + 
-#                     hetMyc_15m:log0yr + log(Prior3_counts + 1):log0yr +
-#                     (1 | survYear),
-#                   family = poisson(link = "log"), data = bs_surv)
-# summary(bsBA_15m)
-# 
-# ## VIFs and pseudo r-squared values
-# car::vif(bsBA_15m) # all < 2
-# r.squaredGLMM(bsBA_15m) 
-# 
-# # Simulate residuals
-# sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
-# # QQ plot of residuals
-# plotQQunif(sim_res)
-# 
-# ### Biotic model of one-year survivorship - with adult proportions (%ECM) - NOT WORKING
-# bsProp_15m <- glmer(total_count_yr1 ~ propbs_15m:log0yr + propEMF_15m:log0yr + 
-#                       log(Prior3_counts + 1):log0yr +
-#                       (1 | Site) + (1 | survYear),
-#                     family = poisson(link = "log"), data = bs_surv)
-# summary(bsProp_15m)
-# 
-# ## VIFs and pseudo r-squared values
-# car::vif(bsProp_15m) # All < 2
-# r.squaredGLMM(bsProp_15m) 
 
 
 ################################################ 
@@ -651,6 +594,15 @@ species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
   bc = "#FEB1A3", rm = "#F77964",  
   sm = "#D2241F", wa = "#AE123A")
 
+## Create a size vector for species to scale points by mean percent ba
+species_sizes <- data.frame(species = c("ab", "bonro", "iw", "nro", "wo",
+                                        "bc", "rm", "sm", "wa"),
+                            percBA = c(2.43, 15.20, 0.11, 29.7, 10.30,
+                                    1.03, 9.40, 15.80, 1.82))
+# Add data to results df
+allSp_results$percBA = species_sizes$percBA[match(allSp_results$species,
+                                                  species_sizes$species)]
+
 # Create ordered factor for species by Myc_Type group and alphabetical within each
 allSp_results <- allSp_results %>%
   mutate(species_label = factor(
@@ -667,21 +619,22 @@ allSp_results <- allSp_results %>%
       "Conspecific_BA")),
     Significant = factor(Significant, levels = c("yes", "no")))
 
-# Filter to exclude one outlier
-allSp_results2 = dplyr::filter(allSp_results, std.error <= 5)
-
 ## Calculate mean parameter estimates for AM versus ECM
-group_means <- allSp_results2 %>%
+group_means <- allSp_results %>%
   group_by(Myc_Type, component) %>%
   summarise(
     mean_estimate = mean(estimate, na.rm = TRUE),
     std.error = sd(estimate, na.rm = TRUE) / sqrt(n()),  
     .groups = "drop")
 
-# Plot - All Species
-ggplot(allSp_results, aes(x = estimate,  y = component, 
-                  color = species_label,  shape = Significant)) +
-  geom_point(size = 2.5, position = position_dodge(width = 0.6)) +
+# Filter to exclude one outlier
+allSp_results2 = dplyr::filter(allSp_results, std.error <= 5)
+
+# Plot - All Species (ECM and AM)
+ggplot(allSp_results2, aes(x = estimate, y = component, 
+                           color = species_label, shape = Significant)) +
+  geom_point(aes(size = log1p(percBA)), 
+             position = position_dodge(width = 0.6)) +   # size only here
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
   geom_errorbarh(aes(xmin = estimate - std.error, 
                      xmax = estimate + std.error), 
@@ -695,22 +648,23 @@ ggplot(allSp_results, aes(x = estimate,  y = component,
                      xmax = mean_estimate + std.error, y = component),
                  color = "black", height = 0, inherit.aes = FALSE) +
   scale_color_manual(values = species_cols) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 1, 
-              "AM" = 17, "ECM" = 15)) +  # triangle and square for means
+  scale_shape_manual(values = c("yes" = 16, "no" = 1, "AM" = 17, "ECM" = 15)) +
+  scale_size(range = c(1.5, 5), 
+             name = "log(% BA + 1)") +  # nicely scaled
   theme_bw() +
   labs(x = "Effect Size ± SE (Log Count Scale)", 
        y = "", color = "Species", shape = "") +
   theme(legend.position = "right",
-        axis.title.x = element_text(size=12,color = "black"),
-        axis.text.x = element_text(size=10,color = "black"),
-        axis.text.y = element_text(size=11,color = "black"))
-
+        axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 # Plot - ECM only
 allSp_results2 %>% filter(., Myc_Type == "ECM")  %>% 
 ggplot(., aes(x = estimate,  y = component, 
                            color = species_label,  shape = Significant)) +
-  geom_point(size = 2.5, position = position_dodge(width = 0.6)) +
+  geom_point(aes(size = log1p(percBA)), 
+             position = position_dodge(width = 0.6)) +   # size only here
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
   geom_errorbarh(aes(xmin = estimate - std.error, 
                      xmax = estimate + std.error), 
@@ -725,20 +679,23 @@ ggplot(., aes(x = estimate,  y = component,
                  color = "black", height = 0, inherit.aes = FALSE) +
   scale_color_manual(values = species_cols) +
   scale_shape_manual(values = c("yes" = 16, "no" = 1, 
-                                "AM" = 17, "ECM" = 15)) + 
+                                "AM" = 17, "ECM" = 15)) +
+  scale_size(range = c(1.5, 5), 
+             name = "log(% BA + 1)") +  # nicely scaled
   theme_bw() +
   labs(x = "Effect Size ± SE (Log Count Scale)", 
        y = "", color = "Species", shape = "") +
   theme(legend.position = "right",
-        axis.title.x = element_text(size=12,color = "black"),
-        axis.text.x = element_text(size=10,color = "black"),
-        axis.text.y = element_text(size=11,color = "black"))
+        axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 # Plot - AM only
 allSp_results2 %>% filter(., Myc_Type == "AM")  %>% 
   ggplot(., aes(x = estimate,  y = component, 
                 color = species_label,  shape = Significant)) +
-  geom_point(size = 2.5, position = position_dodge(width = 0.6)) +
+  geom_point(aes(size = log1p(percBA)), 
+             position = position_dodge(width = 0.6)) +   # size only here
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
   geom_errorbarh(aes(xmin = estimate - std.error, 
                      xmax = estimate + std.error), 
@@ -753,14 +710,16 @@ allSp_results2 %>% filter(., Myc_Type == "AM")  %>%
                  color = "black", height = 0, inherit.aes = FALSE) +
   scale_color_manual(values = species_cols) +
   scale_shape_manual(values = c("yes" = 16, "no" = 1, 
-                                "AM" = 17, "ECM" = 15)) + 
+                                "AM" = 17, "ECM" = 15)) +
+  scale_size(range = c(1.5, 5), 
+             name = "log(% BA + 1)") +  # nicely scaled
   theme_bw() +
   labs(x = "Effect Size ± SE (Log Count Scale)", 
        y = "", color = "Species", shape = "") +
   theme(legend.position = "right",
-        axis.title.x = element_text(size=12,color = "black"),
-        axis.text.x = element_text(size=10,color = "black"),
-        axis.text.y = element_text(size=11,color = "black"))
+        axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 
 ########################################################################
