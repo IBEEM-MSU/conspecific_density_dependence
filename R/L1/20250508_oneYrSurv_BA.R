@@ -152,6 +152,24 @@ rm_surv$log0yr <- log(rm_surv$total_count_yr0)
 ## Calculate the log-transformed prior 3 year count variable + 1
 rm_surv$logPrior = log(rm_surv$Prior3_counts + 1)
 
+#### Calculate the proportion of EMF hosts in 15-m radius
+rm_surv$propEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
+rm_surv$propEMF_15m[rm_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(rm_surv$total_count_yr0, rm_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(rm_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "Red maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+
 #################### 15-m radius
 rmBA_15m <- glmer(total_count_yr1 ~ rm_15m + conMycNS_15m + 
                      hetMyc_15m + rm_15m:hetMyc_15m +
@@ -196,6 +214,24 @@ sm_surv$survYear = as.factor(sm_surv$survYear)
 sm_surv$log0yr <- log(sm_surv$total_count_yr0)  
 ## Calculate the log-transformed prior 3 year count variable + 1
 sm_surv$logPrior = log(sm_surv$Prior3_counts + 1)
+
+#### Calculate the proportion of EMF hosts in 15-m radius
+sm_surv$propEMF_15m = (sm_surv$hetMyc_15m / (sm_surv$hetMyc_15m + sm_surv$conMyc_15m))
+sm_surv$propEMF_15m[sm_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(sm_surv$total_count_yr0, sm_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(sm_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "Sugar maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 #################### 15-m radius
 smBA_15m <- glmer(total_count_yr1 ~ sm_15m + conMycNS_15m + 
@@ -242,6 +278,24 @@ ab_surv$log0yr <- log(ab_surv$total_count_yr0)
 ## Calculate the log-transformed prior 3 year count variable + 1
 ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
 
+#### Calculate the proportion of EMF hosts in 15-m radius
+ab_surv$propEMF_15m = (ab_surv$conMyc_15m / (ab_surv$hetMyc_15m + ab_surv$conMyc_15m))
+ab_surv$propEMF_15m[ab_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(ab_surv$total_count_yr0, ab_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(ab_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "American beech") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+
 #################### 15-m radius - no RE of site
 abBA_15m <- glmer(total_count_yr1 ~ ab_15m + conMycNS_15m + 
                     hetMyc_15m + ab_15m:hetMyc_15m +
@@ -286,6 +340,24 @@ wa_surv$survYear = as.factor(wa_surv$survYear)
 wa_surv$log0yr <- log(wa_surv$total_count_yr0)  
 ## Calculate the log-transformed prior 3 year count variable + 1
 wa_surv$logPrior = log(wa_surv$Prior3_counts + 1)
+
+#### Calculate the proportion of EMF hosts in 15-m radius
+wa_surv$propEMF_15m = (wa_surv$hetMyc_15m / (wa_surv$hetMyc_15m + wa_surv$conMyc_15m))
+wa_surv$propEMF_15m[wa_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(wa_surv$total_count_yr0, wa_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(wa_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "White ash") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 #################### 15-m radius
 waBA_15m <- glmer(total_count_yr1 ~ wa_15m + conMycNS_15m + 
@@ -332,6 +404,24 @@ bc_surv$log0yr <- log(bc_surv$total_count_yr0)
 ## Calculate the log-transformed prior 3 year count variable + 1
 bc_surv$logPrior = log(bc_surv$Prior3_counts + 1)
 
+#### Calculate the proportion of EMF hosts in 15-m radius
+bc_surv$propEMF_15m = (bc_surv$hetMyc_15m / (bc_surv$hetMyc_15m + bc_surv$conMyc_15m))
+bc_surv$propEMF_15m[bc_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(bc_surv$total_count_yr0, bc_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(bc_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "Black cherry") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+
 #################### 15-m radius
 bcBA_15m <- glmer(total_count_yr1 ~ bc_15m + conMycNS_15m + 
                     hetMyc_15m + bc_15m:hetMyc_15m +
@@ -377,6 +467,25 @@ nro_surv$log0yr <- log(nro_surv$total_count_yr0)
 ## Calculate the log-transformed prior 3 year count variable + 1
 nro_surv$logPrior = log(nro_surv$Prior3_counts + 1)
 
+#### Calculate the proportion of EMF hosts in 15-m radius
+nro_surv$propEMF_15m = (nro_surv$conMyc_15m / (nro_surv$hetMyc_15m + nro_surv$conMyc_15m))
+nro_surv$propEMF_15m[nro_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(nro_surv$total_count_yr0, nro_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(nro_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "Northern red oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+
+
 #################### 15-m radius
 nroBA_15m <- glmer(total_count_yr1 ~ nro_15m + conMycNS_15m + 
                      hetMyc_15m + nro_15m:hetMyc_15m +
@@ -421,6 +530,24 @@ bonro_surv$survYear = as.factor(bonro_surv$survYear)
 bonro_surv$log0yr <- log(bonro_surv$total_count_yr0) 
 ## Calculate the log-transformed prior 3 year count variable + 1
 bonro_surv$logPrior = log(bonro_surv$Prior3_counts + 1)
+
+#### Calculate the proportion of EMF hosts in 15-m radius
+bonro_surv$propEMF_15m = (bonro_surv$conMyc_15m / (bonro_surv$hetMyc_15m + bonro_surv$conMyc_15m))
+bonro_surv$propEMF_15m[bonro_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(bonro_surv$total_count_yr0, bonro_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(bonro_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "Black oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 #################### 15-m radius 
 bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m + conMycNS_15m + 
@@ -468,6 +595,24 @@ wo_surv$log0yr <- log(wo_surv$total_count_yr0)
 ## Calculate the log-transformed prior 3 year count variable + 1
 wo_surv$logPrior = log(wo_surv$Prior3_counts + 1)
 
+#### Calculate the proportion of EMF hosts in 15-m radius
+wo_surv$propEMF_15m = (wo_surv$conMyc_15m / (wo_surv$hetMyc_15m + wo_surv$conMyc_15m))
+wo_surv$propEMF_15m[wo_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(wo_surv$total_count_yr0, wo_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(wo_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "White oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+
 #################### 15-m radius 
 woBA_15m <- glmer(total_count_yr1 ~ wo_15m + conMycNS_15m + 
                        hetMyc_15m + #wo_15m:hetMyc_15m +
@@ -512,6 +657,24 @@ iw_surv$survYear = as.factor(iw_surv$survYear)
 iw_surv$log0yr <- log(iw_surv$total_count_yr0)  
 ## Calculate the log-transformed prior 3 year count variable + 1
 iw_surv$logPrior = log(iw_surv$Prior3_counts + 1)
+
+#### Calculate the proportion of EMF hosts in 15-m radius
+iw_surv$propEMF_15m = (iw_surv$conMyc_15m / (iw_surv$hetMyc_15m + iw_surv$conMyc_15m))
+iw_surv$propEMF_15m[iw_surv$propEMF_15m == "NaN"] <- 0
+
+#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
+cor.test(iw_surv$total_count_yr0, iw_surv$propEMF_15m)
+
+# Plot - All Species (ECM and AM)
+ggplot(iw_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Proportion ECM Basal Area", 
+       y = "Total Number of 0-Year Seedlings",
+       title = "Ironwood") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
 
 #################### 15-m radius
 iwBA_15m <- glmer(total_count_yr1 ~ iw_15m + conMycNS_15m + 
