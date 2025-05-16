@@ -125,6 +125,11 @@ allSp_TI_ObsYear$bs_0yr_count =
   bs_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
                                      bs_surv_temp$TI_FY)]
 
+##### Read in file with species' average cumulative BA per site
+speciesSite_sum = read.csv("./data/L1/mean_totalSpSiteBA.csv")
+speciesSite_sum$Site = factor(speciesSite_sum$Site)
+speciesSite_sum = speciesSite_sum[,c(1,2,4)]
+
 #################################################
 #################################################
 #################################################
@@ -156,15 +161,52 @@ rm_surv$logPrior = log(rm_surv$Prior3_counts + 1)
 rm_surv$propEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
 rm_surv$propEMF_15m[rm_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(rm_surv$total_count_yr0, rm_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "rm"
+# Step 2: Add Sp column to match join key
+rm_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+rm_surv <- rm_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+rm_surv$total_yr0_std = rm_surv$total_count_yr0/rm_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(rm_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(rm_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Red maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(rm_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Red maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(rm_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Red maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(rm_surv, aes(x = rm_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "Red maple") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
