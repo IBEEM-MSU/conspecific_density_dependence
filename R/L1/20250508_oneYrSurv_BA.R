@@ -261,15 +261,52 @@ sm_surv$logPrior = log(sm_surv$Prior3_counts + 1)
 sm_surv$propEMF_15m = (sm_surv$hetMyc_15m / (sm_surv$hetMyc_15m + sm_surv$conMyc_15m))
 sm_surv$propEMF_15m[sm_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(sm_surv$total_count_yr0, sm_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "sm"
+# Step 2: Add Sp column to match join key
+sm_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+sm_surv <- sm_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+sm_surv$total_yr0_std = sm_surv$total_count_yr0/sm_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(sm_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(sm_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Sugar maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(sm_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Sugar maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(sm_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Sugar maple") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(sm_surv, aes(x = sm_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "Sugar maple") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -324,15 +361,52 @@ ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
 ab_surv$propEMF_15m = (ab_surv$conMyc_15m / (ab_surv$hetMyc_15m + ab_surv$conMyc_15m))
 ab_surv$propEMF_15m[ab_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(ab_surv$total_count_yr0, ab_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "ab"
+# Step 2: Add Sp column to match join key
+ab_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+ab_surv <- ab_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+ab_surv$total_yr0_std = ab_surv$total_count_yr0/ab_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(ab_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(ab_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "American beech") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(ab_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "American beech") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(ab_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "American beech") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(ab_surv, aes(x = ab_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "American beech") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -387,15 +461,52 @@ wa_surv$logPrior = log(wa_surv$Prior3_counts + 1)
 wa_surv$propEMF_15m = (wa_surv$hetMyc_15m / (wa_surv$hetMyc_15m + wa_surv$conMyc_15m))
 wa_surv$propEMF_15m[wa_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(wa_surv$total_count_yr0, wa_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "wa"
+# Step 2: Add Sp column to match join key
+wa_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+wa_surv <- wa_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+wa_surv$total_yr0_std = wa_surv$total_count_yr0/wa_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(wa_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(wa_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "White ash") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(wa_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "White ash") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(wa_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "White ash") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(wa_surv, aes(x = wa_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "White ash") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -450,15 +561,52 @@ bc_surv$logPrior = log(bc_surv$Prior3_counts + 1)
 bc_surv$propEMF_15m = (bc_surv$hetMyc_15m / (bc_surv$hetMyc_15m + bc_surv$conMyc_15m))
 bc_surv$propEMF_15m[bc_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(bc_surv$total_count_yr0, bc_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "bc"
+# Step 2: Add Sp column to match join key
+bc_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+bc_surv <- bc_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+bc_surv$total_yr0_std = bc_surv$total_count_yr0/bc_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(bc_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(bc_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Black cherry") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(bc_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Black cherry") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(bc_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Black cherry") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(bc_surv, aes(x = bc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "Black cherry") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -513,15 +661,52 @@ nro_surv$logPrior = log(nro_surv$Prior3_counts + 1)
 nro_surv$propEMF_15m = (nro_surv$conMyc_15m / (nro_surv$hetMyc_15m + nro_surv$conMyc_15m))
 nro_surv$propEMF_15m[nro_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(nro_surv$total_count_yr0, nro_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "nro"
+# Step 2: Add Sp column to match join key
+nro_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+nro_surv <- nro_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+nro_surv$total_yr0_std = nro_surv$total_count_yr0/nro_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(nro_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(nro_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Northern red oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(nro_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Northern red oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(nro_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Northern red oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(nro_surv, aes(x = nro_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "Northern red oak") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -577,15 +762,53 @@ bonro_surv$logPrior = log(bonro_surv$Prior3_counts + 1)
 bonro_surv$propEMF_15m = (bonro_surv$conMyc_15m / (bonro_surv$hetMyc_15m + bonro_surv$conMyc_15m))
 bonro_surv$propEMF_15m[bonro_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(bonro_surv$total_count_yr0, bonro_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "bonro"
+# Step 2: Add Sp column to match join key
+bonro_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+bonro_surv <- bonro_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+bonro_surv$total_yr0_std = bonro_surv$total_count_yr0/bonro_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(bonro_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(bonro_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Black oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(bonro_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Black oak") +
+  scale_x_continuous(limits = c(0, 1.25)) +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(bonro_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Black oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(bonro_surv, aes(x = bonro_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "Black oak") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -641,15 +864,52 @@ wo_surv$logPrior = log(wo_surv$Prior3_counts + 1)
 wo_surv$propEMF_15m = (wo_surv$conMyc_15m / (wo_surv$hetMyc_15m + wo_surv$conMyc_15m))
 wo_surv$propEMF_15m[wo_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(wo_surv$total_count_yr0, wo_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "wo"
+# Step 2: Add Sp column to match join key
+wo_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+wo_surv <- wo_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+wo_surv$total_yr0_std = wo_surv$total_count_yr0/wo_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(wo_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(wo_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "White oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(wo_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "White oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(wo_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "White oak") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(wo_surv, aes(x = wo_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "White oak") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
@@ -704,15 +964,52 @@ iw_surv$logPrior = log(iw_surv$Prior3_counts + 1)
 iw_surv$propEMF_15m = (iw_surv$conMyc_15m / (iw_surv$hetMyc_15m + iw_surv$conMyc_15m))
 iw_surv$propEMF_15m[iw_surv$propEMF_15m == "NaN"] <- 0
 
-#### Plot 0-yr old seedling count (y-axis) versus %ECM BA
-cor.test(iw_surv$total_count_yr0, iw_surv$propEMF_15m)
+# Step 1: Define species code from the name
+sp_code <- "iw"
+# Step 2: Add Sp column to match join key
+iw_surv$Sp <- sp_code
+# Step 3: Join with the species BA dataframe
+iw_surv <- iw_surv %>%
+  left_join(speciesSite_sum, by = c("Site", "Sp")) 
+# Make a column for the standardized 0-yr counts
+iw_surv$total_yr0_std = iw_surv$total_count_yr0/iw_surv$spBA_corr
 
-# Plot - All Species (ECM and AM)
-ggplot(iw_surv, aes(x = propEMF_15m, y = total_count_yr0)) +
+##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
+ggplot(iw_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
   geom_point() +  
   theme_bw() +
   labs(x = "Proportion ECM Basal Area", 
-       y = "Total Number of 0-Year Seedlings",
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Ironwood") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
+ggplot(iw_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Ironwood") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
+ggplot(iw_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
+       title = "Ironwood") +
+  theme(axis.title.x = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"))
+##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
+ggplot(iw_surv, aes(x = iw_15m, y = total_yr0_std)) +
+  geom_point() +  
+  theme_bw() +
+  labs(x = "Total Conspecific Basal Area (m²)", 
+       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
        title = "Ironwood") +
   theme(axis.title.x = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 10, color = "black"),
