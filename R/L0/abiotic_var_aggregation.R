@@ -499,6 +499,11 @@ clim_allSites = rbind(clim_site1,clim_site2,clim_site3,
                       clim_site4,clim_site5,clim_site6,
                       clim_site7,clim_site8,clim_site9,
                       clim_site10,clim_site11,clim_site12)
+clim_allSites <- clim_allSites %>%
+  mutate(across(c(TransectID, Site), as.character))
+envVars_mod <- envVars_mod %>%
+  mutate(across(c(TransectID, Site), as.character))
+
 # Merge with environmental data via a left join
 clim_env_allSites <- clim_allSites %>%
   left_join(envVars_mod, by = c("TransectID","Site"))
