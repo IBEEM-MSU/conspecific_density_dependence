@@ -105,11 +105,16 @@ WA_slope_modeling_data <- WA_GLM_slopes %>%
 
 # Non-parametric pewautation testing
 
+WA_slope_modeling_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/WA_slope_modeling_data.csv")
+
 nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 pewautations, this code takes about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM.
 
-Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 4 tewas to test in this model, so we'll need 4 dataframes to store the randomized F-value test results.
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 7 terms!!! to test in this model, so we'll need 4 dataframes to store the randomized F-value test results.
 	Rand_results_con_myc <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_myc_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
 
 for(i in 1:nperm) # For loop for randomized F-values
@@ -125,24 +130,27 @@ for(i in 1:nperm) # For loop for randomized F-values
 			
 			# as.data.frame(Test_data)
 	
-	wa_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ wa_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
-                    hetMyc_15m:log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1):log10(Count + 1) +
+	wa_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ wa_15m + conMycNS_15m + 
+                    hetMyc_15m + wa_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
                     (1 | SiteID) + (1 | Cohort.Year),
 					data = WA_slope_modeling_data)
 					
 	Rand_aov <- anova(wa_mod_BA_rand) # Save results to store F-values below
 					
-					Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
-					Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
-					Rand_results_het_myc[i] <- Rand_aov$"F value"[3]
-					Rand_results_other_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
+		Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
+		Rand_results_het_myc[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_den_het_myc[i] <- Rand_aov$"F value"[4]
+		Rand_results_con_myc_het_myc[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[6]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[7]
 					
 }
 
 	# LM test with real data. We will compare these F-values to those from the pewautations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
 			
-	wa_mod_BA_true <- lmer(GLM.Slope.Estimate ~ wa_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
-                    hetMyc_15m:log10(Count + 1) + log(Prior_3_year_cohorts_counts + 1):log10(Count + 1) +
+	wa_mod_BA_true <- lmer(GLM.Slope.Estimate ~ wa_15m + conMycNS_15m + 
+                    hetMyc_15m + wa_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
                     (1 | SiteID) + (1 | Cohort.Year),
 					data = WA_slope_modeling_data)
 					
@@ -163,7 +171,21 @@ for(i in 1:nperm) # For loop for randomized F-values
 			Ranks_het_myc <- rank(All_results_het_myc)
 			P_values_het_myc <- 1-Ranks_het_myc[nperm+1]/(nperm+1)
 		
-		Obs_results_other_seedlings <- as.vector(Obs_aov[4,5])
+		Obs_results_con_den_het_myc <- as.vector(Obs_aov[4,5])
+			All_results_con_den_het_myc <- rbind(Rand_results_con_den_het_myc, Obs_results_con_den_het_myc)
+			Ranks_con_den_het_myc <- rank(All_results_con_den_het_myc)
+			P_values_con_den_het_myc <- 1-Ranks_con_den_het_myc[nperm+1]/(nperm+1)		
+		Obs_results_con_myc_het_myc <- as.vector(Obs_aov[5,5])
+			All_results_con_myc_het_myc <- rbind(Rand_results_con_myc_het_myc, Obs_results_con_myc_het_myc)
+			Ranks_con_myc_het_myc <- rank(All_results_con_myc_het_myc)
+			P_values_con_myc_het_myc <- 1-Ranks_con_myc_het_myc[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[6,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[7,5])
 			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
@@ -179,6 +201,18 @@ for(i in 1:nperm) # For loop for randomized F-values
 	P_values_het_myc
 		hist(All_results_het_myc) # vs
 		Obs_results_het_myc
+
+	P_values_con_den_het_myc
+		hist(All_results_con_den_het_myc)
+		Obs_results_con_den_het_myc
+
+	P_values_con_myc_het_myc
+		hist(All_results_con_myc_het_myc)
+		Obs_results_con_myc_het_myc
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
 		
 	P_values_other_seedlings
 		hist(All_results_other_seedlings)
@@ -186,8 +220,16 @@ for(i in 1:nperm) # For loop for randomized F-values
 	
 	r.squaredGLMM(wa_mod_BA_true)
 	
-# Plotting - WIP	
+	# Store modeling results & export for plotting.
 
-Obs_summary <- summary(wa_mod_BA_true)
+	summary(wa_mod_BA_true)
+	
+	WA_GLM_slope_coefficient_modeling_results <- data.frame(species = c("wa", "wa", "wa", "wa", "wa", "wa", "wa"), 
+															term = c("Conspecific_BA", "Conmycorrhizal_BA", "Heteromycorrhizal_BA", "Log_Recruit_Density", "Log_Prior_Density", "Consp_x_Heteromycorrhizal_BA", "Conmyc_x_Heteromycorrhizal_BA"), 
+															estimate = c("2.8699", "2.1675", "1.7720", "11.8239", "0.1370", "-1.9433", "-0.8577"), 
+															std.error = c("1.8548", "0.7925", "0.7672", "0.4511", "0.2710", "1.6061", "0.7044"), 
+															statistic = c("1.547", "2.735", "2.310", "26.213", "0.506", "-1.210", "-1.218"), 
+															p.value = c(P_values_con_den, P_values_con_myc, P_values_het_myc, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_het_myc, P_values_con_myc_het_myc),
+															r.squared = c("0.07894294", "0.07894294", "0.07894294", "0.07894294", "0.07894294", "0.07894294", "0.07894294"))
 
-Obs_summary$"Estimate"
+	# write.csv(WA_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/WA_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)

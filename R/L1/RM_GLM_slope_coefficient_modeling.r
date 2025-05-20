@@ -105,11 +105,16 @@ RM_slope_modeling_data <- RM_GLM_slopes %>%
 
 # Non-parametric permutation testing
 
+RM_slope_modeling_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/RM_slope_modeling_data.csv")
+
 nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutations, this code takes about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM.
 
-Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 4 terms to test in this model, so we'll need 4 dataframes to store the randomized F-value test results.
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 7 terms!!! to test in this model, so we'll need 4 dataframes to store the randomized F-value test results.
 	Rand_results_con_myc <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_myc_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
 
 for(i in 1:nperm) # For loop for randomized F-values
@@ -125,24 +130,27 @@ for(i in 1:nperm) # For loop for randomized F-values
 			
 			# as.data.frame(Test_data)
 	
-	rm_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ rm_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
-                    hetMyc_15m:log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1):log10(Count + 1) +
+	rm_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ rm_15m + conMycNS_15m + 
+                    hetMyc_15m + rm_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
                     (1 | SiteID) + (1 | Cohort.Year),
 					data = RM_slope_modeling_data)
 					
 	Rand_aov <- anova(rm_mod_BA_rand) # Save results to store F-values below
 					
-					Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
-					Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
-					Rand_results_het_myc[i] <- Rand_aov$"F value"[3]
-					Rand_results_other_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
+		Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
+		Rand_results_het_myc[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_den_het_myc[i] <- Rand_aov$"F value"[4]
+		Rand_results_con_myc_het_myc[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[6]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[7]
 					
 }
 
 	# LM test with real data. We will compare these F-values to those from the permutations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
 			
-	rm_mod_BA_true <- lmer(GLM.Slope.Estimate ~ rm_15m:log10(Count + 1) + conMycNS_15m:log10(Count + 1) + 
-                    hetMyc_15m:log10(Count + 1) + log(Prior_3_year_cohorts_counts + 1):log10(Count + 1) +
+	rm_mod_BA_true <- lmer(GLM.Slope.Estimate ~ rm_15m + conMycNS_15m + 
+                    hetMyc_15m + rm_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
                     (1 | SiteID) + (1 | Cohort.Year),
 					data = RM_slope_modeling_data)
 					
@@ -163,7 +171,21 @@ for(i in 1:nperm) # For loop for randomized F-values
 			Ranks_het_myc <- rank(All_results_het_myc)
 			P_values_het_myc <- 1-Ranks_het_myc[nperm+1]/(nperm+1)
 		
-		Obs_results_other_seedlings <- as.vector(Obs_aov[4,5])
+		Obs_results_con_den_het_myc <- as.vector(Obs_aov[4,5])
+			All_results_con_den_het_myc <- rbind(Rand_results_con_den_het_myc, Obs_results_con_den_het_myc)
+			Ranks_con_den_het_myc <- rank(All_results_con_den_het_myc)
+			P_values_con_den_het_myc <- 1-Ranks_con_den_het_myc[nperm+1]/(nperm+1)		
+		Obs_results_con_myc_het_myc <- as.vector(Obs_aov[5,5])
+			All_results_con_myc_het_myc <- rbind(Rand_results_con_myc_het_myc, Obs_results_con_myc_het_myc)
+			Ranks_con_myc_het_myc <- rank(All_results_con_myc_het_myc)
+			P_values_con_myc_het_myc <- 1-Ranks_con_myc_het_myc[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[6,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[7,5])
 			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
@@ -179,6 +201,18 @@ for(i in 1:nperm) # For loop for randomized F-values
 	P_values_het_myc
 		hist(All_results_het_myc) # vs
 		Obs_results_het_myc
+
+	P_values_con_den_het_myc
+		hist(All_results_con_den_het_myc)
+		Obs_results_con_den_het_myc
+
+	P_values_con_myc_het_myc
+		hist(All_results_con_myc_het_myc)
+		Obs_results_con_myc_het_myc
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
 		
 	P_values_other_seedlings
 		hist(All_results_other_seedlings)
@@ -186,4 +220,16 @@ for(i in 1:nperm) # For loop for randomized F-values
 	
 	r.squaredGLMM(rm_mod_BA_true)
 	
-# Plotting - WIP	
+	# Store modeling results & export for plotting.
+	
+	summary(rm_mod_BA_true)
+	
+	RM_GLM_slope_coefficient_modeling_results <- data.frame(species = c("rm", "rm", "rm", "rm", "rm", "rm", "rm"), 
+															term = c("Conspecific_BA", "Conmycorrhizal_BA", "Heteromycorrhizal_BA", "Log_Recruit_Density", "Log_Prior_Density", "Consp_x_Heteromycorrhizal_BA", "Conmyc_x_Heteromycorrhizal_BA"), 
+															estimate = c("0.9178", "0.8121", "1.3793", "26.0926", "2.7907", "-1.1125", "-0.8320"), 
+															std.error = c("0.9908", "0.6005", "0.2704", "0.2798", "0.1432", "0.5411", "0.4376"), 
+															statistic = c("0.926", "1.352", "5.101", "93.250", "19.486", "-2.056", "-1.901"), 
+															p.value = c(P_values_con_den, P_values_con_myc, P_values_het_myc, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_het_myc, P_values_con_myc_het_myc),
+															r.squared = c("0.2073774", "0.2073774", "0.2073774", "0.2073774", "0.2073774", "0.2073774", "0.2073774"))
+
+	# write.csv(RM_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/RM_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)

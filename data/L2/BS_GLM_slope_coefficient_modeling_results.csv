@@ -1,0 +1,8 @@
+"species","term","estimate","std.error","statistic","p.value","r.squared"
+"bs","Conspecific_BA","2.8075","1.8400","1.526",0.142,"0.1836765"
+"bs","Conmycorrhizal_BA","7.7227","2.0116","3.839",0.001,"0.1836765"
+"bs","Heteromycorrhizal_BA","4.1178","2.0624","1.997",0.022,"0.1836765"
+"bs","Log_Recruit_Density","20.1392","1.0882","18.507",0.858,"0.1836765"
+"bs","Log_Prior_Density","-3.0792","0.7327","-4.203",0.31,"0.1836765"
+"bs","Consp_x_Heteromycorrhizal_BA","0.8038","1.6135","0.498",0,"0.1836765"
+"bs","Conmyc_x_Heteromycorrhizal_BA","-1.5304","1.5228","-1.005",0.00900000000000001,"0.1836765"
