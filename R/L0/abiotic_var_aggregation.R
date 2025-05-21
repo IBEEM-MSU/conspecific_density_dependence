@@ -101,7 +101,7 @@ clim_summ <- clim_site2 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("59.12"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site2 %>%
@@ -138,7 +138,7 @@ clim_summ <- clim_site3 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("8.21"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site3 %>%
@@ -175,7 +175,7 @@ clim_summ <- clim_site4 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("39.21"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site4 %>%
@@ -212,7 +212,7 @@ clim_summ <- clim_site5 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("16.35"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site5 %>%
@@ -249,7 +249,7 @@ clim_summ <- clim_site6 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("60.35"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site6 %>%
@@ -286,7 +286,7 @@ clim_summ <- clim_site7 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("7.40"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site7 %>%
@@ -323,7 +323,7 @@ clim_summ <- clim_site8 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("40.40"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site8 %>%
@@ -360,7 +360,7 @@ clim_summ <- clim_site9 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("21.43"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site9 %>%
@@ -397,7 +397,7 @@ clim_summ <- clim_site10 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("25.43"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site10 %>%
@@ -434,7 +434,7 @@ clim_summ <- clim_site11 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("6.45"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site11 %>%
@@ -471,7 +471,7 @@ clim_summ <- clim_site12 %>%
             max_tmax_c = max(tmax_c, na.rm = TRUE), .groups = "drop") %>%
   mutate(survYear = as.integer(sub(".*-", "", clim_year)))  %>%
   filter(., survYear != 1997) %>%
-  mutate(Site = rep("49.01"))
+  mutate(Site = rep("24.45"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
 pdsi_summ <- pdsi_site12 %>%
@@ -499,10 +499,6 @@ clim_allSites = rbind(clim_site1,clim_site2,clim_site3,
                       clim_site4,clim_site5,clim_site6,
                       clim_site7,clim_site8,clim_site9,
                       clim_site10,clim_site11,clim_site12)
-clim_allSites <- clim_allSites %>%
-  mutate(across(c(TransectID, Site), as.character))
-envVars_mod <- envVars_mod %>%
-  mutate(across(c(TransectID, Site), as.character))
 
 # Merge with environmental data via a left join
 clim_env_allSites <- clim_allSites %>%
