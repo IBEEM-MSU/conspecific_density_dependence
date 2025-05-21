@@ -1,6 +1,6 @@
 
 #################################################
-####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
+####### Analyses of one-year survivorship WRT abiotic environment
 ####### Author: Bailey McNichol and Andrew Eagar
 ####### Date: 8 May 2025
 #################################################
@@ -18,117 +18,26 @@ library(broom.mixed)
 library(tibble)
 
 ### Most complex model to fit (15-m radius)
-###  Biotic model of one-year survivorship - with adult densities (BA)
-# (#1 yr) ~ Consp BA:log(#0 yr) + Con-myc BA:log(#0 yr) + Het-myc BA:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + Consp BA:log(#0 yr):Con-myc BA + Consp BA:log(#0 yr):Het-myc BA + Het-myc BA:log(#0 yr):Con-myc BA + (1 | Site) + (1 | Year)
+###  Abiotic model of one-year survivorship 
+# (#1 yr) ~ meanGS_PDSI + minDailyTemp + maxDailyTemp + percOpenness + baseCEC + log(#0 yr) + (1 | Site) + (1 | Year)
 
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-# (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
-
-# For species with sufficient observations, we included a random effect of site. For species with limited observations across sites, we excluded this term due to singular fits and lack of variance attributable to site.
-
-##### Read in file that has the counts by species for every TransectID-ObsYear combination
-allSp_TI_ObsYear <- read.csv("./data/L1/allSp_prior_cohort_densities.csv")
-
-## Create TI_FY concatenated variable
-allSp_TI_ObsYear$TI_FY = paste(allSp_TI_ObsYear$TransectID,
-                               allSp_TI_ObsYear$Obs.Year)
-
-##### Going to bring in the total_count_yr0 counts for each species, matching by Obs.Year (First.Year) and Transect ID
-###### rm
-## Read in data file from the R/L1 folder 
-rm_surv_temp <- read.csv("./data/L1/rm_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-rm_surv_temp$TI_FY = paste(rm_surv_temp$TransectID,rm_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$rm_0yr_count = 
-  rm_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     rm_surv_temp$TI_FY)]
-###### sm
-## Read in data file from the R/L1 folder 
-sm_surv_temp <- read.csv("./data/L1/sm_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-sm_surv_temp$TI_FY = paste(sm_surv_temp$TransectID,sm_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$sm_0yr_count = 
-  sm_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     sm_surv_temp$TI_FY)]
-###### ab
-## Read in data file from the R/L1 folder 
-ab_surv_temp <- read.csv("./data/L1/ab_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-ab_surv_temp$TI_FY = paste(ab_surv_temp$TransectID,ab_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$ab_0yr_count = 
-  ab_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     ab_surv_temp$TI_FY)]
-###### wa
-## Read in data file from the R/L1 folder 
-wa_surv_temp <- read.csv("./data/L1/wa_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-wa_surv_temp$TI_FY = paste(wa_surv_temp$TransectID,wa_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$wa_0yr_count = 
-  wa_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     wa_surv_temp$TI_FY)]
-###### bc
-## Read in data file from the R/L1 folder 
-bc_surv_temp <- read.csv("./data/L1/bc_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-bc_surv_temp$TI_FY = paste(bc_surv_temp$TransectID,bc_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$bc_0yr_count = 
-  bc_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     bc_surv_temp$TI_FY)]
-###### nro
-## Read in data file from the R/L1 folder 
-nro_surv_temp <- read.csv("./data/L1/nro_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-nro_surv_temp$TI_FY = paste(nro_surv_temp$TransectID,nro_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$nro_0yr_count = 
-  nro_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                      nro_surv_temp$TI_FY)]
-###### bonro
-## Read in data file from the R/L1 folder 
-bonro_surv_temp <- read.csv("./data/L1/bonro_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-bonro_surv_temp$TI_FY = paste(bonro_surv_temp$TransectID,bonro_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$bonro_0yr_count = 
-  bonro_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                        bonro_surv_temp$TI_FY)]
-###### wo
-## Read in data file from the R/L1 folder 
-wo_surv_temp <- read.csv("./data/L1/wo_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-wo_surv_temp$TI_FY = paste(wo_surv_temp$TransectID,wo_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$wo_0yr_count = 
-  wo_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     wo_surv_temp$TI_FY)]
-###### iw
-## Read in data file from the R/L1 folder 
-iw_surv_temp <- read.csv("./data/L1/iw_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-iw_surv_temp$TI_FY = paste(iw_surv_temp$TransectID,iw_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$iw_0yr_count = 
-  iw_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     iw_surv_temp$TI_FY)]
-###### bs
-## Read in data file from the R/L1 folder 
-bs_surv_temp <- read.csv("./data/L1/bs_oneYrSurv_matureBA.csv", row.names = 1)
-# Create concatenated Transect ID - First Year identifier
-bs_surv_temp$TI_FY = paste(bs_surv_temp$TransectID,bs_surv_temp$First.Year)
-# Bring over 0-yr counts from species' data using match
-allSp_TI_ObsYear$bs_0yr_count = 
-  bs_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
-                                     bs_surv_temp$TI_FY)]
-
-##### Read in file with species' average cumulative BA per site
-speciesSite_sum = read.csv("./data/L1/mean_totalSpSiteBA.csv")
-speciesSite_sum$Site = factor(speciesSite_sum$Site)
-speciesSite_sum = speciesSite_sum[,c(1,2,4)]
+###### Read in data files from the R/L1 folder 
+## Species for modeling
+rm_surv <- read.csv("./data/L1/rm_oneYrSurv_matureBA.csv", row.names = 1)
+sm_surv <- read.csv("./data/L1/sm_oneYrSurv_matureBA.csv", row.names = 1)
+ab_surv <- read.csv("./data/L1/ab_oneYrSurv_matureBA.csv", row.names = 1)
+wa_surv <- read.csv("./data/L1/wa_oneYrSurv_matureBA.csv", row.names = 1)
+bc_surv <- read.csv("./data/L1/bc_oneYrSurv_matureBA.csv", row.names = 1)
+nro_surv <- read.csv("./data/L1/nro_oneYrSurv_matureBA.csv", row.names = 1)
+bonro_surv <- read.csv("./data/L1/bonro_oneYrSurv_matureBA.csv", row.names = 1)
+wo_surv <- read.csv("./data/L1/wo_oneYrSurv_matureBA.csv", row.names = 1)
+iw_surv <- read.csv("./data/L1/iw_oneYrSurv_matureBA.csv", row.names = 1)
+## Environmental/climate data
+clim_env_allSites <- read.csv("./data/L1/clim_envVars_allSites.csv")
+clim_env_allSites$Site = as.character(clim_env_allSites$Site)
+clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
+clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"
+clim_env_allSites$survYear = as.factor(clim_env_allSites$survYear)
 
 #################################################
 #################################################
@@ -136,97 +45,33 @@ speciesSite_sum = speciesSite_sum[,c(1,2,4)]
 ##### Red Maple
 
 ### Filter to include 2001 as first First.Year
-rm_surv_temp <- dplyr::filter(rm_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,17:25)], na.rm = TRUE)
-# Heterospecific
-rm_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(rm_surv_temp$TI_FY,allSp_TI_ObsYear$TI_FY)]
-
-# Rename data
-rm_surv <- rm_surv_temp
-
-#### Make site and year into factors
-rm_surv$Site = as.factor(rm_surv$Site)
+rm_surv <- dplyr::filter(rm_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+rm_surv <- rm_surv[,1:12]
+# Make site and year into factors
+rm_surv$Site = as.character(rm_surv$Site)
+rm_surv$Site[rm_surv$Site=="7.4"] <- "7.40"
+rm_surv$Site[rm_surv$Site=="40.4"] <- "40.40"
 rm_surv$survYear = as.factor(rm_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 rm_surv$log0yr <- log(rm_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-rm_surv$logPrior = log(rm_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+rm_surv_clim <- rm_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-rm_surv$propEMF_15m = (rm_surv$hetMyc_15m / (rm_surv$hetMyc_15m + rm_surv$conMyc_15m))
-rm_surv$propEMF_15m[rm_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "rm"
-# Step 2: Add Sp column to match join key
-rm_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-rm_surv <- rm_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-rm_surv$total_yr0_std = rm_surv$total_count_yr0/rm_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(rm_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Red maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(rm_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Red maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(rm_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Red maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(rm_surv, aes(x = rm_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Red maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius
-rmBA_15m <- glmer(total_count_yr1 ~ rm_15m + conMycNS_15m + 
-                    hetMyc_15m + rm_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
+#################### Effects of environment and climate
+rm_abio <- glmer(total_count_yr1 ~ mean_pdsi + tmin_c + tmax_c +
+                   percOpen + Base_CEC + log0yr +
                     (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = rm_surv)
-summary(rmBA_15m)
+                  family = poisson(link = "log"), data = rm_surv_clim)
+summary(rm_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(rmBA_15m) # all < 7
-r.squaredGLMM(rmBA_15m) 
+car::vif(rm_abio) # all < 2
+r.squaredGLMM(rm_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = rmBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = rm_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -235,98 +80,36 @@ plotQQunif(sim_res)
 ##### Sugar Maple
 
 ### Filter to include 2001 as first First.Year
-sm_surv_temp <- dplyr::filter(sm_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16,18:25)], na.rm = TRUE)
-# Heterospecific
-sm_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(sm_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-sm_surv <- sm_surv_temp
-
-#### Make site and year into factors
-sm_surv$Site = as.factor(sm_surv$Site)
+sm_surv <- dplyr::filter(sm_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+sm_surv <- sm_surv[,1:12]
+# Make site and year into factors
+sm_surv$Site = as.character(sm_surv$Site)
+sm_surv$Site[sm_surv$Site=="7.4"] <- "7.40"
+sm_surv$Site[sm_surv$Site=="40.4"] <- "40.40"
 sm_surv$survYear = as.factor(sm_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 sm_surv$log0yr <- log(sm_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-sm_surv$logPrior = log(sm_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+sm_surv_clim <- sm_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-sm_surv$propEMF_15m = (sm_surv$hetMyc_15m / (sm_surv$hetMyc_15m + sm_surv$conMyc_15m))
-sm_surv$propEMF_15m[sm_surv$propEMF_15m == "NaN"] <- 0
+sm_surv_clim$mintemp = sm_surv_clim$tmin_c - min(sm_surv_clim$tmin_c) 
+sm_surv_clim$maxtemp = sm_surv_clim$tmax_c - min(sm_surv_clim$tmax_c) 
 
-# Step 1: Define species code from the name
-sp_code <- "sm"
-# Step 2: Add Sp column to match join key
-sm_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-sm_surv <- sm_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-sm_surv$total_yr0_std = sm_surv$total_count_yr0/sm_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(sm_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Sugar maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(sm_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Sugar maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(sm_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Sugar maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(sm_surv, aes(x = sm_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Sugar maple") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius
-smBA_15m <- glmer(total_count_yr1 ~ sm_15m + conMycNS_15m + 
-                    hetMyc_15m + sm_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = sm_surv)
-summary(smBA_15m)
+#################### Effects of environment and climate
+sm_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + log0yr +
+                   (1 | Site) + (1 | survYear),
+                 family = poisson(link = "log"), data = sm_surv_clim)
+summary(sm_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(smBA_15m) # all < 3
-r.squaredGLMM(smBA_15m) 
+car::vif(sm_abio) # all < 2
+r.squaredGLMM(sm_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = smBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = sm_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -335,98 +118,37 @@ plotQQunif(sim_res)
 ##### American Beech
 
 ### Filter to include 2001 as first First.Year
-ab_surv_temp <- dplyr::filter(ab_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:17,19:25)], na.rm = TRUE)
-# Heterospecific
-ab_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(ab_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-ab_surv <- ab_surv_temp
-
-#### Make site and year into factors
-ab_surv$Site = as.factor(ab_surv$Site)
+ab_surv <- dplyr::filter(ab_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+ab_surv <- ab_surv[,1:12]
+# Make site and year into factors
+ab_surv$Site = as.character(ab_surv$Site)
+ab_surv$Site[ab_surv$Site=="7.4"] <- "7.40"
+ab_surv$Site[ab_surv$Site=="40.4"] <- "40.40"
 ab_surv$survYear = as.factor(ab_surv$survYear)
+# Log-trans the count of 0-yr old seedlings
+ab_surv$log0yr <- log(ab_surv$total_count_yr0)  
+### Left join to add climate variables to data
+ab_surv_clim <- ab_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
 
-#### Log transform the count of 0-yr old seedlings
-ab_surv$log0yr <- log(ab_surv$total_count_yr0) 
-## Calculate the log-transformed prior 3 year count variable + 1
-ab_surv$logPrior = log(ab_surv$Prior3_counts + 1)
+ab_surv_clim$mintemp = ab_surv_clim$tmin_c - min(ab_surv_clim$tmin_c) 
+ab_surv_clim$maxtemp = ab_surv_clim$tmax_c - min(ab_surv_clim$tmax_c) 
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-ab_surv$propEMF_15m = (ab_surv$conMyc_15m / (ab_surv$hetMyc_15m + ab_surv$conMyc_15m))
-ab_surv$propEMF_15m[ab_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "ab"
-# Step 2: Add Sp column to match join key
-ab_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-ab_surv <- ab_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-ab_surv$total_yr0_std = ab_surv$total_count_yr0/ab_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(ab_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "American beech") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(ab_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "American beech") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(ab_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "American beech") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(ab_surv, aes(x = ab_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "American beech") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius - no RE of site
-abBA_15m <- glmer(total_count_yr1 ~ ab_15m + conMycNS_15m + 
-                    hetMyc_15m + ab_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | survYear),
-                  family = poisson(link = "log"), data = ab_surv)
-summary(abBA_15m)
+#################### Effects of environment and climate
+ab_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + log0yr +
+                   #(1 | Site) + 
+                   (1 | survYear),
+                 family = poisson(link = "log"), data = ab_surv_clim)
+summary(ab_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(abBA_15m) # all < 10
-r.squaredGLMM(abBA_15m) 
+car::vif(ab_abio) # all < 2
+r.squaredGLMM(ab_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = abBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = ab_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
