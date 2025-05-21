@@ -58,10 +58,13 @@ rm_surv$log0yr <- log(rm_surv$total_count_yr0)
 ### Left join to add climate variables to data
 rm_surv_clim <- rm_surv %>%
   left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+rm_surv_clim$mintemp = rm_surv_clim$tmin_c - min(rm_surv_clim$tmin_c) 
+rm_surv_clim$maxtemp = rm_surv_clim$tmax_c - min(rm_surv_clim$tmax_c) 
 
 #################### Effects of environment and climate
-rm_abio <- glmer(total_count_yr1 ~ mean_pdsi + tmin_c + tmax_c +
-                   percOpen + Base_CEC + log0yr +
+rm_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + #log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = rm_surv_clim)
 summary(rm_abio)
@@ -93,13 +96,13 @@ sm_surv$log0yr <- log(sm_surv$total_count_yr0)
 ### Left join to add climate variables to data
 sm_surv_clim <- sm_surv %>%
   left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
-
+### Center min and max temps by the minimum of each
 sm_surv_clim$mintemp = sm_surv_clim$tmin_c - min(sm_surv_clim$tmin_c) 
 sm_surv_clim$maxtemp = sm_surv_clim$tmax_c - min(sm_surv_clim$tmax_c) 
 
 #################### Effects of environment and climate
 sm_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
-                   percOpen + Base_CEC + log0yr +
+                   percOpen + Base_CEC + #log0yr +
                    (1 | Site) + (1 | survYear),
                  family = poisson(link = "log"), data = sm_surv_clim)
 summary(sm_abio)
@@ -131,14 +134,14 @@ ab_surv$log0yr <- log(ab_surv$total_count_yr0)
 ### Left join to add climate variables to data
 ab_surv_clim <- ab_surv %>%
   left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
-
+### Center min and max temps by the minimum of each
 ab_surv_clim$mintemp = ab_surv_clim$tmin_c - min(ab_surv_clim$tmin_c) 
 ab_surv_clim$maxtemp = ab_surv_clim$tmax_c - min(ab_surv_clim$tmax_c) 
 
 #################### Effects of environment and climate
 ab_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
-                   percOpen + Base_CEC + log0yr +
-                   #(1 | Site) + 
+                   percOpen + Base_CEC + #log0yr +
+                   (1 | Site) + 
                    (1 | survYear),
                  family = poisson(link = "log"), data = ab_surv_clim)
 summary(ab_abio)
@@ -157,98 +160,36 @@ plotQQunif(sim_res)
 ##### White ash
 
 ### Filter to include 2001 as first First.Year
-wa_surv_temp <- dplyr::filter(wa_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:18,20:25)], na.rm = TRUE)
-# Heterospecific
-wa_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(wa_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-wa_surv <- wa_surv_temp
-
-#### Make site and year into factors
-wa_surv$Site = as.factor(wa_surv$Site)
+wa_surv <- dplyr::filter(wa_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+wa_surv <- wa_surv[,1:12]
+# Make site and year into factors
+wa_surv$Site = as.character(wa_surv$Site)
+wa_surv$Site[wa_surv$Site=="7.4"] <- "7.40"
+wa_surv$Site[wa_surv$Site=="40.4"] <- "40.40"
 wa_surv$survYear = as.factor(wa_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 wa_surv$log0yr <- log(wa_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-wa_surv$logPrior = log(wa_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+wa_surv_clim <- wa_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+wa_surv_clim$mintemp = wa_surv_clim$tmin_c - min(wa_surv_clim$tmin_c) 
+wa_surv_clim$maxtemp = wa_surv_clim$tmax_c - min(wa_surv_clim$tmax_c) 
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-wa_surv$propEMF_15m = (wa_surv$hetMyc_15m / (wa_surv$hetMyc_15m + wa_surv$conMyc_15m))
-wa_surv$propEMF_15m[wa_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "wa"
-# Step 2: Add Sp column to match join key
-wa_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-wa_surv <- wa_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-wa_surv$total_yr0_std = wa_surv$total_count_yr0/wa_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(wa_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White ash") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(wa_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White ash") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(wa_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White ash") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(wa_surv, aes(x = wa_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White ash") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius
-waBA_15m <- glmer(total_count_yr1 ~ wa_15m + conMycNS_15m + 
-                    hetMyc_15m + wa_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = wa_surv)
-summary(waBA_15m)
+#################### Effects of environment and climate
+wa_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + #log0yr +
+                   (1 | Site) + (1 | survYear),
+                 family = poisson(link = "log"), data = wa_surv_clim)
+summary(wa_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(waBA_15m) # all < 9
-r.squaredGLMM(waBA_15m) 
+car::vif(wa_abio) # all < 2
+r.squaredGLMM(wa_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = waBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = wa_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -257,98 +198,36 @@ plotQQunif(sim_res)
 ##### Black Cherry
 
 ### Filter to include 2001 as first First.Year
-bc_surv_temp <- dplyr::filter(bc_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:19,21:25)], na.rm = TRUE)
-# Heterospecific
-bc_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(bc_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-bc_surv <- bc_surv_temp
-
-#### Make site and year into factors
-bc_surv$Site = as.factor(bc_surv$Site)
+bc_surv <- dplyr::filter(bc_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+bc_surv <- bc_surv[,1:12]
+# Make site and year into factors
+bc_surv$Site = as.character(bc_surv$Site)
+bc_surv$Site[bc_surv$Site=="7.4"] <- "7.40"
+bc_surv$Site[bc_surv$Site=="40.4"] <- "40.40"
 bc_surv$survYear = as.factor(bc_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 bc_surv$log0yr <- log(bc_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-bc_surv$logPrior = log(bc_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+bc_surv_clim <- bc_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+bc_surv_clim$mintemp = bc_surv_clim$tmin_c - min(bc_surv_clim$tmin_c) 
+bc_surv_clim$maxtemp = bc_surv_clim$tmax_c - min(bc_surv_clim$tmax_c) 
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-bc_surv$propEMF_15m = (bc_surv$hetMyc_15m / (bc_surv$hetMyc_15m + bc_surv$conMyc_15m))
-bc_surv$propEMF_15m[bc_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "bc"
-# Step 2: Add Sp column to match join key
-bc_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-bc_surv <- bc_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-bc_surv$total_yr0_std = bc_surv$total_count_yr0/bc_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(bc_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black cherry") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(bc_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black cherry") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(bc_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black cherry") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(bc_surv, aes(x = bc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black cherry") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius
-bcBA_15m <- glmer(total_count_yr1 ~ bc_15m + conMycNS_15m + 
-                    hetMyc_15m + bc_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = bc_surv)
-summary(bcBA_15m)
+#################### Effects of environment and climate
+bc_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + #log0yr +
+                   (1 | Site) + (1 | survYear),
+                 family = poisson(link = "log"), data = bc_surv_clim)
+summary(bc_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(bcBA_15m) # all < 6
-r.squaredGLMM(bcBA_15m) 
+car::vif(bc_abio) # all < 2
+r.squaredGLMM(bc_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = bcBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = bc_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -357,99 +236,36 @@ plotQQunif(sim_res)
 ##### Northern Red Oak
 
 ### Filter to include 2001 as first First.Year
-nro_surv_temp <- dplyr::filter(nro_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:20,22:25)], na.rm = TRUE)
-# Heterospecific
-nro_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(nro_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-nro_surv <- nro_surv_temp
-
-#### Make site and year into factors
-nro_surv$Site = as.factor(nro_surv$Site)
+nro_surv <- dplyr::filter(nro_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+nro_surv <- nro_surv[,1:12]
+# Make site and year into factors
+nro_surv$Site = as.character(nro_surv$Site)
+nro_surv$Site[nro_surv$Site=="7.4"] <- "7.40"
+nro_surv$Site[nro_surv$Site=="40.4"] <- "40.40"
 nro_surv$survYear = as.factor(nro_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 nro_surv$log0yr <- log(nro_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-nro_surv$logPrior = log(nro_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+nro_surv_clim <- nro_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+nro_surv_clim$mintemp = nro_surv_clim$tmin_c - min(nro_surv_clim$tmin_c) 
+nro_surv_clim$maxtemp = nro_surv_clim$tmax_c - min(nro_surv_clim$tmax_c) 
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-nro_surv$propEMF_15m = (nro_surv$conMyc_15m / (nro_surv$hetMyc_15m + nro_surv$conMyc_15m))
-nro_surv$propEMF_15m[nro_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "nro"
-# Step 2: Add Sp column to match join key
-nro_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-nro_surv <- nro_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-nro_surv$total_yr0_std = nro_surv$total_count_yr0/nro_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(nro_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Northern red oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(nro_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Northern red oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(nro_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Northern red oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(nro_surv, aes(x = nro_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Northern red oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-
-#################### 15-m radius
-nroBA_15m <- glmer(total_count_yr1 ~ nro_15m + conMycNS_15m + 
-                     hetMyc_15m + nro_15m:hetMyc_15m +
-                     conMycNS_15m:hetMyc_15m +
-                     logPrior + log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = nro_surv)
-summary(nroBA_15m)
+#################### Effects of environment and climate
+nro_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + #log0yr +
+                   (1 | Site) + (1 | survYear),
+                 family = poisson(link = "log"), data = nro_surv_clim)
+summary(nro_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(nroBA_15m) # all < 10
-r.squaredGLMM(nroBA_15m) 
+car::vif(nro_abio) # all < 2
+r.squaredGLMM(nro_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = nroBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = nro_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -458,100 +274,36 @@ plotQQunif(sim_res)
 ##### Black oak
 
 ### Filter to include 2001 as first First.Year
-bonro_surv_temp <- dplyr::filter(bonro_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:21,23:25)], na.rm = TRUE)
-# Heterospecific
-bonro_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(bonro_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-bonro_surv <- bonro_surv_temp
-
-#### Make site and year into factors
-bonro_surv$Site = as.factor(bonro_surv$Site)
+bonro_surv <- dplyr::filter(bonro_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+bonro_surv <- bonro_surv[,1:12]
+# Make site and year into factors
+bonro_surv$Site = as.character(bonro_surv$Site)
+bonro_surv$Site[bonro_surv$Site=="7.4"] <- "7.40"
+bonro_surv$Site[bonro_surv$Site=="40.4"] <- "40.40"
 bonro_surv$survYear = as.factor(bonro_surv$survYear)
+# Log-trans the count of 0-yr old seedlings
+bonro_surv$log0yr <- log(bonro_surv$total_count_yr0)  
+### Left join to add climate variables to data
+bonro_surv_clim <- bonro_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+bonro_surv_clim$mintemp = bonro_surv_clim$tmin_c - min(bonro_surv_clim$tmin_c) 
+bonro_surv_clim$maxtemp = bonro_surv_clim$tmax_c - min(bonro_surv_clim$tmax_c) 
 
-#### Log transform the count of 0-yr old seedlings
-bonro_surv$log0yr <- log(bonro_surv$total_count_yr0) 
-## Calculate the log-transformed prior 3 year count variable + 1
-bonro_surv$logPrior = log(bonro_surv$Prior3_counts + 1)
-
-#### Calculate the proportion of EMF hosts in 15-m radius
-bonro_surv$propEMF_15m = (bonro_surv$conMyc_15m / (bonro_surv$hetMyc_15m + bonro_surv$conMyc_15m))
-bonro_surv$propEMF_15m[bonro_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "bonro"
-# Step 2: Add Sp column to match join key
-bonro_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-bonro_surv <- bonro_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-bonro_surv$total_yr0_std = bonro_surv$total_count_yr0/bonro_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(bonro_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(bonro_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black oak") +
-  scale_x_continuous(limits = c(0, 1.25)) +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(bonro_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(bonro_surv, aes(x = bonro_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Black oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius 
-bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m + conMycNS_15m + 
-                       hetMyc_15m + #bonro_15m:hetMyc_15m +
-                       conMycNS_15m:hetMyc_15m +
-                       logPrior + log0yr +
-                       #(1 | Site) + 
-                       (1 | survYear),
-                     family = poisson(link = "log"), data = bonro_surv)
-summary(bonroBA_15m)
+#################### Effects of environment and climate
+bonro_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                   percOpen + Base_CEC + #log0yr +
+                   (1 | Site) + (1 | survYear),
+                 family = poisson(link = "log"), data = bonro_surv_clim)
+summary(bonro_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(bonroBA_15m) # all < 8
-r.squaredGLMM(bonroBA_15m) 
+car::vif(bonro_abio) # all < 2
+r.squaredGLMM(bonro_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = bonroBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = bonro_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -560,98 +312,38 @@ plotQQunif(sim_res)
 ##### White oak
 
 ### Filter to include 2001 as first First.Year
-wo_surv_temp <- dplyr::filter(wo_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:22,24:25)], na.rm = TRUE)
-# Heterospecific
-wo_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(wo_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-wo_surv <- wo_surv_temp
-
-#### Make site and year into factors
-wo_surv$Site = as.factor(wo_surv$Site)
+wo_surv <- dplyr::filter(wo_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+wo_surv <- wo_surv[,1:12]
+# Make site and year into factors
+wo_surv$Site = as.character(wo_surv$Site)
+wo_surv$Site[wo_surv$Site=="7.4"] <- "7.40"
+wo_surv$Site[wo_surv$Site=="40.4"] <- "40.40"
 wo_surv$survYear = as.factor(wo_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 wo_surv$log0yr <- log(wo_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-wo_surv$logPrior = log(wo_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+wo_surv_clim <- wo_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+wo_surv_clim$mintemp = wo_surv_clim$tmin_c - min(wo_surv_clim$tmin_c) 
+wo_surv_clim$maxtemp = wo_surv_clim$tmax_c - min(wo_surv_clim$tmax_c) 
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-wo_surv$propEMF_15m = (wo_surv$conMyc_15m / (wo_surv$hetMyc_15m + wo_surv$conMyc_15m))
-wo_surv$propEMF_15m[wo_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "wo"
-# Step 2: Add Sp column to match join key
-wo_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-wo_surv <- wo_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-wo_surv$total_yr0_std = wo_surv$total_count_yr0/wo_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(wo_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(wo_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(wo_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(wo_surv, aes(x = wo_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "White oak") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius 
-woBA_15m <- glmer(total_count_yr1 ~ wo_15m + conMycNS_15m + 
-                    hetMyc_15m + #wo_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = wo_surv)
-summary(woBA_15m)
+#################### Effects of environment and climate
+wo_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + 
+                      maxtemp +
+                      percOpen + Base_CEC + #log0yr +
+                      (1 | Site) + (1 | survYear),
+                    family = poisson(link = "log"), data = wo_surv_clim)
+summary(wo_abio)
+# Quick AIC check - better to retain mintemp than maxtemp
 
 ## VIFs and pseudo r-squared values
-car::vif(woBA_15m) # all < 7
-r.squaredGLMM(woBA_15m) 
+car::vif(wo_abio) # all < 2
+r.squaredGLMM(wo_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = woBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = wo_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
 
@@ -660,102 +352,39 @@ plotQQunif(sim_res)
 ##### Ironwood
 
 ### Filter to include 2001 as first First.Year
-iw_surv_temp <- dplyr::filter(iw_surv_temp, First.Year > 2000)
-
-# Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:23,25)], na.rm = TRUE)
-# Heterospecific
-iw_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(iw_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
-# Rename
-iw_surv <- iw_surv_temp
-
-#### Make site and year into factors
-iw_surv$Site = as.factor(iw_surv$Site)
+iw_surv <- dplyr::filter(iw_surv, First.Year > 2000)
+# Subset to exclude adult BA components
+iw_surv <- iw_surv[,1:12]
+# Make site and year into factors
+iw_surv$Site = as.character(iw_surv$Site)
+iw_surv$Site[iw_surv$Site=="7.4"] <- "7.40"
+iw_surv$Site[iw_surv$Site=="40.4"] <- "40.40"
 iw_surv$survYear = as.factor(iw_surv$survYear)
-
-#### Log transform the count of 0-yr old seedlings
+# Log-trans the count of 0-yr old seedlings
 iw_surv$log0yr <- log(iw_surv$total_count_yr0)  
-## Calculate the log-transformed prior 3 year count variable + 1
-iw_surv$logPrior = log(iw_surv$Prior3_counts + 1)
+### Left join to add climate variables to data
+iw_surv_clim <- iw_surv %>%
+  left_join(clim_env_allSites, by = c("TransectID", "Site", "X", "survYear"))
+### Center min and max temps by the minimum of each
+iw_surv_clim$mintemp = iw_surv_clim$tmin_c - min(iw_surv_clim$tmin_c) 
+iw_surv_clim$maxtemp = iw_surv_clim$tmax_c - min(iw_surv_clim$tmax_c) 
 
-#### Calculate the proportion of EMF hosts in 15-m radius
-iw_surv$propEMF_15m = (iw_surv$conMyc_15m / (iw_surv$hetMyc_15m + iw_surv$conMyc_15m))
-iw_surv$propEMF_15m[iw_surv$propEMF_15m == "NaN"] <- 0
-
-# Step 1: Define species code from the name
-sp_code <- "iw"
-# Step 2: Add Sp column to match join key
-iw_surv$Sp <- sp_code
-# Step 3: Join with the species BA dataframe
-iw_surv <- iw_surv %>%
-  left_join(speciesSite_sum, by = c("Site", "Sp")) 
-# Make a column for the standardized 0-yr counts
-iw_surv$total_yr0_std = iw_surv$total_count_yr0/iw_surv$spBA_corr
-
-##### Plot - Standardized 0 yr versus Proportion ECM Basal Area
-ggplot(iw_surv, aes(x = propEMF_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Proportion ECM Basal Area", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Ironwood") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Heteromycorrhizal Basal Area
-ggplot(iw_surv, aes(x = hetMyc_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Heteromycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Ironwood") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conmycorrhizal Basal Area
-ggplot(iw_surv, aes(x = conMycNS_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conmycorrhizal Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Ironwood") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-##### Plot - Standardized 0 yr versus Total Conspecific Basal Area
-ggplot(iw_surv, aes(x = iw_15m, y = total_yr0_std)) +
-  geom_point() +  
-  theme_bw() +
-  labs(x = "Total Conspecific Basal Area (m²)", 
-       y = "Standardized Count (No. 0-Year Seedlings/Adult Basal Area, m²)",
-       title = "Ironwood") +
-  theme(axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
-
-#################### 15-m radius
-iwBA_15m <- glmer(total_count_yr1 ~ iw_15m + conMycNS_15m + 
-                    hetMyc_15m + #iw_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    #(1 | Site) + 
-                    (1 | survYear),
-                  family = poisson(link = "log"), data = iw_surv)
-summary(iwBA_15m)
+#################### Effects of environment and climate
+iw_abio <- glmer(total_count_yr1 ~ mean_pdsi + mintemp + maxtemp +
+                      percOpen + Base_CEC + #log0yr +
+                     (1 | Site) + 
+                     (1 | survYear),
+                    family = poisson(link = "log"), data = iw_surv_clim)
+summary(iw_abio)
 
 ## VIFs and pseudo r-squared values
-car::vif(iwBA_15m) # one = 11
-r.squaredGLMM(iwBA_15m) 
+car::vif(iw_abio) # all < 2
+r.squaredGLMM(iw_abio) 
 
 # Simulate residuals
-sim_res <- simulateResiduals(fittedModel = iwBA_15m, n = 1000)
+sim_res <- simulateResiduals(fittedModel = iw_abio, n = 1000)
 # QQ plot of residuals
 plotQQunif(sim_res)
-
 
 ################################################ 
 ######## Plotting model coefficients +/- SE
@@ -768,9 +397,9 @@ extract_model_summary <- function(model, species_abbrev) {
 }
 
 # Create a list of our models
-models <- list(rm = rmBA_15m, sm = smBA_15m, ab = abBA_15m, wa = waBA_15m,
-               bc = bcBA_15m, nro = nroBA_15m, bonro = bonroBA_15m,
-               wo = woBA_15m, iw = iwBA_15m)
+models <- list(rm = rm_abio, sm = sm_abio, ab = ab_abio, wa = wa_abio,
+               bc = bc_abio, nro = nro_abio, bonro = bonro_abio,
+               wo = wo_abio, iw = iw_abio)
 
 # Map terms by model
 allSp_results <- purrr::imap_dfr(models, extract_model_summary)
@@ -779,42 +408,37 @@ allSp_results <- purrr::imap_dfr(models, extract_model_summary)
 allSp_results <- allSp_results %>%
   rowwise() %>%
   mutate(component = case_when(
-    term == "conMycNS_15m" ~ "Conmycorrhizal_BA",
-    term == "hetMyc_15m" ~ "Heteromycorrhizal_BA",
-    term == "conMycNS_15m:hetMyc_15m" ~ "Conmyc_x_Heteromycorrhizal_BA",
-    term == "logPrior" ~ "Log_Prior_Density",
-    term == "log0yr" ~ "Log_Recruit_Density",
-    grepl(paste0("^", species, "_15m:hetMyc_15m$"), term) ~
-      "Consp_x_Heteromycorrhizal_BA",
-    grepl(paste0("^", species, "_15m$"), term) ~ "Conspecific_BA",
+    term == "mean_pdsi" ~ "Mean PDSI",
+    term == "mintemp" ~ "Minimum Temp",
+    term == "maxtemp" ~ "Maximum Temp",
+    term == "percOpen" ~ "Canopy Openness (%)",
+    term == "Base_CEC" ~ "Base CEC",
+   # term == "log0yr" ~ "Log(Recruit Density)",
     TRUE ~ NA_character_
   )) %>%
   ungroup()
 # Make into an ordered factor
 allSp_results$component = factor(allSp_results$component,
-                                 levels = c( "Log_Prior_Density", 
-                                             "Log_Recruit_Density",
-                                             "Conmyc_x_Heteromycorrhizal_BA",
-                                             "Consp_x_Heteromycorrhizal_BA",
-                                             "Heteromycorrhizal_BA",
-                                             "Conmycorrhizal_BA",
-                                             "Conspecific_BA"))
+                                 levels = c( #"Log(Recruit Density)", 
+                                             "Base CEC",
+                                             "Canopy Openness (%)",
+                                             "Maximum Temp",
+                                             "Minimum Temp",
+                                             "Mean PDSI"))
 
 # Add AM or ECM to each row by species
 allSp_results$Myc_Type = ifelse(allSp_results$species == "rm", "AM",
-                                ifelse(allSp_results$species == "sm", "AM",
-                                       ifelse(allSp_results$species == "wa", "AM",
-                                              ifelse(allSp_results$species == "bc", "AM","ECM"))))
+                        ifelse(allSp_results$species == "sm", "AM",
+                        ifelse(allSp_results$species == "wa", "AM",
+                        ifelse(allSp_results$species == "bc", "AM","ECM"))))
 
 # Add column for significance of parameter estimate
 allSp_results$Significant = ifelse(allSp_results$p.value <= 0.05, "yes", "no")
 
-View(allSp_results)
-
 ######################
 ## Create a color vector with red shades for AM and blue shades for ECM
-species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
-                  nro = "#1F74B1", wo = "#244D7F",
+species_cols <- c(ab = "#B4D4DA", bonro = "#72BCDC", iw = "#3F8BBA",
+                  nro = "#1C65A3", wo = "#26456E",
                   bc = "#FEB1A3", rm = "#F77964",  
                   sm = "#D2241F", wa = "#AE123A")
 
@@ -833,14 +457,12 @@ allSp_results <- allSp_results %>%
     species,levels = c(
       sort(unique(species[Myc_Type == "AM"])),
       sort(unique(species[Myc_Type == "ECM"])))),
-    component = factor(component, levels = c(
-      "Log_Prior_Density", 
-      "Log_Recruit_Density",
-      "Conmyc_x_Heteromycorrhizal_BA",
-      "Consp_x_Heteromycorrhizal_BA",
-      "Heteromycorrhizal_BA",
-      "Conmycorrhizal_BA",
-      "Conspecific_BA")),
+    component = factor(component, levels = c( #"Log(Recruit Density)", 
+                                              "Base CEC",
+                                              "Canopy Openness (%)",
+                                              "Maximum Temp",
+                                              "Minimum Temp",
+                                              "Mean PDSI")),
     Significant = factor(Significant, levels = c("yes", "no")))
 
 ## Calculate mean parameter estimates for AM versus ECM
@@ -851,11 +473,8 @@ group_means <- allSp_results %>%
     std.error = sd(estimate, na.rm = TRUE) / sqrt(n()),  
     .groups = "drop")
 
-# Filter to exclude one outlier
-allSp_results2 = dplyr::filter(allSp_results, std.error <= 5)
-
 # Plot - All Species (ECM and AM)
-ggplot(allSp_results2, aes(x = estimate, y = component, 
+ggplot(allSp_results, aes(x = estimate, y = component, 
                            color = species_label, shape = Significant)) +
   geom_point(aes(size = log1p(percBA)), 
              position = position_dodge(width = 0.6)) +   # size only here
@@ -883,8 +502,13 @@ ggplot(allSp_results2, aes(x = estimate, y = component,
         axis.text.x = element_text(size = 10, color = "black"),
         axis.text.y = element_text(size = 10, color = "black"))
 
-# Plot - ECM only
-allSp_results2 %>% filter(., Myc_Type == "ECM")  %>% 
+### Plot - ECM only
+# Make just an ECM group
+ecm_group <- group_means %>% filter(Myc_Type == "ECM" )
+                                    #& component != "Log(Recruit Density)")
+# Plot
+allSp_results %>% filter(., Myc_Type == "ECM" ) %>% 
+                        # & component != "Log(Recruit Density)")  %>% 
   ggplot(., aes(x = estimate,  y = component, 
                 color = species_label,  shape = Significant)) +
   geom_point(aes(size = log1p(percBA)), 
@@ -894,10 +518,10 @@ allSp_results2 %>% filter(., Myc_Type == "ECM")  %>%
                      xmax = estimate + std.error), 
                  height = 0, position = position_dodge(width = 0.6)) +
   ## Add ECM and AM group means
-  geom_point(data = group_means %>% filter(Myc_Type == "ECM"), 
+  geom_point(data = ecm_group, 
              aes(x = mean_estimate, y = component, shape = Myc_Type), 
              color = "black", size = 3, inherit.aes = FALSE) +
-  geom_errorbarh(data = group_means %>% filter(Myc_Type == "ECM"),
+  geom_errorbarh(data = ecm_group,
                  aes(xmin = mean_estimate - std.error, 
                      xmax = mean_estimate + std.error, y = component),
                  color = "black", height = 0, inherit.aes = FALSE) +
@@ -914,8 +538,14 @@ allSp_results2 %>% filter(., Myc_Type == "ECM")  %>%
         axis.text.x = element_text(size = 10, color = "black"),
         axis.text.y = element_text(size = 10, color = "black"))
 
-# Plot - AM only
-allSp_results2 %>% filter(., Myc_Type == "AM")  %>% 
+
+### Plot - AM only
+# Make just an AM group
+am_group <- group_means %>% filter(Myc_Type == "AM" )
+                                  # &   component != "Log(Recruit Density)")
+# Plot
+allSp_results %>% filter(., Myc_Type == "AM" ) %>% 
+                        # &  component != "Log(Recruit Density)")  %>% 
   ggplot(., aes(x = estimate,  y = component, 
                 color = species_label,  shape = Significant)) +
   geom_point(aes(size = log1p(percBA)), 
@@ -925,10 +555,10 @@ allSp_results2 %>% filter(., Myc_Type == "AM")  %>%
                      xmax = estimate + std.error), 
                  height = 0, position = position_dodge(width = 0.6)) +
   ## Add ECM and AM group means
-  geom_point(data = group_means %>% filter(Myc_Type == "AM"), 
+  geom_point(data = am_group, 
              aes(x = mean_estimate, y = component, shape = Myc_Type), 
              color = "black", size = 3, inherit.aes = FALSE) +
-  geom_errorbarh(data = group_means %>% filter(Myc_Type == "AM"),
+  geom_errorbarh(data = am_group,
                  aes(xmin = mean_estimate - std.error, 
                      xmax = mean_estimate + std.error, y = component),
                  color = "black", height = 0, inherit.aes = FALSE) +
