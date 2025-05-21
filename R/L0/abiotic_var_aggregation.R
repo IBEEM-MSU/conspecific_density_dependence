@@ -20,6 +20,9 @@ envVars_mod = envVars[,c(1:3,5:6,13)]
 # Multiple percOpen by 100 so it's actually a percentage
 envVars_mod$percOpen = envVars_mod$percOpen*100
 envVars_mod$Site = as.character(envVars_mod$Site)
+# Convert 7.4 and 40.40 to 7.40 and 40.40
+envVars_mod$Site[envVars_mod$Site=="7.4"] <- "7.40"
+envVars_mod$Site[envVars_mod$Site=="40.4"] <- "40.40"
 
 ## Daily climate data - for temperature
 clim_site1 <- read.csv("./data/L0/clim_49.01_1997-2023.csv")
@@ -289,6 +292,8 @@ clim_summ <- clim_site7 %>%
   mutate(Site = rep("7.40"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
+pdsi_site7$Site = as.character(pdsi_site7$Site)
+pdsi_site7$Site[pdsi_site7$Site == "7.4"] <- "7.40"
 pdsi_summ <- pdsi_site7 %>%
   mutate(survYear1 = year,       # Year affects survival in same year
          survYear2 = year + 1 ) %>%   # And also affects survival in next year
@@ -300,7 +305,6 @@ pdsi_summ <- pdsi_site7 %>%
             .groups = "drop") %>%
   mutate(clim_year = paste0(survYear - 1, "-", survYear)) %>%
   filter(., survYear != 1997) 
-pdsi_summ$Site = as.character(pdsi_summ$Site)
 # 3) Merge via a left join
 clim_merge <- pdsi_summ %>%
   left_join(clim_summ, by = c("Site", "survYear", "clim_year"))
@@ -326,6 +330,8 @@ clim_summ <- clim_site8 %>%
   mutate(Site = rep("40.40"))
 clim_summ$Site = as.character(clim_summ$Site)
 # 2) find mean PDSI between May-September of recruit year and survival year, and average
+pdsi_site8$Site = as.character(pdsi_site8$Site)
+pdsi_site8$Site[pdsi_site8$Site == "40.4"] <- "40.40"
 pdsi_summ <- pdsi_site8 %>%
   mutate(survYear1 = year,       # Year affects survival in same year
          survYear2 = year + 1 ) %>%   # And also affects survival in next year
@@ -337,7 +343,6 @@ pdsi_summ <- pdsi_site8 %>%
             .groups = "drop") %>%
   mutate(clim_year = paste0(survYear - 1, "-", survYear)) %>%
   filter(., survYear != 1997) 
-pdsi_summ$Site = as.character(pdsi_summ$Site)
 # 3) Merge via a left join
 clim_merge <- pdsi_summ %>%
   left_join(clim_summ, by = c("Site", "survYear", "clim_year"))
