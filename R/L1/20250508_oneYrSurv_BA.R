@@ -214,15 +214,15 @@ ggplot(rm_surv, aes(x = rm_15m, y = total_yr0_std)) +
 
 #################### 15-m radius
 rmBA_15m <- glmer(total_count_yr1 ~ rm_15m + conMycNS_15m + 
-                     hetMyc_15m + rm_15m:hetMyc_15m +
-                     conMycNS_15m:hetMyc_15m +
+                     hetMyc_15m + #rm_15m:conMycNS_15m +
+                    rm_15m:hetMyc_15m +
                      logPrior + log0yr +
                      (1 | Site) + (1 | survYear),
                    family = poisson(link = "log"), data = rm_surv)
 summary(rmBA_15m)
 
 ## VIFs and pseudo r-squared values
-car::vif(rmBA_15m) # all < 7
+car::vif(rmBA_15m) # all <10
 r.squaredGLMM(rmBA_15m) 
 
 # Simulate residuals
@@ -314,15 +314,15 @@ ggplot(sm_surv, aes(x = sm_15m, y = total_yr0_std)) +
 
 #################### 15-m radius
 smBA_15m <- glmer(total_count_yr1 ~ sm_15m + conMycNS_15m + 
-                    hetMyc_15m + sm_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
+                    hetMyc_15m + sm_15m:conMycNS_15m +
+                    sm_15m:hetMyc_15m +
                     logPrior + log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = sm_surv)
 summary(smBA_15m)
 
 ## VIFs and pseudo r-squared values
-car::vif(smBA_15m) # all < 3
+car::vif(smBA_15m) # all < 7
 r.squaredGLMM(smBA_15m) 
 
 # Simulate residuals
@@ -413,11 +413,12 @@ ggplot(ab_surv, aes(x = ab_15m, y = total_yr0_std)) +
         axis.text.y = element_text(size = 10, color = "black"))
 
 #################### 15-m radius - no RE of site
-abBA_15m <- glmer(total_count_yr1 ~ ab_15m + conMycNS_15m + 
-                    hetMyc_15m + ab_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
+abBA_15m <- glmer(total_count_yr1 ~ ab_15m + 
+                    conMycNS_15m + 
+                    hetMyc_15m + ab_15m:conMycNS_15m +
+                    #ab_15m:hetMyc_15m +
                     logPrior + log0yr +
-                    (1 | survYear),
+                     (1 | survYear),
                   family = poisson(link = "log"), data = ab_surv)
 summary(abBA_15m)
 
@@ -513,9 +514,10 @@ ggplot(wa_surv, aes(x = wa_15m, y = total_yr0_std)) +
         axis.text.y = element_text(size = 10, color = "black"))
 
 #################### 15-m radius
-waBA_15m <- glmer(total_count_yr1 ~ wa_15m + conMycNS_15m + 
-                    hetMyc_15m + wa_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
+waBA_15m <- glmer(total_count_yr1 ~ wa_15m + 
+                    conMycNS_15m + 
+                    hetMyc_15m + #wa_15m:conMycNS_15m +
+                    wa_15m:hetMyc_15m +
                     logPrior + log0yr +
                     (1 | Site) + (1 | survYear),
                   family = poisson(link = "log"), data = wa_surv)
