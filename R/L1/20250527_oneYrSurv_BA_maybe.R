@@ -17,13 +17,6 @@ library(DHARMa)
 library(broom.mixed)
 library(tibble)
 
-### Most complex model to fit (15-m radius)
-###  Biotic model of one-year survivorship - with adult densities (BA)
-# (#1 yr) ~ Consp BA:log(#0 yr) + Con-myc BA:log(#0 yr) + Het-myc BA:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + Consp BA:log(#0 yr):Con-myc BA + Consp BA:log(#0 yr):Het-myc BA + Het-myc BA:log(#0 yr):Con-myc BA + (1 | Site) + (1 | Year)
-
-### Biotic model of one-year survivorship - with adult proportions (%ECM)
-# (#1 yr) ~ ConspRelativeAbund:log(#0 yr) + %ECM:log(#0 yr) + log(hetSp_Current_Prior3 + 1):log(#0 yr) + ConspRelativeAbund:log(#0 yr):%ECM + (1 | Site) + (1 | Year)
-
 # For species with sufficient observations, we included a random effect of site. For species with limited observations across sites, we excluded this term due to singular fits and lack of variance attributable to site.
 
 ##### Read in file that has the counts by species for every TransectID-ObsYear combination
@@ -124,6 +117,12 @@ bs_surv_temp$TI_FY = paste(bs_surv_temp$TransectID,bs_surv_temp$First.Year)
 allSp_TI_ObsYear$bs_0yr_count = 
   bs_surv_temp$total_count_yr0[match(allSp_TI_ObsYear$TI_FY,
                                      bs_surv_temp$TI_FY)]
+
+#### Create csv file with prior 3 year and 0-year counts for all species
+#write.csv(allSp_TI_ObsYear, "./data/L1/allSp_0_3yr_counts.csv", row.names = FALSE)
+
+#### Read in csv with prior 3 year and 0-year counts for all species
+allSp_0_3yr_counts <- read.csv("./data/L1/allSp_0_3yr_counts.csv")
 
 ##### Read in file with species' average cumulative BA per site
 speciesSite_sum = read.csv("./data/L1/mean_totalSpSiteBA.csv")
