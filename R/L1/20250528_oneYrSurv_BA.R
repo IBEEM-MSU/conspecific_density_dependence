@@ -768,7 +768,7 @@ rm_surv <- subset(all_sp_surv, Sp == "rm")
 
 ##### Species-Level
 
-## Panel A - simple conspecific DD
+## Species-level - simple test of conspecific DD
 rm_15m <- glmer(total_count_yr1 ~ consp_15m +
                       logPrior + log0yr +
                       (1|Site) + (1|survYear),
