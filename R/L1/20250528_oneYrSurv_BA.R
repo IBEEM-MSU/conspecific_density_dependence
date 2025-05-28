@@ -32,15 +32,18 @@ speciesSite_sum = speciesSite_sum[,c(1,2,4)]
 #################################################
 ##### Red Maple
 
+rm_surv_temp <- read.csv("./data/L1/rm_oneYrSurv_matureBA.csv", row.names = 1)
+
+rm_surv_temp <- dplyr::filter(rm_surv_temp, First.Year > 2001 & First.Year < 2022)
 ### Filter to include 2001 as first First.Year
 rm_surv_temp <- dplyr::filter(rm_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,17:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,17:25)], na.rm = TRUE)
 # Heterospecific
 rm_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(rm_surv_temp$TI_FY,allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(rm_surv_temp$TI_FY,allSp_0_3yr_counts$TI_FY)]
 
 # Rename data
 rm_surv <- rm_surv_temp
@@ -76,24 +79,6 @@ rm_surv_mg <- rm_surv_mg %>%
          ECM_15m = hetMyc_15m,
          myc_type = "AM")
 
-#################### 15-m radius
-rmBA_15m <- glmer(total_count_yr1 ~ rm_15m + conMycNS_15m + 
-                     hetMyc_15m + #rm_15m:conMycNS_15m +
-                    rm_15m:hetMyc_15m +
-                     logPrior + log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = rm_surv)
-summary(rmBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(rmBA_15m) # all <10
-r.squaredGLMM(rmBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = rmBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### Sugar Maple
@@ -102,12 +87,12 @@ plotQQunif(sim_res)
 sm_surv_temp <- dplyr::filter(sm_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16,18:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16,18:25)], na.rm = TRUE)
 # Heterospecific
 sm_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(sm_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(sm_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 sm_surv <- sm_surv_temp
 
@@ -142,24 +127,6 @@ sm_surv_mg <- sm_surv_mg %>%
          ECM_15m = hetMyc_15m,
          myc_type = "AM")
 
-#################### 15-m radius
-smBA_15m <- glmer(total_count_yr1 ~ sm_15m + conMycNS_15m + 
-                    hetMyc_15m + sm_15m:conMycNS_15m +
-                    sm_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = sm_surv)
-summary(smBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(smBA_15m) # all < 7
-r.squaredGLMM(smBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = smBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### American Beech
@@ -168,12 +135,12 @@ plotQQunif(sim_res)
 ab_surv_temp <- dplyr::filter(ab_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:17,19:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:17,19:25)], na.rm = TRUE)
 # Heterospecific
 ab_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(ab_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(ab_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 
 # Rename
 ab_surv <- ab_surv_temp
@@ -209,25 +176,6 @@ ab_surv_mg <- ab_surv_mg %>%
          AM_15m = hetMyc_15m,
          myc_type = "ECM")
 
-#################### 15-m radius - no RE of site
-abBA_15m <- glmer(total_count_yr1 ~ ab_15m + 
-                    conMycNS_15m + 
-                    hetMyc_15m + ab_15m:conMycNS_15m +
-                    #ab_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | survYear),
-                  family = poisson(link = "log"), data = ab_surv)
-summary(abBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(abBA_15m) # all < 10
-r.squaredGLMM(abBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = abBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### White ash
@@ -236,12 +184,12 @@ plotQQunif(sim_res)
 wa_surv_temp <- dplyr::filter(wa_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:18,20:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:18,20:25)], na.rm = TRUE)
 # Heterospecific
 wa_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(wa_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(wa_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 wa_surv <- wa_surv_temp
 
@@ -276,25 +224,6 @@ wa_surv_mg <- wa_surv_mg %>%
          ECM_15m = hetMyc_15m,
          myc_type = "AM")
 
-#################### 15-m radius
-waBA_15m <- glmer(total_count_yr1 ~ wa_15m + 
-                    conMycNS_15m + 
-                    hetMyc_15m + #wa_15m:conMycNS_15m +
-                    wa_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = wa_surv)
-summary(waBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(waBA_15m) # all < 9
-r.squaredGLMM(waBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = waBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### Black Cherry
@@ -303,12 +232,12 @@ plotQQunif(sim_res)
 bc_surv_temp <- dplyr::filter(bc_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:19,21:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:19,21:25)], na.rm = TRUE)
 # Heterospecific
 bc_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(bc_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(bc_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 bc_surv <- bc_surv_temp
 
@@ -343,24 +272,6 @@ bc_surv_mg <- bc_surv_mg %>%
          ECM_15m = hetMyc_15m,
          myc_type = "AM")
 
-#################### 15-m radius
-bcBA_15m <- glmer(total_count_yr1 ~ bc_15m + conMycNS_15m + 
-                    hetMyc_15m + bc_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = bc_surv)
-summary(bcBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bcBA_15m) # all < 6
-r.squaredGLMM(bcBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = bcBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### Northern Red Oak
@@ -369,12 +280,12 @@ plotQQunif(sim_res)
 nro_surv_temp <- dplyr::filter(nro_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:20,22:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:20,22:25)], na.rm = TRUE)
 # Heterospecific
 nro_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(nro_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(nro_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 nro_surv <- nro_surv_temp
 
@@ -409,24 +320,6 @@ nro_surv_mg <- nro_surv_mg %>%
          AM_15m = hetMyc_15m,
          myc_type = "ECM")
 
-#################### 15-m radius
-nroBA_15m <- glmer(total_count_yr1 ~ nro_15m + conMycNS_15m + 
-                     hetMyc_15m + nro_15m:hetMyc_15m +
-                     conMycNS_15m:hetMyc_15m +
-                     logPrior + log0yr +
-                     (1 | Site) + (1 | survYear),
-                   family = poisson(link = "log"), data = nro_surv)
-summary(nroBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(nroBA_15m) # all < 10
-r.squaredGLMM(nroBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = nroBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### Black oak
@@ -435,12 +328,12 @@ plotQQunif(sim_res)
 bonro_surv_temp <- dplyr::filter(bonro_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:21,23:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:21,23:25)], na.rm = TRUE)
 # Heterospecific
 bonro_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(bonro_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(bonro_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 bonro_surv <- bonro_surv_temp
 
@@ -475,25 +368,6 @@ bonro_surv_mg <- bonro_surv_mg %>%
          AM_15m = hetMyc_15m,
          myc_type = "ECM")
 
-#################### 15-m radius 
-bonroBA_15m <- glmer(total_count_yr1 ~ bonro_15m + conMycNS_15m + 
-                       hetMyc_15m + #bonro_15m:hetMyc_15m +
-                       conMycNS_15m:hetMyc_15m +
-                       logPrior + log0yr +
-                       #(1 | Site) + 
-                       (1 | survYear),
-                     family = poisson(link = "log"), data = bonro_surv)
-summary(bonroBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bonroBA_15m) # all < 8
-r.squaredGLMM(bonroBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = bonroBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### White oak
@@ -502,12 +376,12 @@ plotQQunif(sim_res)
 wo_surv_temp <- dplyr::filter(wo_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:22,24:25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:22,24:25)], na.rm = TRUE)
 # Heterospecific
 wo_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(wo_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(wo_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 wo_surv <- wo_surv_temp
 
@@ -542,24 +416,6 @@ wo_surv_mg <- wo_surv_mg %>%
          AM_15m = hetMyc_15m,
          myc_type = "ECM")
 
-#################### 15-m radius 
-woBA_15m <- glmer(total_count_yr1 ~ wo_15m + conMycNS_15m + 
-                    hetMyc_15m + #wo_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    (1 | Site) + (1 | survYear),
-                  family = poisson(link = "log"), data = wo_surv)
-summary(woBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(woBA_15m) # all < 7
-r.squaredGLMM(woBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = woBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### Ironwood
@@ -568,13 +424,12 @@ plotQQunif(sim_res)
 iw_surv_temp <- dplyr::filter(iw_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:23,25)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:23,25)], na.rm = TRUE)
 # Heterospecific
 iw_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(iw_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
-
+  allSp_0_3yr_counts$Prior3_counts[match(iw_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 iw_surv <- iw_surv_temp
 
@@ -609,25 +464,6 @@ iw_surv_mg <- iw_surv_mg %>%
          AM_15m = hetMyc_15m,
          myc_type = "ECM")
 
-#################### 15-m radius
-iwBA_15m <- glmer(total_count_yr1 ~ iw_15m + conMycNS_15m + 
-                    hetMyc_15m + #iw_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    #(1 | Site) + 
-                    (1 | survYear),
-                  family = poisson(link = "log"), data = iw_surv)
-summary(iwBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(iwBA_15m) # one = 11
-r.squaredGLMM(iwBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = iwBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #################################################
 #################################################
 ##### Basswod
@@ -636,12 +472,12 @@ plotQQunif(sim_res)
 bs_surv_temp <- dplyr::filter(bs_surv_temp, First.Year > 2000)
 
 # Calculate sum of previous 3-year counts of hetero- and conspecific seedlings 
-allSp_TI_ObsYear$Prior3_counts = 
-  rowSums(allSp_TI_ObsYear[,c(5:14,16:24)], na.rm = TRUE)
+allSp_0_3yr_counts$Prior3_counts = 
+  rowSums(allSp_0_3yr_counts[,c(5:14,16:24)], na.rm = TRUE)
 # Heterospecific
 bs_surv_temp$Prior3_counts = 
-  allSp_TI_ObsYear$Prior3_counts[match(bs_surv_temp$TI_FY,
-                                       allSp_TI_ObsYear$TI_FY)]
+  allSp_0_3yr_counts$Prior3_counts[match(bs_surv_temp$TI_FY,
+                                       allSp_0_3yr_counts$TI_FY)]
 # Rename
 bs_surv <- bs_surv_temp
 
@@ -676,31 +512,16 @@ bs_surv_mg <- bs_surv_mg %>%
          AM_15m = hetMyc_15m,
          myc_type = "ECM")
 
-#################### 15-m radius
-bsBA_15m <- glmer(total_count_yr1 ~ bs_15m + conMycNS_15m + 
-                    hetMyc_15m + #bs_15m:hetMyc_15m +
-                    conMycNS_15m:hetMyc_15m +
-                    logPrior + log0yr +
-                    #(1 | Site) + 
-                    (1 | survYear),
-                  family = poisson(link = "log"), data = bs_surv)
-summary(bsBA_15m)
-
-## VIFs and pseudo r-squared values
-car::vif(bsBA_15m) # one = 11
-r.squaredGLMM(bsBA_15m) 
-
-# Simulate residuals
-sim_res <- simulateResiduals(fittedModel = bsBA_15m, n = 1000)
-# QQ plot of residuals
-plotQQunif(sim_res)
-
 #########################################################
 ################################################ 
 ################################################ 
 all_sp_surv = rbind(rm_surv_mg, sm_surv_mg, ab_surv_mg,
                     wa_surv_mg, bc_surv_mg, nro_surv_mg,
                     bonro_surv_mg, wo_surv_mg, iw_surv_mg, bs_surv_mg)
+dim(all_sp_surv)
+
+combined_slope <- read.csv("./data/L1/Combined.slope.data.csv")
+unique(combined_slope$Cohort.Year)
 
 ### Write csv for all species survivorship
 #write.csv(all_sp_surv, "./data/L1/allSp_surv_bioticVars.csv", row.names = FALSE)

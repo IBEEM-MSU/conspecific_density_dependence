@@ -62,6 +62,8 @@ rm_data <- subset(rm_data, FY != 27)
 # Check dimensions of cleaned data
 dim(rm_data)
 
+rm_data_test <- subset(rm_data, First.Year < 2022 & First.Year > 2001)
+
 ## Add a column that denotes the year for proportion of survivorship
 rm_data$survYear = as.character(rm_data$First.Year + 1)
 
