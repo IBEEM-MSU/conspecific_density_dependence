@@ -156,6 +156,17 @@ Red_maple_demography_subset <- Red_maple_demography %>% # Format data & filter f
 					filter(First.Year >= 2002 & First.Year <= 2021) %>% # Filter for cohorts
 					select(c(2, 4, 5, 7, 14, 15)) # Reduce column number
 
+Red_maple_demography_subset_yr_1 <- Red_maple_demography %>% # Format data & filter for time (years 0 - 3); remove early cohorts with insufficient data and later cohorts that lack enough time (e.g., cohort 1998 with only 3 years of observations, 2024 cohort)
+					filter(sumAll > 0) %>% # Remove quadrats with no observed seedlings at a given time and site
+					gather(c(12:38), key = "Obs.Year", value = "Count") %>%
+					separate(Obs.Year, into = c("X", "Obs.Year"), sep = "X") %>%
+					mutate(Time.Since.First.Year = as.numeric(Obs.Year) - as.numeric(First.Year)) %>%
+					filter(Time.Since.First.Year <= 3 & Time.Since.First.Year >= 0) %>% # Filter for time
+					filter(First.Year >= 2002 & First.Year <= 2021) %>% # Filter for cohorts
+					select(c(2, 4, 5, 7, 14, 15)) %>%
+					filter(Time.Since.First.Year < 2) %>%
+					spread(key = Time.Since.First.Year, value = Count)
+					
 	write.csv(Red_maple_demography_subset, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/rm_count_demography.csv", row.names = FALSE) # Export data for random slopes modeling
 
 # For loops for obtaining slope estimates from Binomial GLMs
