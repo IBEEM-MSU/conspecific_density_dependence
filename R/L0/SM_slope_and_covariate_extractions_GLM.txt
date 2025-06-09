@@ -156,6 +156,9 @@ Sugar_maple_demography_subset <- Sugar_maple_demography %>% # Fosmat data & filt
 					filter(First.Year >= 2002 & First.Year <= 2021) %>% # Filter for cohorts
 					select(c(2, 4, 5, 7, 14, 15)) # Reduce column number
 
+Debug <- Sugar_maple_demography_subset %>%
+					filter(SiteID == 7 & quadrat == 25)
+					
 	write.csv(Sugar_maple_demography_subset, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L1/sm_count_demography.csv", row.names = FALSE) # Export data for random slopes modeling
 
 # For loops for obtaining slope estimates from Binomial GLMs
