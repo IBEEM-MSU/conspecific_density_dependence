@@ -144,7 +144,7 @@ allSpDat <- allSpDat %>%
 
 #########################################################
 #########################################################
-################# All Species Models
+################# All Species Models - Raw Basal Area
 
 ## Testing Panel A conceptual figure
 all_sp_15m <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
@@ -202,6 +202,22 @@ all_sp_15m4 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
 summary(all_sp_15m4)
 car::vif(all_sp_15m4)
 
+## We also had this version with additional main effects in the word doc? Not sure if it quite corresponds to explicit panels in the conceptual model
+# DOES NOT WORK
+# THROWS WARNING/ERROR: fixed-effect model matrix is rank deficient so dropping 2 columns / coefficients
+# all_sp_15m5 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+#                        AM_15m + ECM_15m + 
+#                        conMyc_15m + hetMyc_15m +
+#                        consp_15m:AM_15m + 
+#                        consp_15m:ECM_15m +
+#                        consp_15m:conMyc_15m + 
+#                        consp_15m:hetMyc_15m + 
+#                        logPrior + log0yr +
+#                        (1|Site) + (1|survYear) + (1|Sp),
+#                      family = poisson(link = "log"), data = allSpDat)
+# summary(all_sp_15m5)
+# car::vif(all_sp_15m5)
+
 ### Compare AICs - lowest is for all_sp_15m4 but all_sp_15m3 close 2nd
 AIC(all_sp_15m, all_sp_15m1, all_sp_15m2, all_sp_15m3, all_sp_15m4)
 summary(all_sp_15m3)
@@ -209,8 +225,71 @@ summary(all_sp_15m3)
 anova(all_sp_15m3, all_sp_15m4)
 
 #########################################################
+################# All Species Models - Proportional Basal Area
+
+### Calculate proportion AM, proportion conmyc, and proportion consp
+## Proportion conspecific
+allSpDat$propConsp = allSpDat$consp_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
+## Proportion con-mycorrhizal
+allSpDat$propConmyc = allSpDat$conMyc_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
+## Proportion AM
+allSpDat$propAM = allSpDat$AM_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
+#### *** Not sure we can include both propConmyc and propAM in models - they are either identical or the inverse of each other
+
+### Full model - High VIFs
+all_sp_prop <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                       propAM + propConmyc + 
+                       propConsp:propAM +
+                       propConsp:propConmyc +
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop) 
+car::vif(all_sp_prop) ## VIFs >10
+
+### Full model with propAM - Fits well
+all_sp_propAM <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                       propAM + #propConmyc + 
+                       propConsp:propAM +
+                       #propConsp:propConmyc +
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_propAM) 
+car::vif(all_sp_propAM) 
+
+### Full model with propConmyc - Fits well
+all_sp_propConmyc <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                         #propAM + 
+                         propConmyc + 
+                         #propConsp:propAM +
+                         propConsp:propConmyc +
+                         logPrior + log0yr +
+                         (1|Site) + (1|survYear) + (1|Sp),
+                       family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_propConmyc) 
+car::vif(all_sp_propConmyc) 
+
+### Full model using raw consp BA instead of proportional - High VIFs
+all_sp_rawConsp <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+                       propAM + propConmyc + 
+                       consp_15m:propAM +
+                       consp_15m:propConmyc +
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_rawConsp) 
+car::vif(all_sp_rawConsp) ## One high VIF >10
+
+### Compare AICs - all_sp_rawConsp is best!
+AIC(all_sp_prop, all_sp_propAM, all_sp_propConmyc, all_sp_rawConsp)
+summary(all_sp_rawConsp)
+# More complex model fits better
+anova(all_sp_propConmyc, all_sp_rawConsp)
+
 #########################################################
-################# Species-Level Test - RM
+#########################################################
+################# Species-Level Test - RM - Raw Basal Area
 
 ##### Subset RM data
 rm_surv <- subset(allSpDat, Sp == "rm")
@@ -223,7 +302,7 @@ rm_15m <- glmer(Year_1_counts ~ consp_15m +
 summary(rm_15m)
 car::vif(rm_15m)
 
-## Full species-level model - thinking it makes more sense to use con-mycorrhizal neighborhood (excluding conspecific BA) and heteromycorrhizal than ECM and AM
+## Full species-level model - using con-mycorrhizal neighborhood excluding conspecific BA and heteromycorrhizal, rather than ECM and AM
 rm_15m_full <- glmer(Year_1_counts ~ consp_15m + 
                        conMycNS_15m + hetMyc_15m + 
                        consp_15m:conMycNS_15m + 
@@ -233,6 +312,50 @@ rm_15m_full <- glmer(Year_1_counts ~ consp_15m +
                      family = poisson(link = "log"), data = rm_surv)
 summary(rm_15m_full)
 car::vif(rm_15m_full)
+
+##### Version with conspecifics included in con-mycorrhizal - VIFs too high
+rm_15m_full2 <- glmer(Year_1_counts ~ consp_15m + 
+                       conMyc_15m + hetMyc_15m + 
+                       consp_15m:conMyc_15m + 
+                       consp_15m:hetMyc_15m + 
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = rm_surv)
+summary(rm_15m_full2)
+car::vif(rm_15m_full2)
+
+### Compare AICs - all_sp_rawConsp is best!
+AIC(rm_15m, rm_15m_full, rm_15m_full2)
+summary(rm_15m_full)
+# More complex model rm_15m_full is better
+anova(rm_15m, rm_15m_full)
+
+#########################################################
+################# Species-Level Test - RM - Proportional Basal Area
+
+###### Cannot include both propAM and propConmyc - but each of these is the exact same thing because propAM = propConmyc
+### Full model with propAM - Fits well
+rm_propAM <- glmer(Year_1_counts ~ propConsp + 
+                       propAM + #propConmyc + 
+                       propConsp:propAM +
+                       #propConsp:propConmyc +
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = rm_surv)
+summary(rm_propAM) 
+car::vif(rm_propAM) 
+
+### Full model with propConmyc - Fits well
+rm_propConmyc <- glmer(Year_1_counts ~ propConsp + 
+                     #propAM + 
+                     propConmyc + 
+                     #propConsp:propAM +
+                     propConsp:propConmyc +
+                     logPrior + log0yr +
+                     (1|Site) + (1|survYear),
+                   family = poisson(link = "log"), data = rm_surv)
+summary(rm_propConmyc) 
+car::vif(rm_propConmyc) 
 
 
 ################################################ 
