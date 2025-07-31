@@ -1,0 +1,203 @@
+library(tidyverse) # For data manipulation & graphing. Wickham H, Averick M, Bryan J, Chang W, McGowan LD, François R, Grolemund G, Hayes A, Henry L, Hester J, Kuhn M, Pedersen TL, Miller E, Bache SM, Müller K, Ooms J, Robinson D, Seidel DP, Spinu V, Takahashi K, Vaughan D, Wilke C, Woo K, Yutani H (2019). “Welcome to the tidyverse.” Journal of Open Source Software, 4(43), 1686. doi:10.21105/joss.01686. 
+library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and Walker, S., 2014. Fitting linear mixed-effects models using lme4. arXiv preprint arXiv:1406.5823
+library(MuMIn) # For AIC and R-squared values. Barton, K. and Barton, M.K., 2015. Package ‘mumin’. Version, 1(18), p.439.
+library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christensen, R.H., 2017. lmerTest package: tests in linear mixed effects models. Journal of statistical software, 82, pp.1-26.
+library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
+
+Demography_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/Combined_demography_modeling_data.csv") %>%
+					mutate(AM_BA_perc = AM_15m/sum(c(14,15)),
+					ECM_BA_perc = ECM_15m/sum(c(14,15)),
+					ab_perc = ab_15m/sum(c(16:33)),
+					ae_perc = ae_15m/sum(c(16:33)),
+					bc_perc = bc_15m/sum(c(16:33)),
+					bo_perc = bo_15m/sum(c(16:33)),
+					bonro_perc = bonro_15m/sum(c(16:33)),
+					bs_perc = bs_15m/sum(c(16:33)),
+					bta_perc = bta_15m/sum(c(16:33)),
+					hem_perc = hem_15m/sum(c(16:33)),
+					iw_perc = iw_15m/sum(c(16:33)),
+					jp_perc = jp_15m/sum(c(16:33)),
+					nro_perc = nro_15m/sum(c(16:33)),
+					qa_perc = qa_15m/sum(c(16:33)),
+					rm_perc = rm_15m/sum(c(16:33)),
+					sm_perc = sm_15m/sum(c(16:33)),
+					svb_perc = svb_15m/sum(c(16:33)),
+					wa_perc = wa_15m/sum(c(16:33)),
+					wo_perc = wo_15m/sum(c(16:33)),
+					wp_perc = wp_15m/sum(c(16:33))
+					)
+					
+					
+
+nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutations; it can take about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM at 999 for certain species.
+# Analyses are divided first by species, then by analysis type. Test A, Test B, Test C, and Test D correspond to the four panels of Fig. 3 in Eagar et al. 2024. Test A tests for conspecific density dependence based on seedling mycorrhizal type. Test B tests for density dependent effects related to conspecific density in interaction with the surrounding tree community's mycorrhizal dominance. Test C tests for density dependent effects related to conmycorrhizal density in interaciton with the surrounding tree community's mycorrhizal dominance. Test D tests a new hypothesis concerning density dependent effects structred by seedling mycorrhizal types in con- and heteromycorrhizal dominant communities.
+
+# Each of the four tests are done with both raw basal area values and proportional values.
+
+# We will also perform a permutation test modeling mortality responses to our abiotic variables: mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC
+
+# Other species go here
+
+
+# Northern Red Oak Analyses
+
+# Test A (BA)
+
+	nro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ nro_15m + conMycNS_15m + 
+                    hetMyc_15m + nro_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = NRO_slope_modeling_data)
+					
+# Test B (BA)
+
+	nro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ nro_15m + conMycNS_15m + 
+                    hetMyc_15m + nro_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = NRO_slope_modeling_data)
+					
+# Test C (BA)
+
+	nro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ nro_15m + conMycNS_15m + 
+                    hetMyc_15m + nro_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = NRO_slope_modeling_data)
+					
+# Test D (BA)
+ 
+ 	nro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ nro_15m + conMycNS_15m + 
+                    hetMyc_15m + nro_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = NRO_slope_modeling_data)
+					
+# Test A (%)
+
+# Test B (%)
+
+# Test C (%)
+
+# Test D (%)
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # we have 7 terms!!! to test in this model, so we'll need 4 dataframes to store the randomized F-value test results.
+	Rand_results_con_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_myc_het_myc <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	NRO_slope_modeling_data <- NRO_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- NRO_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	nro_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ nro_15m + conMycNS_15m + 
+                    hetMyc_15m + nro_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = NRO_slope_modeling_data)
+					
+	Rand_aov <- anova(nro_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]				
+		Rand_results_con_myc[i] <- Rand_aov$"F value"[2]
+		Rand_results_het_myc[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_den_het_myc[i] <- Rand_aov$"F value"[4]
+		Rand_results_con_myc_het_myc[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[6]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the penroutations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	nro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ nro_15m + conMycNS_15m + 
+                    hetMyc_15m + nro_15m:hetMyc_15m + conMycNS_15m:hetMyc_15m + log10(Count + 1) + log(Avg_3_yr_prior_cohort_counts + 1) +
+                    (1 | SiteID) + (1 | Cohort.Year),
+					data = NRO_slope_modeling_data)
+					
+	Obs_aov <- anova(nro_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+
+		Obs_results_con_myc <- as.vector(Obs_aov[2,5])
+			All_results_con_myc <- rbind(Rand_results_con_myc, Obs_results_con_myc)
+			Ranks_con_myc <- rank(All_results_con_myc)
+			P_values_con_myc <- 1-Ranks_con_myc[nperm+1]/(nperm+1)
+		
+		Obs_results_het_myc <- as.vector(Obs_aov[3,5])
+			All_results_het_myc <- rbind(Rand_results_het_myc, Obs_results_het_myc)
+			Ranks_het_myc <- rank(All_results_het_myc)
+			P_values_het_myc <- 1-Ranks_het_myc[nperm+1]/(nperm+1)
+		
+		Obs_results_con_den_het_myc <- as.vector(Obs_aov[4,5])
+			All_results_con_den_het_myc <- rbind(Rand_results_con_den_het_myc, Obs_results_con_den_het_myc)
+			Ranks_con_den_het_myc <- rank(All_results_con_den_het_myc)
+			P_values_con_den_het_myc <- 1-Ranks_con_den_het_myc[nperm+1]/(nperm+1)		
+		Obs_results_con_myc_het_myc <- as.vector(Obs_aov[5,5])
+			All_results_con_myc_het_myc <- rbind(Rand_results_con_myc_het_myc, Obs_results_con_myc_het_myc)
+			Ranks_con_myc_het_myc <- rank(All_results_con_myc_het_myc)
+			P_values_con_myc_het_myc <- 1-Ranks_con_myc_het_myc[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[6,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[7,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+	
+	P_values_con_myc
+		hist(All_results_con_myc) # vs
+		Obs_results_con_myc
+		
+	P_values_het_myc
+		hist(All_results_het_myc) # vs
+		Obs_results_het_myc
+
+	P_values_con_den_het_myc
+		hist(All_results_con_den_het_myc)
+		Obs_results_con_den_het_myc
+
+	P_values_con_myc_het_myc
+		hist(All_results_con_myc_het_myc)
+		Obs_results_con_myc_het_myc
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+	
+	r.squaredGLMM(nro_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(nro_mod_BA_true)
+	
+	NRO_GLM_slope_coefficient_modeling_results <- data.frame(species = c("nro", "nro", "nro", "nro", "nro", "nro", "nro"), 
+															term = c("Conspecific_BA", "Conmycorrhizal_BA", "Heteromycorrhizal_BA", "Log_Recruit_Density", "Log_Prior_Density", "Consp_x_Heteromycorrhizal_BA", "Conmyc_x_Heteromycorrhizal_BA"), 
+															estimate = c("0.7775", "1.9199", "-2.2478", "21.9498", "5.3454", "-0.1363", "0.9898"), 
+															std.error = c("1.0830", "2.0415", "2.1879", "1.1318", "1.0040", "0.9890", "2.1562"), 
+															statistic = c("0.718", "0.940", "-1.027", "19.394", "5.324", "-0.138", "0.459"), 
+															p.value = c(P_values_con_den, P_values_con_myc, P_values_het_myc, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_het_myc, P_values_con_myc_het_myc),
+															r.squared = c("0.1239852", "0.1239852", "0.1239852", "0.1239852", "0.1239852", "0.1239852", "0.1239852"))
+
+	# write.csv(NRO_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/NRO_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
