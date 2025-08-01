@@ -20,16 +20,10 @@ library(tibble)
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/Combined_demography_modeling_data.csv")
 
+#### START HERE
 ## Add survYear
 allSpDat$survYear = allSpDat$Cohort.Year + 1
 
-# ##### Read in file with species' average cumulative BA per site
-# speciesSite_sum = read.csv("./data/L1/mean_totalSpSiteBA.csv")
-# speciesSite_sum$Site = factor(speciesSite_sum$Site)
-# speciesSite_sum = speciesSite_sum[,c(1,2,4)]
-
-#################################################
-#################################################
 #### Add neighborhood BA components and all other variables for modeling by species
 
 ##### Define species-specific BA groups
@@ -142,9 +136,26 @@ allSpDat <- allSpDat %>%
     log0yr = log(Year_0_counts),
     logPrior = log(Prior_3_year_cohorts_counts + 1))
 
+### Calculate proportion AM, proportion conmyc, and proportion consp
+## Proportion conspecific
+allSpDat$propConsp = allSpDat$consp_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
+## Proportion con-mycorrhizal
+allSpDat$propConmyc = allSpDat$conMyc_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
+## Proportion AM
+allSpDat$propAM = allSpDat$AM_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
+
+#### END HERE
+
 #########################################################
 #########################################################
 ################# All Species Models - Raw Basal Area
+
+## Null model
+all_sp_15m_null <- glmer(Year_1_counts ~ 1 +
+                      (1|Site) + (1|survYear) + (1|Sp),
+                    family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_15m_null)
+r.squaredGLMM(all_sp_15m_null) 
 
 ## Testing Panel A conceptual figure
 all_sp_15m <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
@@ -153,9 +164,10 @@ all_sp_15m <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
                      family = poisson(link = "log"), data = allSpDat) 
 summary(all_sp_15m)
 car::vif(all_sp_15m)
+r.squaredGLMM(all_sp_15m) 
 
 ## Testing Panel B conceptual figure
-all_sp_15m1 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+all_sp_15m1 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
                        AM_15m + ECM_15m + 
                        consp_15m:AM_15m + # Panel B
                        consp_15m:ECM_15m + # Panel B
@@ -164,6 +176,7 @@ all_sp_15m1 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15m1)
 car::vif(all_sp_15m1)
+r.squaredGLMM(all_sp_15m1) 
 
 ## Testing Panel C conceptual figure
 all_sp_15m2 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
@@ -175,6 +188,7 @@ all_sp_15m2 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15m2)
 car::vif(all_sp_15m2)
+r.squaredGLMM(all_sp_15m2) 
 
 ## Testing Panel D conceptual figure
 all_sp_15m3 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
@@ -186,8 +200,9 @@ all_sp_15m3 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15m3) 
 car::vif(all_sp_15m3) ## Some VIFs >10
+r.squaredGLMM(all_sp_15m3) 
 
-## Testing Panels B, C, and D of conceptual figure
+## Testing Panels B, C, and D of conceptual figure - Global model
 all_sp_15m4 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
                     AM_15m + ECM_15m + 
                     consp_15m:AM_15m + # Panel B
@@ -201,89 +216,82 @@ all_sp_15m4 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
                   family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15m4)
 car::vif(all_sp_15m4)
+r.squaredGLMM(all_sp_15m4) 
 
-## We also had this version with additional main effects in the word doc? Not sure if it quite corresponds to explicit panels in the conceptual model
-# DOES NOT WORK
-# THROWS WARNING/ERROR: fixed-effect model matrix is rank deficient so dropping 2 columns / coefficients
-# all_sp_15m5 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
-#                        AM_15m + ECM_15m + 
-#                        conMyc_15m + hetMyc_15m +
-#                        consp_15m:AM_15m + 
-#                        consp_15m:ECM_15m +
-#                        consp_15m:conMyc_15m + 
-#                        consp_15m:hetMyc_15m + 
-#                        logPrior + log0yr +
-#                        (1|Site) + (1|survYear) + (1|Sp),
-#                      family = poisson(link = "log"), data = allSpDat)
-# summary(all_sp_15m5)
-# car::vif(all_sp_15m5)
-
+## Model comparison
 ### Compare AICs - lowest is for all_sp_15m4 but all_sp_15m3 close 2nd
-AIC(all_sp_15m, all_sp_15m1, all_sp_15m2, all_sp_15m3, all_sp_15m4)
-summary(all_sp_15m3)
+AIC(all_sp_15m_null, all_sp_15m, all_sp_15m1, all_sp_15m2, all_sp_15m3, all_sp_15m4)
 # More complex model fits better
 anova(all_sp_15m3, all_sp_15m4)
 
 #########################################################
 ################# All Species Models - Proportional Basal Area
 
-### Calculate proportion AM, proportion conmyc, and proportion consp
-## Proportion conspecific
-allSpDat$propConsp = allSpDat$consp_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
-## Proportion con-mycorrhizal
-allSpDat$propConmyc = allSpDat$conMyc_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
-## Proportion AM
-allSpDat$propAM = allSpDat$AM_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
-#### *** Not sure we can include both propConmyc and propAM in models - they are either identical or the inverse of each other
+## Null model
+all_sp_prop_null <- glmer(Year_1_counts ~ 1 +
+                           (1|Site) + (1|survYear) + (1|Sp),
+                         family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_prop_null)
+r.squaredGLMM(all_sp_prop_null) 
 
-### Full model - High VIFs
-all_sp_prop <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
-                       propAM + propConmyc + 
-                       propConsp:propAM +
-                       propConsp:propConmyc +
+## Testing Panel A conceptual figure (proportional BA)
+all_sp_prop <- glmer(Year_1_counts ~ propConsp*Seedling_myc +
+                      logPrior + log0yr +
+                      (1|Site) + (1|survYear) + (1|Sp),
+                    family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_prop)
+car::vif(all_sp_prop)
+r.squaredGLMM(all_sp_prop) 
+
+## Testing Panel B conceptual figure (proportional BA)
+all_sp_prop1 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                       propAM + # Panel B
+                       propConsp:propAM + # Panel B
                        logPrior + log0yr +
                        (1|Site) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
-summary(all_sp_prop) 
-car::vif(all_sp_prop) ## VIFs >10
+summary(all_sp_prop1)
+car::vif(all_sp_prop1)
+r.squaredGLMM(all_sp_prop1) 
 
-### Full model with propAM - Fits well
-all_sp_propAM <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
-                       propAM + #propConmyc + 
-                       propConsp:propAM +
-                       #propConsp:propConmyc +
+## Testing Panel C conceptual figure (proportional BA)
+all_sp_prop2 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                        propAM + 
+                        Seedling_myc:propAM + # Panel C
+                        logPrior + log0yr +
+                        (1|Site) + (1|survYear) + (1|Sp),
+                      family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop2)
+car::vif(all_sp_prop2)
+r.squaredGLMM(all_sp_prop2) 
+
+## Testing Panel D conceptual figure (proportional BA)
+all_sp_prop3 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                        propAM + 
+                        propConsp:Seedling_myc:propAM + # Panel D
+                        logPrior + log0yr +
+                        (1|Site) + (1|survYear) + (1|Sp),
+                      family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop3)
+car::vif(all_sp_prop3)
+r.squaredGLMM(all_sp_prop3) 
+
+## Testing Panels B, C, and D of conceptual figure - Global model (proportional BA)
+all_sp_prop4 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                       propAM + 
+                       propConsp:propAM + # Panel B
+                       Seedling_myc:propAM + # Panel C
+                       propConsp:Seedling_myc:propAM + # Panel D
                        logPrior + log0yr +
                        (1|Site) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
-summary(all_sp_propAM) 
-car::vif(all_sp_propAM) 
+summary(all_sp_prop4)
+car::vif(all_sp_prop4)
+r.squaredGLMM(all_sp_prop4) 
 
-### Full model with propConmyc - Fits well
-all_sp_propConmyc <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
-                         #propAM + 
-                         propConmyc + 
-                         #propConsp:propAM +
-                         propConsp:propConmyc +
-                         logPrior + log0yr +
-                         (1|Site) + (1|survYear) + (1|Sp),
-                       family = poisson(link = "log"), data = allSpDat)
-summary(all_sp_propConmyc) 
-car::vif(all_sp_propConmyc) 
-
-### Full model using raw consp BA instead of proportional - High VIFs
-all_sp_rawConsp <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
-                       propAM + propConmyc + 
-                       consp_15m:propAM +
-                       consp_15m:propConmyc +
-                       logPrior + log0yr +
-                       (1|Site) + (1|survYear) + (1|Sp),
-                     family = poisson(link = "log"), data = allSpDat)
-summary(all_sp_rawConsp) 
-car::vif(all_sp_rawConsp) ## One high VIF >10
-
-### Compare AICs - all_sp_rawConsp is best!
-AIC(all_sp_prop, all_sp_propAM, all_sp_propConmyc, all_sp_rawConsp)
-summary(all_sp_rawConsp)
+### Compare AICs - 
+AIC(all_sp_prop_null, all_sp_prop, all_sp_prop1, 
+    all_sp_prop2, all_sp_prop3, all_sp_prop4)
 # More complex model fits better
 anova(all_sp_propConmyc, all_sp_rawConsp)
 
