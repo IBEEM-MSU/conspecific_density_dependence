@@ -96,6 +96,51 @@ Here's some additional information on the column meanings in this file:
 - **All other columns**: take the form xx_ym and hold the basal area values (m2 per radius), where xx is a 2-letter species abbreviation, and ym is one of 5m, 10m, or 15m representing the radius for which BA was calculated in meters
 ab = American beech, bs = basswood, sm = sugar maple, qa = quaking aspen, ae = American elm, wa = white ash, bta = bigtooth aspen, nro = Northern red oak, iw = ironwood, rm = red maple, bo = black oak, bc = black cherry, bonro = black oak/nro hybrid, wo = white oak, hem = eastern hemlock, wp = white pine, jp = jack pine, svb = serviceberry
 
+**Combined_demography_modeling_data**: This master file was created after cleaning up and manipulating existing raw data files. It includes information for each species' cohort of seedlings in a given year at a given site in a given quadrat and information about the surrounding adult community. Unless otherwise noted, all adult community data was sampled in a 15m radius plot area surrounding each quadrat. Column names refer to the following:
+- **SiteID**: ID of each of the 12 sites.
+- **quadrat**: Each of the 200 quadrats per site
+- **Cohort.Year**: Year each cohort in each quadrat at each site was censused.
+- **GLM.Slope.Estimate**: Slope parameter estimate from a simple linear model estimating seedling count reductions over 3 years. More negative values indicate greater rates of attrition through time for a given cohort in a given quadrat at a given site. These values are used as the response variable in the permutation test.
+- **Sp**: Species ID of recorded seedlings.
+- **Year_0_counts**: Starting number of seedlings in a cohort.
+- **Year_1_counts**: Number of seedlings remaining for a given cohort after 1 year.
+- **Year_2_counts**: Number of seedlings remaining for a given cohort after 2 years.
+- **Year_3_counts**: Number of seedlings remaining for a given cohort after 3 years.
+- **Avg_3_year_prior_counts**: Average number of other seedlings a cohort contends with over a 3 year span.
+- **Prior_1_year_cohorts_and_1st_year_and_new_2nd_year_counts**: Number of seedlings from the previous year and following two years of new seedlings that emerged that challenge a given cohort of seedlings.
+- **Prior_2_year_cohorts_and_new_1st_year_counts**: Number of seedlings from the previous 2 years and new seedlings that emerged that challenge a given cohort of seedlings.
+- **Prior_3_year_cohorts_counts**: Number of seedlings from the previous 3 years that challenge an emerging cohort of seedlings.
+- **AM_15m**: Total AM adult tree basal area.
+- **ECM_15m**: Total ECM adult tree basal area.
+- **ab_15m**: Total American Beech adult tree basal area.
+- **ae_15m**: Total American Elm adult tree basal area.
+- **bc_15m**: Total Black Cherry adult tree basal area.
+- **bo_15m**: Total Black Oak adult tree basal area.
+- **bonro_15m**: Total Black Oak-Northern Red Oak Hybrid adult tree basal area.
+- **bs_15m**: Total Basswood adult tree basal area.
+- **bta_15m**: Total Bigtooth Aspen adult tree basal area.
+- **hem_15m**: Total Eastern Hemlock adult tree basal area.
+- **iw_15m**: Total Ironwood adult tree basal area.
+- **jp_15m**: Total Jack Pine adult tree basal area.
+- **nro_15m**: Total Northern Red Oak adult tree basal area.
+- **qa_15m**: Total Quaking Aspen adult tree basal area.
+- **rm_15m**: Total Red Maple adult tree basal area.
+- **sm_15m**: Total Sugar Mapel adult tree basal area.
+- **svb_15m**: Total Serviceberry adult shrub basal area.
+- **wa_15m**: Total White Ash adult tree basal area.
+- **wo_15m**: Total White Oak adult tree basal area.
+- **wp_15m**: Total White Pine adult tree basal area.
+- **Seedling_myc**: Mycorrhizal type of seedling species.
+- **conMyc_15m**: Total conmycorrhizal adult tree basal area, based on Sp column species id with conspecifics included.
+- **conMycNS_15m**: Total conmycorrhizal adult tree basal area, based on Sp column species id with conspecifics removed.
+- **hetMyc_15m**: Total heterospecific adult tree basal area, based on Sp column species id.
+- **consp_15m**: Total conspecific adult tree basal area, based on Sp column species id.
+- **log0yr**: Log10-transformed counts of a specific cohort of seedlings in a quadrat.
+- **logPrior**: Log10-transformed counts of all prior seedlings in a quadrat that are not the cohort of interest.
+- **propConsp**: Proportion of total adult tree basal area that are conspecific trees based on Sp column species id.
+- **propConmyc**: Proportion of total adult tree basal area that are conmycorrhizal trees based on Sp column species id.
+- **propAM**: Proportion of total adult tree basal area that are AM-associated trees.
+
 **Scripts**: [*Use descriptive names for scripts and follow a consistent naming convention, such as `process_data.py` or `cleaning_script.R`. If scripts are designed to be run in sequence, it may be helpful to number them in order (e.g., `1_cleaning_script.R`, `2_process_data.R`)*]
 
 ## Scripts
