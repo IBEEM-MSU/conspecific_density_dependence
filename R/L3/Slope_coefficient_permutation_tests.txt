@@ -34,6 +34,151 @@ nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutati
 
 # We will also perform a permutation test modeling mortality responses to our abiotic variables: mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC
 
+## Null model
+all_sp_15m_null <- glmer(Year_1_counts ~ 1 +
+                      (1|Site) + (1|survYear) + (1|Sp),
+                    family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_15m_null)
+r.squaredGLMM(all_sp_15m_null) 
+
+## Testing Panel A conceptual figure
+all_sp_15m <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_15m)
+car::vif(all_sp_15m)
+r.squaredGLMM(all_sp_15m) 
+
+## Testing Panel B conceptual figure
+all_sp_15m1 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel B
+                       consp_15m:ECM_15m + # Panel B
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15m1)
+car::vif(all_sp_15m1)
+r.squaredGLMM(all_sp_15m1) 
+
+## Testing Panel C conceptual figure
+all_sp_15m2 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+                       AM_15m + ECM_15m + 
+                       Seedling_myc:AM_15m + # Panel C
+                       Seedling_myc:ECM_15m + # Panel C
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15m2)
+car::vif(all_sp_15m2)
+r.squaredGLMM(all_sp_15m2) 
+
+## Testing Panel D conceptual figure
+all_sp_15m3 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+                       AM_15m + ECM_15m + 
+                       consp_15m:Seedling_myc:AM_15m + # Panel D
+                       consp_15m:Seedling_myc:ECM_15m + # Panel D
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15m3) 
+car::vif(all_sp_15m3) ## Some VIFs >10
+r.squaredGLMM(all_sp_15m3) 
+
+## Testing Panels B, C, and D of conceptual figure - Global model
+all_sp_15m4 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+                    AM_15m + ECM_15m + 
+                    consp_15m:AM_15m + # Panel B
+                    consp_15m:ECM_15m + # Panel B
+                    Seedling_myc:AM_15m + # Panel C
+                    Seedling_myc:ECM_15m + # Panel C
+                    consp_15m:Seedling_myc:AM_15m + # Panel D
+                    consp_15m:Seedling_myc:ECM_15m + # Panel D
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear) + (1|Sp),
+                  family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15m4)
+car::vif(all_sp_15m4)
+r.squaredGLMM(all_sp_15m4) 
+
+## Model comparison
+### Compare AICs - lowest is for all_sp_15m4 but all_sp_15m3 close 2nd
+AIC(all_sp_15m_null, all_sp_15m, all_sp_15m1, all_sp_15m2, all_sp_15m3, all_sp_15m4)
+# More complex model fits better
+anova(all_sp_15m3, all_sp_15m4)
+
+#########################################################
+################# All Species Models - Proportional Basal Area
+
+## Null model
+all_sp_prop_null <- glmer(Year_1_counts ~ 1 +
+                           (1|Site) + (1|survYear) + (1|Sp),
+                         family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_prop_null)
+r.squaredGLMM(all_sp_prop_null) 
+
+## Testing Panel A conceptual figure (proportional BA)
+all_sp_prop <- glmer(Year_1_counts ~ propConsp*Seedling_myc +
+                      logPrior + log0yr +
+                      (1|Site) + (1|survYear) + (1|Sp),
+                    family = poisson(link = "log"), data = allSpDat) 
+summary(all_sp_prop)
+car::vif(all_sp_prop)
+r.squaredGLMM(all_sp_prop) 
+
+## Testing Panel B conceptual figure (proportional BA)
+all_sp_prop1 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                       propAM + # Panel B
+                       propConsp:propAM + # Panel B
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop1)
+car::vif(all_sp_prop1)
+r.squaredGLMM(all_sp_prop1) 
+
+## Testing Panel C conceptual figure (proportional BA)
+all_sp_prop2 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                        propAM + 
+                        Seedling_myc:propAM + # Panel C
+                        logPrior + log0yr +
+                        (1|Site) + (1|survYear) + (1|Sp),
+                      family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop2)
+car::vif(all_sp_prop2)
+r.squaredGLMM(all_sp_prop2) 
+
+## Testing Panel D conceptual figure (proportional BA)
+all_sp_prop3 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                        propAM + 
+                        propConsp:Seedling_myc:propAM + # Panel D
+                        logPrior + log0yr +
+                        (1|Site) + (1|survYear) + (1|Sp),
+                      family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop3)
+car::vif(all_sp_prop3)
+r.squaredGLMM(all_sp_prop3) 
+
+## Testing Panels B, C, and D of conceptual figure - Global model (proportional BA)
+all_sp_prop4 <- glmer(Year_1_counts ~ propConsp + Seedling_myc + 
+                       propAM + 
+                       propConsp:propAM + # Panel B
+                       Seedling_myc:propAM + # Panel C
+                       propConsp:Seedling_myc:propAM + # Panel D
+                       logPrior + log0yr +
+                       (1|Site) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_prop4)
+car::vif(all_sp_prop4)
+r.squaredGLMM(all_sp_prop4) 
+
+### Compare AICs - 
+AIC(all_sp_prop_null, all_sp_prop, all_sp_prop1, 
+    all_sp_prop2, all_sp_prop3, all_sp_prop4)
+# More complex model fits better
+anova(all_sp_propConmyc, all_sp_rawConsp)
+
 # Other species go here
 
 

@@ -433,9 +433,116 @@ Joined_WO_modeling_data <- WO_slope_modeling_data %>%
 					# select(-c(4, 6:14))
 
 Combined_demography_modeling_data <- rbind(Joined_AB_modeling_data, Joined_BC_modeling_data, Joined_BONRO_modeling_data, Joined_BS_modeling_data, Joined_IW_modeling_data, Joined_NRO_modeling_data, Joined_RM_modeling_data, Joined_SM_modeling_data, Joined_WA_modeling_data, Joined_WO_modeling_data) %>%
-replace(is.na(.), 0)
+replace(is.na(.), 0) 
 
-Debug <- Combined_demography_modeling_data %>%
-					filter(SiteID == 7 & quadrat == 25 & Sp == "sm")
+#### Add neighborhood BA components and all other variables for modeling by species
+
+##### Define species-specific BA groups
+## Conmycorrhizal BA in 15-m radius - WITH species included
+conMyc_15m <- list(
+  rm = c("sm_15m", "ae_15m", "wa_15m","rm_15m", "bc_15m", "svb_15m"),
+  sm = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
+  ab = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  wa = c("wa_15m", "ae_15m", "sm_15m", "rm_15m", "bc_15m", "svb_15m"),
+  bc = c("bc_15m", "ae_15m", "sm_15m", "rm_15m", "wa_15m", "svb_15m"),
+  wo = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  nro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+          "nro_15m","iw_15m", "bo_15m","bonro_15m",
+          "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  bonro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+            "nro_15m","iw_15m", "bo_15m","bonro_15m",
+            "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  bs = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  iw = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"))
+
+## Conmycorrhizal BA in 15-m radius - WITHOUT species included
+conMycNS_15m <- list(rm = c("sm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
+  sm = c("rm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
+  ab = c("bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  wa = c("rm_15m", "ae_15m", "sm_15m", "bc_15m", "svb_15m"),
+  bc = c("ae_15m", "sm_15m", "rm_15m", "wa_15m", "svb_15m"),
+  wo = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+          "hem_15m","wp_15m","jp_15m"),
+  nro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+          "iw_15m", "bo_15m","bonro_15m",
+          "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  bonro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+            "nro_15m","iw_15m", "bo_15m",
+            "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  bs = c("ab_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  iw = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"))
+
+## Heteromycorrhizal BA in 15-m radius
+hetMyc_15m  <- list(
+  rm = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  sm = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  ab = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
+  wa = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  bc = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
+         "nro_15m","iw_15m", "bo_15m","bonro_15m",
+         "wo_15m", "hem_15m","wp_15m","jp_15m"),
+  wo = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
+  nro = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
+  bonro = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
+  bs = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
+  iw = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"))
+
+# Define a helper function for one row
+# Helper function: compute species-specific variables per row
+compute_species_vars <- function(row) {
+  sp <- row[["Sp"]]
+  
+  if (!sp %in% names(conMyc_15m)) return(rep(NA, 4))
+  
+  # Use different variable names to avoid overwriting the global lists
+  conMyc_with <- sum(as.numeric(row[conMyc_15m[[sp]]]), na.rm = TRUE)
+  conMyc_noSelf <- sum(as.numeric(row[conMycNS_15m[[sp]]]), na.rm = TRUE)
+  hetMyc_sum <- sum(as.numeric(row[hetMyc_15m[[sp]]]), na.rm = TRUE)
+  conspecific <- as.numeric(row[[paste0(sp, "_15m")]])
+  
+  return(c(conMyc_with, conMyc_noSelf, hetMyc_sum, conspecific))
+}
+
+
+# Apply row-wise and bind to original data
+# Make sure your dataframe is actually a data.frame, not a tibble (which apply() doesn't handle rowwise well)
+Combined_demography_modeling_data <- as.data.frame(Combined_demography_modeling_data)
+
+# Apply to each row
+species_vars <- t(apply(Combined_demography_modeling_data, 1, compute_species_vars))
+
+# Convert to data frame and rename columns
+species_vars_df <- as.data.frame(species_vars)
+names(species_vars_df) <- c("conMyc_15m", "conMycNS_15m", "hetMyc_15m", "consp_15m")
+
+# Combine with original dataframe
+allSpDat <- cbind(Combined_demography_modeling_data, species_vars_df) %>%
+					mutate(Site = as.factor(SiteID),
+						log0yr = log(Year_0_counts),
+						logPrior = log(Prior_3_year_cohorts_counts + 1),
+						propConsp = consp_15m / (conMyc_15m + hetMyc_15m),
+						propConmyc = conMyc_15m / (conMyc_15m + hetMyc_15m),
+						propAM = AM_15m / (AM_15m + ECM_15m))
 								
-	write.csv(Combined_demography_modeling_data, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/Combined_demography_modeling_data.csv", row.names = FALSE)
+write.csv(allSpDat, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/Combined_demography_modeling_data.csv", row.names = FALSE)
