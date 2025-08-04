@@ -23,8 +23,6 @@ Site_BA_quads_species_BA <- Site_BA %>%
 					spread(key = Species_BA, value = Total_BA) %>%
 					unique()
 	
-	head(Site_BA_quads_species_BA)
-	
 Site_BA_quads_myc_BA <- Site_BA %>%
 					mutate(quadrat = as.numeric(X) + 0.5, ba_joiner = paste(TransectID,".",Year)) %>%
 					select(-c(X.1, X, Y, Midpoint_X, Midpoint_Y)) %>%
