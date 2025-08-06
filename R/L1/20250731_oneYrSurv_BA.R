@@ -20,131 +20,8 @@ library(tibble)
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/Combined_demography_modeling_data.csv")
 
-#### START HERE
 ## Add survYear
 allSpDat$survYear = allSpDat$Cohort.Year + 1
-
-#### Add neighborhood BA components and all other variables for modeling by species
-
-##### Define species-specific BA groups
-## Conmycorrhizal BA in 15-m radius - WITH species included
-conMyc_15m <- list(
-  rm = c("sm_15m", "ae_15m", "wa_15m","rm_15m", "bc_15m", "svb_15m"),
-  sm = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
-  ab = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  wa = c("wa_15m", "ae_15m", "sm_15m", "rm_15m", "bc_15m", "svb_15m"),
-  bc = c("bc_15m", "ae_15m", "sm_15m", "rm_15m", "wa_15m", "svb_15m"),
-  wo = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  nro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-          "nro_15m","iw_15m", "bo_15m","bonro_15m",
-          "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  bonro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-            "nro_15m","iw_15m", "bo_15m","bonro_15m",
-            "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  bs = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  iw = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"))
-
-## Conmycorrhizal BA in 15-m radius - WITHOUT species included
-conMycNS_15m <- list(rm = c("sm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
-  sm = c("rm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
-  ab = c("bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  wa = c("rm_15m", "ae_15m", "sm_15m", "bc_15m", "svb_15m"),
-  bc = c("ae_15m", "sm_15m", "rm_15m", "wa_15m", "svb_15m"),
-  wo = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-          "hem_15m","wp_15m","jp_15m"),
-  nro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-          "iw_15m", "bo_15m","bonro_15m",
-          "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  bonro = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-            "nro_15m","iw_15m", "bo_15m",
-            "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  bs = c("ab_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  iw = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"))
-
-## Heteromycorrhizal BA in 15-m radius
-hetMyc_15m  <- list(
-  rm = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  sm = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  ab = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
-  wa = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  bc = c("ab_15m", "bs_15m", "qa_15m","bta_15m", 
-         "nro_15m","iw_15m", "bo_15m","bonro_15m",
-         "wo_15m", "hem_15m","wp_15m","jp_15m"),
-  wo = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
-  nro = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
-  bonro = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
-  bs = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"),
-  iw = c("sm_15m", "ae_15m", "wa_15m", "rm_15m", "bc_15m", "svb_15m"))
-
-# Define a helper function for one row
-# Helper function: compute species-specific variables per row
-compute_species_vars <- function(row) {
-  sp <- row[["Sp"]]
-  
-  if (!sp %in% names(conMyc_15m)) return(rep(NA, 4))
-  
-  # Use different variable names to avoid overwriting the global lists
-  conMyc_with <- sum(as.numeric(row[conMyc_15m[[sp]]]), na.rm = TRUE)
-  conMyc_noSelf <- sum(as.numeric(row[conMycNS_15m[[sp]]]), na.rm = TRUE)
-  hetMyc_sum <- sum(as.numeric(row[hetMyc_15m[[sp]]]), na.rm = TRUE)
-  conspecific <- as.numeric(row[[paste0(sp, "_15m")]])
-  
-  return(c(conMyc_with, conMyc_noSelf, hetMyc_sum, conspecific))
-}
-
-
-# Apply row-wise and bind to original data
-# Make sure your dataframe is actually a data.frame, not a tibble (which apply() doesn't handle rowwise well)
-allSpDat_df <- as.data.frame(allSpDat)
-
-# Apply to each row
-species_vars <- t(apply(allSpDat_df, 1, compute_species_vars))
-
-# Convert to data frame and rename columns
-species_vars_df <- as.data.frame(species_vars)
-names(species_vars_df) <- c("conMyc_15m", "conMycNS_15m", "hetMyc_15m", "consp_15m")
-
-# Combine with original dataframe
-allSpDat <- cbind(allSpDat_df, species_vars_df)
-
-# Add transformed variables
-allSpDat <- allSpDat %>%
-  mutate(
-    Site = as.factor(SiteID),
-    survYear = as.factor(survYear),
-    log0yr = log(Year_0_counts),
-    logPrior = log(Prior_3_year_cohorts_counts + 1))
-
-### Calculate proportion AM, proportion conmyc, and proportion consp
-## Proportion conspecific
-allSpDat$propConsp = allSpDat$consp_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
-## Proportion con-mycorrhizal
-allSpDat$propConmyc = allSpDat$conMyc_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
-## Proportion AM
-allSpDat$propAM = allSpDat$AM_15m / (allSpDat$conMyc_15m + allSpDat$hetMyc_15m)
-
-#### END HERE
 
 #########################################################
 #########################################################
@@ -202,6 +79,18 @@ summary(all_sp_15m3)
 car::vif(all_sp_15m3) ## Some VIFs >10
 r.squaredGLMM(all_sp_15m3) 
 
+# ## Testing Panel D conceptual figure - log0yr as RE
+# all_sp_15m3b <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
+#                        AM_15m + ECM_15m + 
+#                        consp_15m:Seedling_myc:AM_15m + # Panel D
+#                        consp_15m:Seedling_myc:ECM_15m + # Panel D
+#                        logPrior + #log0yr +
+#                        (1|Site) + (1|survYear) + (1|Sp) + (1|log0yr),
+#                      family = poisson(link = "log"), data = allSpDat)
+# summary(all_sp_15m3b) 
+# car::vif(all_sp_15m3b) ## Some VIFs >10
+# r.squaredGLMM(all_sp_15m3b) 
+
 ## Testing Panels B, C, and D of conceptual figure - Global model
 all_sp_15m4 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
                     AM_15m + ECM_15m + 
@@ -222,7 +111,7 @@ r.squaredGLMM(all_sp_15m4)
 ### Compare AICs - lowest is for all_sp_15m4 but all_sp_15m3 close 2nd
 AIC(all_sp_15m_null, all_sp_15m, all_sp_15m1, all_sp_15m2, all_sp_15m3, all_sp_15m4)
 # More complex model fits better
-anova(all_sp_15m3, all_sp_15m4)
+anova(all_sp_15m3, all_sp_15m4) # Global model significantly better than Panel D
 
 #########################################################
 ################# All Species Models - Proportional Basal Area
@@ -293,7 +182,32 @@ r.squaredGLMM(all_sp_prop4)
 AIC(all_sp_prop_null, all_sp_prop, all_sp_prop1, 
     all_sp_prop2, all_sp_prop3, all_sp_prop4)
 # More complex model fits better
-anova(all_sp_propConmyc, all_sp_rawConsp)
+anova(all_sp_prop3, all_sp_prop4) # Global model not better than Panel D
+anova(all_sp_prop1, all_sp_prop3) # Panel D significantly better than Panel B
+# We lose sensitivity when we use the proportional data - consider AICs
+
+## ALL Model AIC comparison (raw BA and proportional)
+# Named list of models
+models <- list(
+  all_sp_15m_null = all_sp_15m_null,
+  all_sp_15m = all_sp_15m,
+  all_sp_15m1 = all_sp_15m1,
+  all_sp_15m2 = all_sp_15m2,
+  all_sp_15m3 = all_sp_15m3,
+  all_sp_15m4 = all_sp_15m4,
+  all_sp_prop_null = all_sp_prop_null,
+  all_sp_prop = all_sp_prop,
+  all_sp_prop1 = all_sp_prop1,
+  all_sp_prop2 = all_sp_prop2,
+  all_sp_prop3 = all_sp_prop3,
+  all_sp_prop4 = all_sp_prop4
+)
+
+# Extract and order AICs
+aic_vals <- sapply(models, AIC)
+aic_vals[order(aic_vals)]
+## The raw BA models are better!
+
 
 #########################################################
 #########################################################
@@ -302,68 +216,980 @@ anova(all_sp_propConmyc, all_sp_rawConsp)
 ##### Subset RM data
 rm_surv <- subset(allSpDat, Sp == "rm")
 
-## Simple test of conspecific DD
+## Null model - species-level
+rm_15m_null <- glmer(Year_1_counts ~ 1 +
+                     (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = rm_surv) 
+summary(rm_15m_null)
+r.squaredGLMM(rm_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
 rm_15m <- glmer(Year_1_counts ~ consp_15m +
                       logPrior + log0yr +
                       (1|Site) + (1|survYear),
                     family = poisson(link = "log"), data = rm_surv)
 summary(rm_15m)
 car::vif(rm_15m)
+r.squaredGLMM(rm_15m) 
 
-## Full species-level model - using con-mycorrhizal neighborhood excluding conspecific BA and heteromycorrhizal, rather than ECM and AM
-rm_15m_full <- glmer(Year_1_counts ~ consp_15m + 
-                       conMycNS_15m + hetMyc_15m + 
-                       consp_15m:conMycNS_15m + 
-                       consp_15m:hetMyc_15m + 
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+rm_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = rm_surv)
+summary(rm_15m1)
+car::vif(rm_15m1)
+r.squaredGLMM(rm_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+rm_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel B
+                       consp_15m:ECM_15m + # Panel B
                        logPrior + log0yr +
                        (1|Site) + (1|survYear),
                      family = poisson(link = "log"), data = rm_surv)
-summary(rm_15m_full)
-car::vif(rm_15m_full)
+summary(rm_15m2)
+car::vif(rm_15m2)
+r.squaredGLMM(rm_15m2) 
 
-##### Version with conspecifics included in con-mycorrhizal - VIFs too high
-rm_15m_full2 <- glmer(Year_1_counts ~ consp_15m + 
-                       conMyc_15m + hetMyc_15m + 
-                       consp_15m:conMyc_15m + 
-                       consp_15m:hetMyc_15m + 
-                       logPrior + log0yr +
-                       (1|Site) + (1|survYear),
-                     family = poisson(link = "log"), data = rm_surv)
-summary(rm_15m_full2)
-car::vif(rm_15m_full2)
+## Model comparison - species-level
+### Compare AICs - lowest is for rm_15m4 but rm_15m3 close 2nd
+AIC(rm_15m_null, rm_15m, rm_15m1, rm_15m2)
+# More complex model is NOT better
+anova(rm_15m1, rm_15m2)
 
-### Compare AICs - all_sp_rawConsp is best!
-AIC(rm_15m, rm_15m_full, rm_15m_full2)
-summary(rm_15m_full)
-# More complex model rm_15m_full is better
-anova(rm_15m, rm_15m_full)
-
-#########################################################
 ################# Species-Level Test - RM - Proportional Basal Area
 
-###### Cannot include both propAM and propConmyc - but each of these is the exact same thing because propAM = propConmyc
-### Full model with propAM - Fits well
-rm_propAM <- glmer(Year_1_counts ~ propConsp + 
-                       propAM + #propConmyc + 
-                       propConsp:propAM +
-                       #propConsp:propConmyc +
-                       logPrior + log0yr +
+## Null model - species-level (proportional BA)
+rm_15m_prop_null <- glmer(Year_1_counts ~ 1 +
                        (1|Site) + (1|survYear),
-                     family = poisson(link = "log"), data = rm_surv)
-summary(rm_propAM) 
-car::vif(rm_propAM) 
+                     family = poisson(link = "log"), data = rm_surv) 
+summary(rm_15m_prop_null)
+r.squaredGLMM(rm_15m_prop_null) 
 
-### Full model with propConmyc - Fits well
-rm_propConmyc <- glmer(Year_1_counts ~ propConsp + 
-                     #propAM + 
-                     propConmyc + 
-                     #propConsp:propAM +
-                     propConsp:propConmyc +
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+rm_prop <- glmer(Year_1_counts ~ propConsp +
+                  logPrior + log0yr +
+                  (1|Site) + (1|survYear),
+                family = poisson(link = "log"), data = rm_surv)
+summary(rm_prop)
+car::vif(rm_prop)
+r.squaredGLMM(rm_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+rm_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = rm_surv)
+summary(rm_prop1)
+car::vif(rm_prop1)
+r.squaredGLMM(rm_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+rm_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = rm_surv)
+summary(rm_prop2)
+car::vif(rm_prop2)
+r.squaredGLMM(rm_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(rm_15m_prop_null, rm_prop, rm_prop1, rm_prop2)
+# More complex model is NOT better
+anova(rm_prop1, rm_prop2)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  rm_15m_null = rm_15m_null,
+  rm_15m = rm_15m,
+  rm_15m1 = rm_15m1,
+  rm_15m2 = rm_15m2,
+  rm_15m_prop_null = rm_15m_prop_null,
+  rm_prop = rm_prop,
+  rm_prop1 = rm_prop1,
+  rm_prop2 = rm_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The raw BA models are better!
+
+#########################################################
+################# Species-Level Test - SM - Raw Basal Area
+
+##### Subset sm data
+sm_surv <- subset(allSpDat, Sp == "sm")
+
+## Null model - species-level
+sm_15m_null <- glmer(Year_1_counts ~ 1 +
+                       (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = sm_surv) 
+summary(sm_15m_null)
+r.squaredGLMM(sm_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+sm_15m <- glmer(Year_1_counts ~ consp_15m +
+                  logPrior + log0yr +
+                  (1|Site) + (1|survYear),
+                family = poisson(link = "log"), data = sm_surv)
+summary(sm_15m)
+car::vif(sm_15m)
+r.squaredGLMM(sm_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+sm_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = sm_surv)
+summary(sm_15m1)
+car::vif(sm_15m1)
+r.squaredGLMM(sm_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+sm_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = sm_surv)
+summary(sm_15m2)
+car::vif(sm_15m2)
+r.squaredGLMM(sm_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for sm_15m4 but sm_15m3 close 2nd
+AIC(sm_15m_null, sm_15m, sm_15m1, sm_15m2)
+# More complex model is NOT better
+anova(sm_15m1, sm_15m2)
+
+################# Species-Level Test - sm - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+sm_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                            (1|Site) + (1|survYear),
+                          family = poisson(link = "log"), data = sm_surv) 
+summary(sm_15m_prop_null)
+r.squaredGLMM(sm_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+sm_prop <- glmer(Year_1_counts ~ propConsp +
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = sm_surv)
+summary(sm_prop)
+car::vif(sm_prop)
+r.squaredGLMM(sm_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+sm_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = sm_surv)
+summary(sm_prop1)
+car::vif(sm_prop1)
+r.squaredGLMM(sm_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+sm_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = sm_surv)
+summary(sm_prop2)
+car::vif(sm_prop2)
+r.squaredGLMM(sm_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(sm_15m_prop_null, sm_prop, sm_prop1, sm_prop2)
+# More complex model is NOT better
+anova(sm_prop1, sm_prop2)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  sm_15m_null = sm_15m_null,
+  sm_15m = sm_15m,
+  sm_15m1 = sm_15m1,
+  sm_15m2 = sm_15m2,
+  sm_15m_prop_null = sm_15m_prop_null,
+  sm_prop = sm_prop,
+  sm_prop1 = sm_prop1,
+  sm_prop2 = sm_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The raw BA models are better!
+
+#########################################################
+################# Species-Level Test - bc - Raw Basal Area
+
+##### Subset bc data
+bc_surv <- subset(allSpDat, Sp == "bc")
+
+## Null model - species-level
+bc_15m_null <- glmer(Year_1_counts ~ 1 +
+                       (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = bc_surv) 
+summary(bc_15m_null)
+r.squaredGLMM(bc_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+bc_15m <- glmer(Year_1_counts ~ consp_15m +
+                  logPrior + log0yr +
+                  (1|Site) + (1|survYear),
+                family = poisson(link = "log"), data = bc_surv)
+summary(bc_15m)
+car::vif(bc_15m)
+r.squaredGLMM(bc_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+bc_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = bc_surv)
+summary(bc_15m1)
+car::vif(bc_15m1)
+r.squaredGLMM(bc_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+bc_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = bc_surv)
+summary(bc_15m2)
+car::vif(bc_15m2)
+r.squaredGLMM(bc_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for bc_15m4 but bc_15m3 close 2nd
+AIC(bc_15m_null, bc_15m, bc_15m1, bc_15m2)
+# More complex model is NOT better than bc_15m
+anova(bc_15m, bc_15m2)
+
+################# Species-Level Test - bc - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+bc_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                            (1|Site) + (1|survYear),
+                          family = poisson(link = "log"), data = bc_surv) 
+summary(bc_15m_prop_null)
+r.squaredGLMM(bc_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+bc_prop <- glmer(Year_1_counts ~ propConsp +
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = bc_surv)
+summary(bc_prop)
+car::vif(bc_prop)
+r.squaredGLMM(bc_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+bc_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = bc_surv)
+summary(bc_prop1)
+car::vif(bc_prop1)
+r.squaredGLMM(bc_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+bc_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = bc_surv)
+summary(bc_prop2)
+car::vif(bc_prop2)
+r.squaredGLMM(bc_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(bc_15m_prop_null, bc_prop, bc_prop1, bc_prop2)
+# More complex model is NOT better
+anova(bc_prop, bc_prop2)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  bc_15m_null = bc_15m_null,
+  bc_15m = bc_15m,
+  bc_15m1 = bc_15m1,
+  bc_15m2 = bc_15m2,
+  bc_15m_prop_null = bc_15m_prop_null,
+  bc_prop = bc_prop,
+  bc_prop1 = bc_prop1,
+  bc_prop2 = bc_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The raw BA models are better, but not by much
+
+#########################################################
+################# Species-Level Test - wa - Raw Basal Area
+
+##### Subset wa data
+wa_surv <- subset(allSpDat, Sp == "wa")
+
+## Null model - species-level
+wa_15m_null <- glmer(Year_1_counts ~ 1 +
+                       (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = wa_surv) 
+summary(wa_15m_null)
+r.squaredGLMM(wa_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+wa_15m <- glmer(Year_1_counts ~ consp_15m +
+                  logPrior + log0yr +
+                  (1|Site) + (1|survYear),
+                family = poisson(link = "log"), data = wa_surv)
+summary(wa_15m)
+car::vif(wa_15m)
+r.squaredGLMM(wa_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+wa_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = wa_surv)
+summary(wa_15m1)
+car::vif(wa_15m1)
+r.squaredGLMM(wa_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+wa_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = wa_surv)
+summary(wa_15m2)
+car::vif(wa_15m2)
+r.squaredGLMM(wa_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for wa_15m4 but wa_15m3 close 2nd
+AIC(wa_15m_null, wa_15m, wa_15m1, wa_15m2)
+# More complex model is NOT better
+anova(wa_15m, wa_15m2)
+
+################# Species-Level Test - wa - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+wa_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                            (1|Site) + (1|survYear),
+                          family = poisson(link = "log"), data = wa_surv) 
+summary(wa_15m_prop_null)
+r.squaredGLMM(wa_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+wa_prop <- glmer(Year_1_counts ~ propConsp +
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = wa_surv)
+summary(wa_prop)
+car::vif(wa_prop)
+r.squaredGLMM(wa_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+wa_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = wa_surv)
+summary(wa_prop1)
+car::vif(wa_prop1)
+r.squaredGLMM(wa_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+wa_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = wa_surv)
+summary(wa_prop2)
+car::vif(wa_prop2)
+r.squaredGLMM(wa_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(wa_15m_prop_null, wa_prop, wa_prop1, wa_prop2)
+# More complex model is NOT better
+anova(wa_prop, wa_prop1)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  wa_15m_null = wa_15m_null,
+  wa_15m = wa_15m,
+  wa_15m1 = wa_15m1,
+  wa_15m2 = wa_15m2,
+  wa_15m_prop_null = wa_15m_prop_null,
+  wa_prop = wa_prop,
+  wa_prop1 = wa_prop1,
+  wa_prop2 = wa_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The raw BA models are much better!
+
+#########################################################
+################# Species-Level Test - ab - Raw Basal Area - Excludes RE of site
+
+##### Subset ab data
+ab_surv <- subset(allSpDat, Sp == "ab")
+
+## Null model - species-level
+ab_15m_null <- glmer(Year_1_counts ~ 1 + (1|survYear),
+                     family = poisson(link = "log"), data = ab_surv) 
+summary(ab_15m_null)
+r.squaredGLMM(ab_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+ab_15m <- glmer(Year_1_counts ~ consp_15m +
+                  logPrior + log0yr + (1|survYear),
+                family = poisson(link = "log"), data = ab_surv)
+summary(ab_15m)
+car::vif(ab_15m)
+r.squaredGLMM(ab_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+ab_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|survYear),
+                 family = poisson(link = "log"), data = ab_surv)
+summary(ab_15m1)
+car::vif(ab_15m1)
+r.squaredGLMM(ab_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+ab_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+                   logPrior + log0yr +
+                   (1|survYear),
+                 family = poisson(link = "log"), data = ab_surv)
+summary(ab_15m2)
+car::vif(ab_15m2)
+r.squaredGLMM(ab_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for ab_15m4 but ab_15m3 close 2nd
+AIC(ab_15m_null, ab_15m, ab_15m1, ab_15m2)
+# More complex model is NOT better
+anova(ab_15m, ab_15m1)
+
+################# Species-Level Test - ab - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+ab_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                            (1|survYear),
+                          family = poisson(link = "log"), data = ab_surv) 
+summary(ab_15m_prop_null)
+r.squaredGLMM(ab_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+ab_prop <- glmer(Year_1_counts ~ propConsp +
+                   logPrior + log0yr +
+                   (1|survYear),
+                 family = poisson(link = "log"), data = ab_surv)
+summary(ab_prop)
+car::vif(ab_prop)
+r.squaredGLMM(ab_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+ab_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = ab_surv)
+summary(ab_prop1)
+car::vif(ab_prop1)
+r.squaredGLMM(ab_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+ab_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = ab_surv)
+summary(ab_prop2)
+car::vif(ab_prop2)
+r.squaredGLMM(ab_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(ab_15m_prop_null, ab_prop, ab_prop1, ab_prop2)
+# More complex model is NOT better
+anova(ab_prop, ab_prop1)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  ab_15m_null = ab_15m_null,
+  ab_15m = ab_15m,
+  ab_15m1 = ab_15m1,
+  ab_15m2 = ab_15m2,
+  ab_15m_prop_null = ab_15m_prop_null,
+  ab_prop = ab_prop,
+  ab_prop1 = ab_prop1,
+  ab_prop2 = ab_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The raw BA models are better, but just barely
+
+#########################################################
+################# Species-Level Test - nro - Raw Basal Area
+
+##### Subset nro data
+nro_surv <- subset(allSpDat, Sp == "nro")
+
+## Null model - species-level
+nro_15m_null <- glmer(Year_1_counts ~ 1 +
+                       (1|Site) + (1|survYear),
+                     family = poisson(link = "log"), data = nro_surv) 
+summary(nro_15m_null)
+r.squaredGLMM(nro_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+nro_15m <- glmer(Year_1_counts ~ consp_15m +
+                  logPrior + log0yr +
+                  (1|Site) + (1|survYear),
+                family = poisson(link = "log"), data = nro_surv)
+summary(nro_15m)
+car::vif(nro_15m)
+r.squaredGLMM(nro_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+nro_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = nro_surv)
+summary(nro_15m1)
+car::vif(nro_15m1)
+r.squaredGLMM(nro_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+nro_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = nro_surv)
+summary(nro_15m2)
+car::vif(nro_15m2)
+r.squaredGLMM(nro_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for nro_15m4 but nro_15m3 close 2nd
+AIC(nro_15m_null, nro_15m, nro_15m1, nro_15m2)
+# More complex model is NOT better
+anova(nro_15m1, nro_15m2)
+
+################# Species-Level Test - nro - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+nro_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                            (1|Site) + (1|survYear),
+                          family = poisson(link = "log"), data = nro_surv) 
+summary(nro_15m_prop_null)
+r.squaredGLMM(nro_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+nro_prop <- glmer(Year_1_counts ~ propConsp +
+                   logPrior + log0yr +
+                   (1|Site) + (1|survYear),
+                 family = poisson(link = "log"), data = nro_surv)
+summary(nro_prop)
+car::vif(nro_prop)
+r.squaredGLMM(nro_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+nro_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = nro_surv)
+summary(nro_prop1)
+car::vif(nro_prop1)
+r.squaredGLMM(nro_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+nro_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                    logPrior + log0yr +
+                    (1|Site) + (1|survYear),
+                  family = poisson(link = "log"), data = nro_surv)
+summary(nro_prop2)
+car::vif(nro_prop2)
+r.squaredGLMM(nro_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(nro_15m_prop_null, nro_prop, nro_prop1, nro_prop2)
+# More complex model is NOT better
+anova(nro_prop1, nro_prop2)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  nro_15m_null = nro_15m_null,
+  nro_15m = nro_15m,
+  nro_15m1 = nro_15m1,
+  nro_15m2 = nro_15m2,
+  nro_15m_prop_null = nro_15m_prop_null,
+  nro_prop = nro_prop,
+  nro_prop1 = nro_prop1,
+  nro_prop2 = nro_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The raw BA models are better, but not by much
+anova(nro_15m1, nro_prop1)
+
+#########################################################
+################# Species-Level Test - bonro - Raw Basal Area - No RE of site
+
+##### Subset bonro data
+bonro_surv <- subset(allSpDat, Sp == "bonro")
+
+## Null model - species-level
+bonro_15m_null <- glmer(Year_1_counts ~ 1 +
+                      (1|survYear),
+                      family = poisson(link = "log"), data = bonro_surv) 
+summary(bonro_15m_null)
+r.squaredGLMM(bonro_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+bonro_15m <- glmer(Year_1_counts ~ consp_15m +
+                   logPrior + log0yr +
+                 (1|survYear),
+                 family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_15m)
+car::vif(bonro_15m)
+r.squaredGLMM(bonro_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+bonro_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                  (1|survYear),
+                  family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_15m1)
+car::vif(bonro_15m1)
+r.squaredGLMM(bonro_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+bonro_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    consp_15m:AM_15m + # Panel B
+                    consp_15m:ECM_15m + # Panel B
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_15m2)
+car::vif(bonro_15m2)
+r.squaredGLMM(bonro_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for bonro_15m4 but bonro_15m3 close 2nd
+AIC(bonro_15m_null, bonro_15m, bonro_15m1, bonro_15m2)
+# More complex model is NOT better
+anova(bonro_15m, bonro_15m1)
+
+################# Species-Level Test - bonro - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+bonro_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                           (1|survYear),
+                           family = poisson(link = "log"), data = bonro_surv) 
+summary(bonro_15m_prop_null)
+r.squaredGLMM(bonro_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+bonro_prop <- glmer(Year_1_counts ~ propConsp +
+                    logPrior + log0yr +
+                   (1|survYear),
+                  family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_prop)
+car::vif(bonro_prop)
+r.squaredGLMM(bonro_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+bonro_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
                      logPrior + log0yr +
-                     (1|Site) + (1|survYear),
-                   family = poisson(link = "log"), data = rm_surv)
-summary(rm_propConmyc) 
-car::vif(rm_propConmyc) 
+                   (1|survYear),
+                   family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_prop1)
+car::vif(bonro_prop1)
+r.squaredGLMM(bonro_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+bonro_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                     logPrior + log0yr +
+                   (1|survYear),
+                   family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_prop2)
+car::vif(bonro_prop2)
+r.squaredGLMM(bonro_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(bonro_15m_prop_null, bonro_prop, bonro_prop1, bonro_prop2)
+# More complex model is NOT better
+anova(bonro_prop, bonro_prop1)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  bonro_15m_null = bonro_15m_null,
+  bonro_15m = bonro_15m,
+  bonro_15m1 = bonro_15m1,
+  bonro_15m2 = bonro_15m2,
+  bonro_15m_prop_null = bonro_15m_prop_null,
+  bonro_prop = bonro_prop,
+  bonro_prop1 = bonro_prop1,
+  bonro_prop2 = bonro_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The proportional BA model is slightly better than raw BA, but not by much
+anova(bonro_prop, bonro_prop1)
+
+#########################################################
+################# Species-Level Test - wo - Raw Basal Area - Excludes RE of site
+
+##### Subset wo data
+wo_surv <- subset(allSpDat, Sp == "wo")
+
+## Null model - species-level
+wo_15m_null <- glmer(Year_1_counts ~ 1 + (1|survYear),
+                      family = poisson(link = "log"), data = wo_surv) 
+summary(wo_15m_null)
+r.squaredGLMM(wo_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+wo_15m <- glmer(Year_1_counts ~ consp_15m +
+                   logPrior + log0yr + 
+                  (1|survYear),
+                 family = poisson(link = "log"), data = wo_surv)
+summary(wo_15m)
+car::vif(wo_15m)
+r.squaredGLMM(wo_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+wo_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = wo_surv)
+summary(wo_15m1)
+car::vif(wo_15m1)
+r.squaredGLMM(wo_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+wo_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    consp_15m:AM_15m + # Panel B
+                    consp_15m:ECM_15m + # Panel B
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = wo_surv)
+summary(wo_15m2)
+car::vif(wo_15m2)
+r.squaredGLMM(wo_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for wo_15m4 but wo_15m3 close 2nd
+AIC(wo_15m_null, wo_15m, wo_15m1, wo_15m2)
+# More complex model is NOT better
+anova(wo_15m, wo_15m1)
+
+################# Species-Level Test - wo - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+wo_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                             (1|survYear),
+                           family = poisson(link = "log"), data = wo_surv) 
+summary(wo_15m_prop_null)
+r.squaredGLMM(wo_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+wo_prop <- glmer(Year_1_counts ~ propConsp +
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = wo_surv)
+summary(wo_prop)
+car::vif(wo_prop)
+r.squaredGLMM(wo_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+wo_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                     logPrior + log0yr +
+                      (1|survYear),
+                   family = poisson(link = "log"), data = wo_surv)
+summary(wo_prop1)
+car::vif(wo_prop1)
+r.squaredGLMM(wo_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+wo_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                     logPrior + log0yr +
+                     (1|survYear),
+                   family = poisson(link = "log"), data = wo_surv)
+summary(wo_prop2)
+car::vif(wo_prop2)
+r.squaredGLMM(wo_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(wo_15m_prop_null, wo_prop, wo_prop1, wo_prop2)
+# More complex model is NOT better
+anova(wo_prop, wo_prop1)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  wo_15m_null = wo_15m_null,
+  wo_15m = wo_15m,
+  wo_15m1 = wo_15m1,
+  wo_15m2 = wo_15m2,
+  wo_15m_prop_null = wo_15m_prop_null,
+  wo_prop = wo_prop,
+  wo_prop1 = wo_prop1,
+  wo_prop2 = wo_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The proportional BA models are better, but not by much
+anova(wo_prop, wo_prop1)
+
+#########################################################
+################# Species-Level Test - iw - Raw Basal Area - Excludes RE of site
+
+##### Subset iw data
+iw_surv <- subset(allSpDat, Sp == "iw")
+
+## Null model - species-level
+iw_15m_null <- glmer(Year_1_counts ~ 1 + (1|survYear),
+                     family = poisson(link = "log"), data = iw_surv) 
+summary(iw_15m_null)
+r.squaredGLMM(iw_15m_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level
+iw_15m <- glmer(Year_1_counts ~ consp_15m +
+                  logPrior + log0yr + 
+                  (1|survYear),
+                family = poisson(link = "log"), data = iw_surv)
+summary(iw_15m)
+car::vif(iw_15m)
+r.squaredGLMM(iw_15m) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level
+iw_15m1 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|survYear),
+                 family = poisson(link = "log"), data = iw_surv)
+summary(iw_15m1)
+car::vif(iw_15m1)
+r.squaredGLMM(iw_15m1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level
+iw_15m2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+                   logPrior + log0yr +
+                   (1|survYear),
+                 family = poisson(link = "log"), data = iw_surv)
+summary(iw_15m2)
+car::vif(iw_15m2)
+r.squaredGLMM(iw_15m2) 
+
+## Model comparison - species-level
+### Compare AICs - lowest is for iw_15m4 but iw_15m3 close 2nd
+AIC(iw_15m_null, iw_15m, iw_15m1, iw_15m2)
+# More complex model is NOT better
+anova(iw_15m, iw_15m1)
+
+################# Species-Level Test - iw - Proportional Basal Area
+
+## Null model - species-level (proportional BA)
+iw_15m_prop_null <- glmer(Year_1_counts ~ 1 +
+                            (1|survYear),
+                          family = poisson(link = "log"), data = iw_surv) 
+summary(iw_15m_prop_null)
+r.squaredGLMM(iw_15m_prop_null) 
+
+## Testing Panel A conceptual figure - CNDD - species-level (proportional BA)
+iw_prop <- glmer(Year_1_counts ~ propConsp +
+                   logPrior + log0yr +
+                   (1|survYear),
+                 family = poisson(link = "log"), data = iw_surv)
+summary(iw_prop)
+car::vif(iw_prop)
+r.squaredGLMM(iw_prop) 
+
+## Testing Partial Panel C conceptual figure (with AM) - species-level (proportional BA)
+iw_prop1 <- glmer(Year_1_counts ~ propConsp + propAM + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = iw_surv)
+summary(iw_prop1)
+car::vif(iw_prop1)
+r.squaredGLMM(iw_prop1) 
+
+## Testing Partial Panel D conceptual figure (with AM) - species-level (proportional BA)
+iw_prop2 <- glmer(Year_1_counts ~ propConsp*propAM + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = iw_surv)
+summary(iw_prop2)
+car::vif(iw_prop2)
+r.squaredGLMM(iw_prop2) 
+
+## Model comparison - species-level (proportional BA)
+### Compare AICs
+AIC(iw_15m_prop_null, iw_prop, iw_prop1, iw_prop2)
+# More complex model is NOT better
+anova(iw_prop1, iw_prop2)
+
+## ALL Model AIC comparison - species-level (raw BA and proportional)
+# Named list of models
+models_sp <- list(
+  iw_15m_null = iw_15m_null,
+  iw_15m = iw_15m,
+  iw_15m1 = iw_15m1,
+  iw_15m2 = iw_15m2,
+  iw_15m_prop_null = iw_15m_prop_null,
+  iw_prop = iw_prop,
+  iw_prop1 = iw_prop1,
+  iw_prop2 = iw_prop2)
+
+# Extract and order AICs
+aic_vals_sp <- sapply(models_sp, AIC)
+aic_vals_sp[order(aic_vals_sp)]
+## The proportional BA models are better, but not by much
+anova(iw_prop1, iw_prop2)
 
 
 ################################################ 
