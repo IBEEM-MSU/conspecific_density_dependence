@@ -17,6 +17,7 @@ library(DHARMa)
 library(broom.mixed)
 library(tibble)
 library(lavaan)
+library(piecewiseSEM)
 
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/Combined_demography_modeling_data.csv")
@@ -86,76 +87,39 @@ summary(allSp_biotic)
 car::vif(allSp_biotic)
 r.squaredGLMM(allSp_biotic)
 
-library(lme4)
-library(piecewiseSEM)
-
-# Submodels
-m_ba <- lmer(AM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-               (1|Site), data = allSpDat_surv_clim)
-
-m_seedlings <- glmer(Year_1_counts ~ consp_15m + Seedling_myc +
-                       AM_15m + ECM_15m +
-                       mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-                       logPrior + log0yr +
-                       (1|Site) + (1|survYear) + (1|Sp),
-                     family = poisson, data = allSpDat_surv_clim)
-
-# Combine into SEM
-sem_model <- psem(
-  m_ba,
-  m_seedlings
-)
-
-summary(sem_model)
 
 
-allSp_abiotic <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
-                         percOpen + Base_CEC + log0yr +
-                         (1|SiteID) + (1|survYear) + (1|Sp),
-                       family = poisson(link = "log"), data = allSpDat_surv_clim)
-
-allSp_biotic <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
-                        AM_15m + ECM_15m + 
-                        consp_15m:AM_15m + consp_15m:ECM_15m + 
-                        Seedling_myc:AM_15m + Seedling_myc:ECM_15m + 
-                        consp_15m:Seedling_myc:AM_15m + 
-                        consp_15m:Seedling_myc:ECM_15m + 
-                        logPrior + log0yr + (1|SiteID) + (1|survYear) + (1|Sp),
-                      family = poisson(link = "log"), data = allSpDat_surv_clim)
-
-
-library(lme4)
-library(piecewiseSEM)
 
 dat <- allSpDat_surv_clim
+dat <- filter(allSpDat_surv_clim,Sp == "sm")
 
 ## 1) Biotic mediator models (Abiotic → Biotic)
-m_AM <- lmer(AM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-               (1|SiteID) #+ (1|survYear) + (1|Sp)
+m_AM <- lmer(AM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|survYear)
+              # (1|SiteID) #+ (1|survYear) + (1|Sp)
              , data = dat)
 
-m_ECM <- lmer(ECM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-                (1|SiteID) #+ (1|survYear) + (1|Sp)
+m_ECM <- lmer(ECM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|survYear)
+               # (1|SiteID) #+ (1|survYear) + (1|Sp)
               , data = dat)
 
-m_CON <- lmer(consp_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-                (1|SiteID) #+ (1|survYear) + (1|Sp)
+m_CON <- lmer(consp_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|survYear)
+                #(1|SiteID) #+ (1|survYear) + (1|Sp)
               , data = dat)
 
 ## 2) Seedling outcome model (Biotic + Abiotic + Trait + Interactions + Controls)
 m_seedlings <- glmer(
   Year_1_counts ~
     # main effects
-    consp_15m + Seedling_myc + 
+    consp_15m + #Seedling_myc + 
     AM_15m + ECM_15m + 
     #consp_15m:AM_15m + consp_15m:ECM_15m + 
     #Seedling_myc:AM_15m + Seedling_myc:ECM_15m + 
     #consp_15m:Seedling_myc:AM_15m + 
     #consp_15m:Seedling_myc:ECM_15m +
     mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-    logPrior + log0yr +
+    logPrior + log0yr + (1|survYear),
     # random effects
-    (1|SiteID) + (1|survYear) + (1|Sp),
+   # (1|SiteID) +  + (1|Sp),
   family = poisson(link = "log"), data = dat)
 
 ## 3) Assemble the SEM
