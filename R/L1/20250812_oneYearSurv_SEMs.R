@@ -88,22 +88,22 @@ car::vif(allSp_biotic)
 r.squaredGLMM(allSp_biotic)
 
 
-
+### SEMS?
 
 dat <- allSpDat_surv_clim
-dat <- filter(allSpDat_surv_clim,Sp == "sm")
+dat <- filter(allSpDat_surv_clim,Sp == "sm" | Sp == "wo" | Sp == "bc" | Sp == "bonro")
 
 ## 1) Biotic mediator models (Abiotic → Biotic)
-m_AM <- lmer(AM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|survYear)
-              # (1|SiteID) #+ (1|survYear) + (1|Sp)
+m_AM <- lmer(AM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|Sp)
+              # + (1|survYear)  #+ (1|SiteID)
              , data = dat)
 
-m_ECM <- lmer(ECM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|survYear)
-               # (1|SiteID) #+ (1|survYear) + (1|Sp)
+m_ECM <- lmer(ECM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|Sp)
+              #+ (1|survYear)  #+ (1|SiteID)
               , data = dat)
 
-m_CON <- lmer(consp_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|survYear)
-                #(1|SiteID) #+ (1|survYear) + (1|Sp)
+m_CON <- lmer(consp_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|Sp)
+              #+ (1|survYear)  #+ (1|SiteID) 
               , data = dat)
 
 ## 2) Seedling outcome model (Biotic + Abiotic + Trait + Interactions + Controls)
@@ -117,9 +117,9 @@ m_seedlings <- glmer(
     #consp_15m:Seedling_myc:AM_15m + 
     #consp_15m:Seedling_myc:ECM_15m +
     mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
-    logPrior + log0yr + (1|survYear),
+    logPrior + log0yr + 
     # random effects
-   # (1|SiteID) +  + (1|Sp),
+    (1|survYear), #+ (1|SiteID), #+ (1|Sp),
   family = poisson(link = "log"), data = dat)
 
 ## 3) Assemble the SEM
