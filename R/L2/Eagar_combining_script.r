@@ -464,7 +464,8 @@ conMyc_15m <- list(
          "wo_15m", "hem_15m","wp_15m","jp_15m"))
 
 ## Conmycorrhizal BA in 15-m radius - WITHOUT species included
-conMycNS_15m <- list(rm = c("sm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
+conMycNS_15m <- list(
+  rm = c("sm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
   sm = c("rm_15m", "ae_15m", "wa_15m", "bc_15m", "svb_15m"),
   ab = c("bs_15m", "qa_15m","bta_15m", 
          "nro_15m","iw_15m", "bo_15m","bonro_15m",
@@ -524,7 +525,6 @@ compute_species_vars <- function(row) {
   return(c(conMyc_with, conMyc_noSelf, hetMyc_sum, conspecific))
 }
 
-
 # Apply row-wise and bind to original data
 # Make sure your dataframe is actually a data.frame, not a tibble (which apply() doesn't handle rowwise well)
 Combined_demography_modeling_data <- as.data.frame(Combined_demography_modeling_data)
@@ -539,10 +539,11 @@ names(species_vars_df) <- c("conMyc_15m", "conMycNS_15m", "hetMyc_15m", "consp_1
 # Combine with original dataframe
 allSpDat <- cbind(Combined_demography_modeling_data, species_vars_df) %>%
 					mutate(Site = as.factor(SiteID),
-						log0yr = log(Year_0_counts),
-						logPrior = log(Prior_3_year_cohorts_counts + 1),
+						log0yr = log10(Year_0_counts),
+						logPrior = log10(Prior_3_year_cohorts_counts + 1),
 						propConsp = consp_15m / (conMyc_15m + hetMyc_15m),
 						propConmyc = conMyc_15m / (conMyc_15m + hetMyc_15m),
-						propAM = AM_15m / (AM_15m + ECM_15m))
+						propAM = AM_15m / (AM_15m + ECM_15m)) %>%
+						select(-Site)
 								
 write.csv(allSpDat, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/Combined_demography_modeling_data.csv", row.names = FALSE)
