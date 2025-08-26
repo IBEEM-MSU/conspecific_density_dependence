@@ -113,22 +113,22 @@ fixef_df <- broom.mixed::tidy(all_sp_15m3, effects = "fixed") %>%
 fixef_df <- fixef_df %>%
   mutate(component = case_when(
     term == "consp_15m" ~ "Conspecific BA",
-    term == "Seedling_mycECM" ~ "Seedling mycorrhizal type",
-    term == "AM_15m" ~ "Arbuscular mycorrhizal BA",
-    term == "ECM_15m" ~ "Ectomycorrhizal BA",
-    term == "consp_15m:Seedling_mycAM:AM_15m" ~ "Consp:Seedling myc AM:AM",
-    term == "consp_15m:Seedling_mycECM:AM_15m" ~ "Consp:Seedling myc ECM:AM",
-    term == "consp_15m:Seedling_mycAM:ECM_15m" ~ "Consp:Seedling myc AM:ECM",
-    term == "consp_15m:Seedling_mycECM:ECM_15m" ~ "Consp:Seedling myc ECM:ECM",
+    term == "Seedling_mycECM" ~ "Mycorrhizal type",
+    term == "AM_15m" ~ "AM BA",
+    term == "ECM_15m" ~ "ECM BA",
+    term == "consp_15m:Seedling_mycAM:AM_15m" ~ "Consp BA:Myc. type AM:AM BA",
+    term == "consp_15m:Seedling_mycECM:AM_15m" ~ "Consp BA:Myc. type ECM:AM BA",
+    term == "consp_15m:Seedling_mycAM:ECM_15m" ~ "Consp BA:Myc. type AM:ECM BA",
+    term == "consp_15m:Seedling_mycECM:ECM_15m" ~ "Consp BA:Myc. type ECM:ECM BA",
     term == "logPrior" ~ "Log(Prior Density)",
     term == "log0yr" ~ "Log(Recruit Density)",
     TRUE ~ term))
 
 # 3. Order components on the y-axis in the order you prefer
-desired_order <- c("Conspecific BA","Arbuscular mycorrhizal BA",
-                   "Ectomycorrhizal BA", "Seedling mycorrhizal type",
-                   "Consp:Seedling myc AM:AM", "Consp:Seedling myc ECM:AM",
-                   "Consp:Seedling myc AM:ECM", "Consp:Seedling myc ECM:ECM",
+desired_order <- c("Conspecific BA","AM BA",
+                   "ECM BA", "Mycorrhizal type",
+                   "Consp BA:Myc. type AM:AM BA", "Consp BA:Myc. type ECM:AM BA",
+                   "Consp BA:Myc. type AM:ECM BA", "Consp BA:Myc. type ECM:ECM BA",
                    "Log(Recruit Density)","Log(Prior Density)")
 fixef_df <- fixef_df %>%
   mutate(component = factor(component, levels = desired_order))
@@ -268,19 +268,21 @@ fixef_df <- broom.mixed::tidy(all_sp_prop3, effects = "fixed") %>%
 fixef_df <- fixef_df %>%
   mutate(component = case_when(
     term == "propConsp" ~ "Prop. Conspecific BA",
-    term == "Seedling_mycECM" ~ "Seedling mycorrhizal type",
-    term == "propAM" ~ "Prop. Arbuscular mycorrhizal BA",
-    term == "propConsp:Seedling_mycAM:propAM" ~ "propConsp:Seedling myc AM:propAM",
-    term == "propConsp:Seedling_mycECM:propAM" ~ "propConsp:Seedling myc ECM:propAM",
+    term == "Seedling_mycECM" ~ "Mycorrhizal type",
+    term == "propAM" ~ "Prop. AM BA",
+    term == "propConsp:Seedling_mycAM:propAM" ~ 
+      "Prop. Consp. BA:Myc. type AM:\nProp. AM BA",
+    term == "propConsp:Seedling_mycECM:propAM" ~ 
+      "Prop. Consp. BA:Myc. type ECM:\nProp. AM BA",
     term == "logPrior" ~ "Log(Prior Density)",
     term == "log0yr" ~ "Log(Recruit Density)",
     TRUE ~ term))
 
 # 3. Order components on the y-axis in the order you prefer
-desired_order <- c("Prop. Conspecific BA","Prop. Arbuscular mycorrhizal BA",
-                   "Seedling mycorrhizal type",
-                   "propConsp:Seedling myc AM:propAM",
-                   "propConsp:Seedling myc ECM:propAM",
+desired_order <- c("Prop. Conspecific BA","Prop. AM BA",
+                   "Mycorrhizal type",
+                   "Prop. Consp. BA:Myc. type AM:\nProp. AM BA",
+                   "Prop. Consp. BA:Myc. type ECM:\nProp. AM BA",
                    "Log(Recruit Density)","Log(Prior Density)")
 fixef_df <- fixef_df %>%
   mutate(component = factor(component, levels = desired_order))
@@ -390,10 +392,10 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = case_when(
         term == "consp_15m" ~ "Conspecific BA",
-        term == "AM_15m" ~ "Arbuscular mycorrhizal BA",
-        term == "ECM_15m" ~ "Ectomycorrhizal BA",
-        term == "consp_15m:AM_15m" ~ "Consp:AM",
-        term == "consp_15m:ECM_15m" ~ "Consp:ECM",
+        term == "AM_15m" ~ "AM BA",
+        term == "ECM_15m" ~ "EM BA",
+        term == "consp_15m:AM_15m" ~ "Consp. BA:AM BA",
+        term == "consp_15m:ECM_15m" ~ "Consp. BA:ECM BA",
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
@@ -401,8 +403,8 @@ extract_fixef <- function(model, model_type) {
       Model = model_type) %>%
     mutate(
       component = factor(component, levels = c(
-        "Conspecific BA", "Arbuscular mycorrhizal BA", 
-        "Ectomycorrhizal BA", "Consp:AM", "Consp:ECM",
+        "Conspecific BA", "AM BA", 
+        "EM BA", "Consp. BA:AM BA", "Consp. BA:ECM BA",
         "Log(Recruit Density)", "Log(Prior Density)")))
 }
 
@@ -414,10 +416,9 @@ fixef_ECM <- extract_fixef(ECM_sp_15m1, "ECM")
 fixef_df <- bind_rows(fixef_AM, fixef_ECM)
 
 # Define desired vertical order
-desired_order <- c("Conspecific BA",
-  "Arbuscular mycorrhizal BA","Ectomycorrhizal BA",
-  "Consp:AM","Consp:ECM",
-  "Log(Recruit Density)","Log(Prior Density)")
+desired_order <- c("Conspecific BA", "AM BA", 
+                   "EM BA", "Consp. BA:AM BA", "Consp. BA:ECM BA",
+                   "Log(Recruit Density)", "Log(Prior Density)")
 
 # --- prepare data
 fixef_df <- fixef_df %>%
@@ -528,16 +529,16 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = case_when(
         term == "propConsp" ~ "Prop. Conspecific BA",
-        term == "propAM" ~ "Prop. Arbuscular mycorrhizal BA",
-        term == "propConsp:propAM" ~ "propConsp:propAM",
+        term == "propAM" ~ "Prop. AM BA",
+        term == "propConsp:propAM" ~ "Prop. Consp. BA:Prop AM BA",
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
       Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"),
       Model = model_type) %>%
     mutate(component = factor(component, levels = c(
-        "Prop. Conspecific BA", "Prop. Arbuscular mycorrhizal BA", 
-        "propConsp:propAM","Log(Recruit Density)","Log(Prior Density)")))
+        "Prop. Conspecific BA", "Prop. AM BA", 
+        "Prop. Consp. BA:Prop AM BA","Log(Recruit Density)","Log(Prior Density)")))
 }
 
 ## Extract for both models
@@ -548,8 +549,9 @@ fixef_ECM <- extract_fixef(ECM_sp_15m1prop, "ECM")
 fixef_df <- bind_rows(fixef_AM, fixef_ECM)
 
 # Define desired vertical order
-desired_order <- c("Prop. Conspecific BA", "Prop. Arbuscular mycorrhizal BA", 
-                   "propConsp:propAM","Log(Recruit Density)","Log(Prior Density)")
+desired_order <- c("Prop. Conspecific BA", "Prop. AM BA", 
+                   "Prop. Consp. BA:Prop AM BA",
+                   "Log(Recruit Density)","Log(Prior Density)")
 
 # Prepare data
 fixef_df <- fixef_df %>%
@@ -1040,8 +1042,8 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = case_when(
         term == "consp_15m" ~ "Conspecific BA",
-        term == "AM_15m" ~ "Arbuscular mycorrhizal BA",
-        term == "ECM_15m" ~ "Ectomycorrhizal BA",
+        term == "AM_15m" ~ "AM BA",
+        term == "ECM_15m" ~ "ECM BA",
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
@@ -1049,8 +1051,8 @@ extract_fixef <- function(model, model_type) {
       Model = model_type) %>%
     mutate(
       component = factor(component, levels = c(
-        "Conspecific BA", "Arbuscular mycorrhizal BA", 
-        "Ectomycorrhizal BA", "Log(Recruit Density)", 
+        "Conspecific BA", "AM BA", 
+        "ECM BA", "Log(Recruit Density)", 
         "Log(Prior Density)")))
 }
 
@@ -1071,8 +1073,8 @@ fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
                       fixef_BONRO, fixef_WO, fixef_IW)
 
 # Define desired vertical order
-desired_order <- c("Conspecific BA", "Arbuscular mycorrhizal BA", 
-                   "Ectomycorrhizal BA", "Log(Recruit Density)", 
+desired_order <- c("Conspecific BA", "AM BA", 
+                   "ECM BA", "Log(Recruit Density)", 
                    "Log(Prior Density)")
 
 ## Create a color vector with red shades for AM and blue shades for ECM 
@@ -1110,15 +1112,15 @@ fixef_df_plot <- fixef_df %>%
     color_col = species_cols[Model],
     # species-specific vertical offset
     y_offset = case_when(
-      Model == "rm" ~ 0.12,
-      Model == "bc" ~ 0.09,
-      Model == "sm" ~ 0.06,
-      Model == "wa" ~ 0.09,
-      Model == "ab" ~ -0,
-      Model == "nro" ~ -0.03,
-      Model == "bonro" ~ -0.06,
-      Model == "wo" ~ -0.09,
-      Model == "iw" ~ -0.12,
+      Model == "rm" ~ 0.20,
+      Model == "bc" ~ 0.15,
+      Model == "sm" ~ 0.10,
+      Model == "wa" ~ 0.05,
+      Model == "ab" ~ 0,
+      Model == "nro" ~ -0.05,
+      Model == "bonro" ~ -0.10,
+      Model == "wo" ~ -0.15,
+      Model == "iw" ~ -0.20,
       TRUE ~ 0),
     # final y-position for plotting
     y_pos = as.numeric(component) + y_offset,
@@ -1139,8 +1141,8 @@ ggplot(fixef_df_plot, aes(x = estimate, y = y_pos)) +
                  color = Model, size = log1p(percBA)),
              stroke = 1) +
   # Y-axis with desired top-to-bottom order
-  scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
-    labels = levels(fixef_df$component),
+  scale_y_continuous(breaks = 1:length(levels(fixef_df_plot$component)),
+    labels = levels(fixef_df_plot$component),
     trans = "reverse"   # ensures top-to-bottom ordering visually
   ) +
   # Shape legend for mycorrhizal type
@@ -1182,15 +1184,15 @@ fixef_df_plot <- fixef_df %>%
          color_col = species_cols[Model],
          # species-specific vertical offset
          y_offset = case_when(
-           Model == "rm" ~ 0.06,
-           Model == "bc" ~ 0.03,
-           Model == "sm" ~ 0,
-           Model == "wa" ~ -0.03,
-           Model == "ab" ~ 0.06,
-           Model == "nro" ~ 0.03,
-           Model == "bonro" ~ 0,
-           Model == "wo" ~ -0.03,
-           Model == "iw" ~ -0.06,
+           Model == "rm" ~ 0.20,
+           Model == "bc" ~ 0.15,
+           Model == "sm" ~ 0.10,
+           Model == "wa" ~ 0.05,
+           Model == "ab" ~ 0,
+           Model == "nro" ~ -0.05,
+           Model == "bonro" ~ -0.10,
+           Model == "wo" ~ -0.15,
+           Model == "iw" ~ -0.20,
            TRUE ~ 0),
          # final y-position for plotting
          y_pos = as.numeric(component) + y_offset,
@@ -1837,7 +1839,7 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = case_when(
         term == "propConsp" ~ "Prop. Conspecific BA",
-        term == "propAM" ~ "Prop. Arbuscular mycorrhizal BA",
+        term == "propAM" ~ "Prop. AM BA",
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
@@ -1846,7 +1848,7 @@ extract_fixef <- function(model, model_type) {
       Model = model_type) %>%
     mutate(
       component = factor(component, levels = c(
-        "Prop. Conspecific BA", "Prop. Arbuscular mycorrhizal BA", 
+        "Prop. Conspecific BA", "Prop. AM BA", 
         "Log(Recruit Density)", "Log(Prior Density)")))
 }
 
@@ -1868,7 +1870,7 @@ fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
 
 # Define desired vertical order
 desired_order <- c("Prop. Conspecific BA", 
-                   "Prop. Arbuscular mycorrhizal BA", 
+                   "Prop. AM BA", 
                    "Log(Recruit Density)", "Log(Prior Density)")
 
 ## Create a color vector with red shades for AM and blue shades for ECM 
@@ -1906,15 +1908,15 @@ fixef_df_plot <- fixef_df %>%
          color_col = species_cols[Model],
          # species-specific vertical offset
          y_offset = case_when(
-           Model == "rm" ~ 0.12,
-           Model == "bc" ~ 0.09,
-           Model == "sm" ~ 0.06,
-           Model == "wa" ~ 0.09,
-           Model == "ab" ~ -0,
-           Model == "nro" ~ -0.03,
-           Model == "bonro" ~ -0.06,
-           Model == "wo" ~ -0.09,
-           Model == "iw" ~ -0.12,
+           Model == "rm" ~ 0.20,
+           Model == "bc" ~ 0.15,
+           Model == "sm" ~ 0.10,
+           Model == "wa" ~ 0.05,
+           Model == "ab" ~ 0,
+           Model == "nro" ~ -0.05,
+           Model == "bonro" ~ -0.10,
+           Model == "wo" ~ -0.15,
+           Model == "iw" ~ -0.20,
            TRUE ~ 0),
          # final y-position for plotting
          y_pos = as.numeric(component) + y_offset,
@@ -1978,15 +1980,15 @@ fixef_df_plot <- fixef_df %>%
          color_col = species_cols[Model],
          # species-specific vertical offset
          y_offset = case_when(
-           Model == "rm" ~ 0.06,
-           Model == "bc" ~ 0.03,
-           Model == "sm" ~ 0,
-           Model == "wa" ~ -0.03,
-           Model == "ab" ~ 0.06,
-           Model == "nro" ~ 0.03,
-           Model == "bonro" ~ 0,
-           Model == "wo" ~ -0.03,
-           Model == "iw" ~ -0.06,
+           Model == "rm" ~ 0.20,
+           Model == "bc" ~ 0.15,
+           Model == "sm" ~ 0.10,
+           Model == "wa" ~ 0.05,
+           Model == "ab" ~ 0,
+           Model == "nro" ~ -0.05,
+           Model == "bonro" ~ -0.10,
+           Model == "wo" ~ -0.15,
+           Model == "iw" ~ -0.20,
            TRUE ~ 0),
          # final y-position for plotting
          y_pos = as.numeric(component) + y_offset,

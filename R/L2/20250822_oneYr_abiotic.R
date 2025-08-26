@@ -225,99 +225,42 @@ fixef_df <- fixef_df %>%
     component = factor(component, levels = rev(desired_order)),
     Model = factor(Model, levels = c("All", "AM", "ECM")),
     Significant = factor(Significant, levels = c("yes", "no")),
-    y_offset = case_when(Model == "All" ~ 0,
-      Model == "AM" ~ -1, Model == "ECM" ~ 1),
+    y_offset = case_when(
+      Model == "All" ~ 0,
+      Model == "AM"  ~ -0.2,
+      Model == "ECM" ~  0.2), 
     y_pos = as.numeric(component) + y_offset,
     plot_est = ifelse(estimate > 1, estimate - 1, estimate),
     plot_xmin = ifelse(estimate > 1, estimate - 1, estimate) - std.error,
     plot_xmax = ifelse(estimate > 1, estimate - 1, estimate) + std.error)
   
-
 # --- Plot
 ggplot(fixef_df, aes(x = plot_est, y = y_pos)) +   # use numeric y_pos
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  
   # Error bars
   geom_errorbarh(aes(xmin = plot_xmin, xmax = plot_xmax),
-                 height = 0.05, color = "black") +
-  
+                 height = 0.05, color = "black", linewidth = 0.5)+
   # Points
   geom_point(aes(shape = Model, fill = Significant),
-             size = 3, color = "black", stroke = 1) +
-  
+             size = 2.5, color = "black", stroke = 1) +
   # Y-axis: show factor labels at base positions
   scale_y_continuous(
     breaks = 1:length(desired_order),
-    labels = rev(desired_order)
-  ) +
-  
+    labels = rev(desired_order)) +
   # Shapes for models
   scale_shape_manual(values = c("All" = 21, "AM" = 24, "ECM" = 22)) +
-  
   # Fill for significance
   scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  
   # X-axis breaks
-  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 2, 2.5),
-                     labels = c("-0.5", "0", "0.5", "1.0", "2.0", "2.5")) +
-  
+  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 1.25, 1.5),
+                     labels = c("-0.5", "0", "0.5", "2.0", "", "2.5")) +
   labs(x = "Effect size ± SE (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
-  theme(
-    legend.position = "right",
+  theme(legend.position = "right",
     axis.text.y = element_text(size = 12, color = "black"),
-    axis.text.x = element_text(size = 12, color = "black")
-  ) +
-  
+    axis.text.x = element_text(size = 12, color = "black")) +
   # Fix fill legend shape
   guides(fill = guide_legend(override.aes = list(shape = 21, color = "black", size = 3.5)))
-
-# --- Plot
-ggplot(fixef_df, aes(x = plot_est, y = y_pos)) +   # use numeric y_pos with offsets
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  
-  # Error bars
-  geom_errorbarh(aes(xmin = plot_xmin, xmax = plot_xmax),
-                 height = 0.05, color = "black") +
-  
-  # Points
-  geom_point(aes(shape = Model, fill = Significant),
-             size = 3, color = "black", stroke = 1) +
-  
-  # Y-axis: numeric positions with factor labels at base
-  scale_y_continuous(
-    breaks = 1:length(desired_order),      # base positions
-    labels = rev(desired_order)
-  ) +
-  
-  # Shapes for models
-  scale_shape_manual(values = c("All" = 21, "AM" = 24, "ECM" = 22)) +
-  
-  # Fill for significance
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  
-  # X-axis
-  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 2, 2.5),
-                     labels = c("-0.5", "0", "0.5", "1.0", "2.0", "2.5")) +
-  
-  # Labels and theme
-  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(
-    legend.position = "right",
-    axis.text.y = element_text(size = 12, color = "black"),
-    axis.text.x = element_text(size = 12, color = "black")
-  ) +
-  
-  # Fix fill legend shape
-  guides(fill = guide_legend(override.aes = list(shape = 21, color = "black", size = 3.5)))
-
-
-
-
-
-
-
 
 #########################################################
 #########################################################
@@ -422,7 +365,7 @@ summary(bc_abio_null)
 r.squaredGLMM(bc_abio_null)
 
 ##### Effects of environment and climate
-bc_abio <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
+bc_abio <- glmer(Year_1_counts ~ mean_pdsi + mintemp + #maxtemp +
                    percOpen + Base_CEC + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = bc_surv)
@@ -599,8 +542,7 @@ r.squaredGLMM(bonro_abio_null)
 
 ##### Effects of environment and climate
 bonro_abio <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
-                   percOpen + Base_CEC + log0yr +
-                   (1|SiteID) + (1|survYear),
+                   percOpen + Base_CEC + log0yr + (1|survYear),
                  family = poisson(link = "log"), data = bonro_surv)
 summary(bonro_abio)
 car::vif(bonro_abio)
@@ -717,793 +659,218 @@ AIC(iw_abio_null, iw_abio, iw_clim, iw_env)
 anova(iw_abio, iw_clim)
 
 
-################################################ 
-################################################ 
-################################################ 
-##########  PLOTTING CODE FOR LATER
-
-################################################ 
-######## Plotting model coefficients +/- SE
-# Function to pull out relevant terms
-extract_model_summary <- function(model, species_abbrev) {
+########## Plotting effect sizes for models with climate and environment
+# --- Function to extract fixed effects and tidy them
+extract_fixef_abio <- function(model, model_type) {
   broom.mixed::tidy(model, effects = "fixed") %>%
     filter(term != "(Intercept)") %>%
-    mutate(species = species_abbrev) %>%
-    select(species, term, estimate, std.error, statistic, p.value)
+    select(term, estimate, std.error, p.value) %>%
+    mutate(
+      # Convert model terms to nicer labels
+      component = case_when(
+        term == "mean_pdsi" ~ "Mean PDSI",
+        term == "mintemp" ~ "Min Temperature",
+        term == "maxtemp" ~ "Max Temperature",
+        term == "percOpen" ~ "% Canopy Openness",
+        term == "Base_CEC" ~ "Base CEC",
+        term == "log0yr" ~ "Log(Recruit Density)",
+        TRUE ~ term),
+      Significant = ifelse(!is.na(p.value) & 
+                             p.value <= 0.05, "yes", "no"),
+      Model = model_type)
 }
 
-# Create a list of our models
-models <- list(rm = rm_abio, sm = sm_abio, ab = ab_abio, wa = wa_abio,
-               bc = bc_abio, nro = nro_abio, bonro = bonro_abio,
-               wo = wo_abio, iw = iw_abio)
+## Extract for each species
+fixef_RM  <- extract_fixef_abio(rm_abio, "rm")
+fixef_SM  <- extract_fixef_abio(sm_abio, "sm")
+fixef_BC  <- extract_fixef_abio(bc_abio, "bc")
+fixef_WA  <- extract_fixef_abio(wa_abio, "wa")
+fixef_AB  <- extract_fixef_abio(ab_abio, "ab")
+fixef_NRO  <- extract_fixef_abio(nro_abio, "nro")
+fixef_BONRO  <- extract_fixef_abio(bonro_abio, "bonro")
+fixef_WO  <- extract_fixef_abio(wo_abio, "wo")
+fixef_IW  <- extract_fixef_abio(iw_abio, "iw")
 
-# Map terms by model
-allSp_results <- purrr::imap_dfr(models, extract_model_summary)
+## Combine
+fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
+                      fixef_WA, fixef_AB, fixef_NRO,
+                      fixef_BONRO, fixef_WO, fixef_IW)
 
-# Add uniform names for covariates across species
-allSp_results <- allSp_results %>%
-  rowwise() %>%
-  mutate(component = case_when(
-    term == "mean_pdsi" ~ "Mean PDSI",
-    term == "mintemp" ~ "Minimum Temp",
-    term == "maxtemp" ~ "Maximum Temp",
-    term == "percOpen" ~ "Canopy Openness (%)",
-    term == "Base_CEC" ~ "Base CEC",
-   # term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ NA_character_
-  )) %>%
-  ungroup()
-# Make into an ordered factor
-allSp_results$component = factor(allSp_results$component,
-                                 levels = c( #"Log(Recruit Density)", 
-                                             "Base CEC",
-                                             "Canopy Openness (%)",
-                                             "Maximum Temp",
-                                             "Minimum Temp",
-                                             "Mean PDSI"))
+# Define vertical order for plotting (top → bottom)
+desired_order <- c("Mean PDSI", "Min Temperature", "Max Temperature",
+                   "% Canopy Openness", "Base CEC",
+                   "Log(Recruit Density)")
 
-# Add AM or ECM to each row by species
-allSp_results$Myc_Type = ifelse(allSp_results$species == "rm", "AM",
-                        ifelse(allSp_results$species == "sm", "AM",
-                        ifelse(allSp_results$species == "wa", "AM",
-                        ifelse(allSp_results$species == "bc", "AM","ECM"))))
+## Create a color vector with red shades for AM and blue shades for ECM 
+species_cols <- c(ab    = "#C6E0EB", 
+                  bonro = "#7FB8D0",iw    = "#4A90C2",
+                  nro   = "#1F5BA1",wo    = "#143D7A", 
+                  bc    = "#FDCBC0",  rm    = "#FB8A74",
+                  sm    = "#E63E2D", wa    = "#991F1F")
 
-# Add column for significance of parameter estimate
-allSp_results$Significant = ifelse(allSp_results$p.value <= 0.05, "yes", "no")
-
-######################
-## Create a color vector with red shades for AM and blue shades for ECM
-species_cols <- c(ab = "#B4D4DA", bonro = "#72BCDC", iw = "#3F8BBA",
-                  nro = "#1C65A3", wo = "#26456E",
-                  bc = "#FEB1A3", rm = "#F77964",  
-                  sm = "#D2241F", wa = "#AE123A")
-
-## Create a size vector for species to scale points by mean percent ba
-species_sizes <- data.frame(species = c("ab", "bonro", "iw", "nro", "wo",
-                                        "bc", "rm", "sm", "wa"),
-                            percBA = c(2.43, 15.20, 0.11, 29.7, 10.30,
+## Create a size vector for species to scale points by mean percent ba 
+species_sizes <- data.frame(species = c("ab", "bonro", "iw", "nro", 
+                                        "wo", "bc", "rm", "sm", "wa"), 
+                            percBA = c(2.43, 15.20, 0.11, 29.7, 10.30, 
                                        1.03, 9.40, 15.80, 1.82))
-# Add data to results df
-allSp_results$percBA = species_sizes$percBA[match(allSp_results$species,
-                                                  species_sizes$species)]
 
-# Create ordered factor for species by Myc_Type group and alphabetical within each
-allSp_results <- allSp_results %>%
-  mutate(species_label = factor(
-    species,levels = c(
-      sort(unique(species[Myc_Type == "AM"])),
-      sort(unique(species[Myc_Type == "ECM"])))),
-    component = factor(component, levels = c( #"Log(Recruit Density)", 
-                                              "Base CEC",
-                                              "Canopy Openness (%)",
-                                              "Maximum Temp",
-                                              "Minimum Temp",
-                                              "Mean PDSI")),
-    Significant = factor(Significant, levels = c("yes", "no")))
+# Representative % BA values for legend
+legend_percBA <- c(1, 10, 20)
 
-## Calculate mean parameter estimates for AM versus ECM
-group_means <- allSp_results %>%
-  group_by(Myc_Type, component) %>%
-  summarise(
-    mean_estimate = mean(estimate, na.rm = TRUE),
-    std.error = sd(estimate, na.rm = TRUE) / sqrt(n()),  
-    .groups = "drop")
+# --- Prepare plotting data
+fixef_df_plot <- fixef_df %>%
+  mutate(component = factor(component, levels = desired_order),
+         # tidy up Model and Significant
+         Model = factor(Model, levels = c("ab", "bonro", "iw",
+                                          "nro", "wo", 
+                                          "bc", "rm", "sm", "wa")),
+         Significant = factor(Significant, levels = c("yes", "no")),
+         # assign Myc_type based on Model
+         Myc_type = case_when(Model %in% c("rm", "sm", "bc", "wa") ~ "AM",
+                              TRUE ~ "ECM"),
+         # percent BA per species
+         percBA = species_sizes$percBA[match(Model, species_sizes$species)],
+         # color for species
+         color_col = species_cols[Model],
+         # species-specific vertical offset
+         y_offset = case_when(
+           Model == "rm" ~ 0.20,
+           Model == "bc" ~ 0.15,
+           Model == "sm" ~ 0.10,
+           Model == "wa" ~ 0.05,
+           Model == "ab" ~ 0,
+           Model == "nro" ~ -0.05,
+           Model == "bonro" ~ -0.10,
+           Model == "wo" ~ -0.15,
+           Model == "iw" ~ -0.20,
+           TRUE ~ 0),
+         # final y-position for plotting
+         y_pos = as.numeric(component) + y_offset,
+         # fill color: species color if significant, white otherwise
+         fill_col = ifelse(Significant == "yes", 
+                           species_cols[Model], "white"),
+         plot_est = ifelse(estimate > 1, estimate - 1, estimate),
+         plot_xmin = ifelse(estimate > 1, estimate - 1, estimate) - std.error,
+         plot_xmax = ifelse(estimate > 1, estimate - 1, estimate) + std.error)
 
-# Plot - All Species (ECM and AM)
-ggplot(allSp_results, aes(x = estimate, y = component, 
-                           color = species_label, shape = Significant)) +
-  geom_point(aes(size = log1p(percBA)), 
-             position = position_dodge(width = 0.6)) +   # size only here
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error), 
-                 height = 0, position = position_dodge(width = 0.6)) +
-  ## Add ECM and AM group means
-  geom_point(data = group_means, 
-             aes(x = mean_estimate, y = component, shape = Myc_Type), 
-             color = "black", size = 3, inherit.aes = FALSE) +
-  geom_errorbarh(data = group_means,
-                 aes(xmin = mean_estimate - std.error, 
-                     xmax = mean_estimate + std.error, y = component),
-                 color = "black", height = 0, inherit.aes = FALSE) +
-  scale_color_manual(values = species_cols) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 1, "AM" = 17, "ECM" = 15)) +
-  scale_size(range = c(1.5, 5), 
-             name = "log(% BA + 1)") +  # nicely scaled
-  theme_bw() +
-  labs(x = "Effect Size ± SE (Log Count Scale)", 
-       y = "", color = "Species", shape = "") +
+################# Plot - all species
+ggplot(fixef_df_plot, aes(x = plot_est, y = y_pos)) +
+  # Reference line at zero
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
+  # Error bars colored by species
+  geom_errorbarh(aes(xmin = plot_xmin, xmax = plot_xmax, color = Model),
+                 height = 0.05, linewidth = 0.5)+
+  # Points: shape by Myc_type, fill by significance, outline by species
+  geom_point(aes(shape = Myc_type, fill = fill_col,
+                 color = Model, size = log1p(percBA)),
+             stroke = 1) +
+  # Y-axis with desired top-to-bottom order
+  scale_y_continuous(breaks = 1:length(levels(fixef_df_plot$component)),
+                     labels = levels(fixef_df_plot$component),
+                     trans = "reverse") +
+  # Shape legend for mycorrhizal type
+  scale_shape_manual(name = "Mycorrhizal\nType", 
+                     values = c("AM" = 24, "ECM" = 22) ) +
+  # Fill is used only for significance; no separate legend
+  scale_fill_identity(guide = "none") +
+  # Species colors and legend
+  scale_color_manual(
+    name = "Species", values = species_cols) +
+  # Size scale with interpretable legend
+  scale_size(range = c(2, 6),
+             breaks = log1p(legend_percBA),          # positions in plot scale
+             labels = paste0(legend_percBA, "%"),   # human-readable labels
+             name = "% BA" ) +
+  # X-axis breaks
+  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 1.25, 1.5),
+                     labels = c("-0.5", "0", "0.5", "2.0", "", "2.5")) +
+  # Labels & theme
+  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
+  theme_bw(base_size = 12) +
   theme(legend.position = "right",
-        axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 12, color = "black"))
 
-### Plot - ECM only
-# Make just an ECM group
-ecm_group <- group_means %>% filter(Myc_Type == "ECM" )
-                                    #& component != "Log(Recruit Density)")
+
+################# Plot - AM species only
+##### Filter to just include AM
+fixef_df_AM <- filter(fixef_df_plot, Myc_type == "AM")
 # Plot
-allSp_results %>% filter(., Myc_Type == "ECM" ) %>% 
-                        # & component != "Log(Recruit Density)")  %>% 
-  ggplot(., aes(x = estimate,  y = component, 
-                color = species_label,  shape = Significant)) +
-  geom_point(aes(size = log1p(percBA)), 
-             position = position_dodge(width = 0.6)) +   # size only here
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error), 
-                 height = 0, position = position_dodge(width = 0.6)) +
-  ## Add ECM and AM group means
-  geom_point(data = ecm_group, 
-             aes(x = mean_estimate, y = component, shape = Myc_Type), 
-             color = "black", size = 3, inherit.aes = FALSE) +
-  geom_errorbarh(data = ecm_group,
-                 aes(xmin = mean_estimate - std.error, 
-                     xmax = mean_estimate + std.error, y = component),
-                 color = "black", height = 0, inherit.aes = FALSE) +
-  scale_color_manual(values = species_cols) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 1, 
-                                "AM" = 17, "ECM" = 15)) +
-  scale_size(range = c(1.5, 5), 
-             name = "log(% BA + 1)") +  # nicely scaled
-  theme_bw() +
-  labs(x = "Effect Size ± SE (Log Count Scale)", 
-       y = "", color = "Species", shape = "") +
+ggplot(fixef_df_AM, aes(x = plot_est, y = y_pos)) +
+  # Reference line at zero
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
+  # Error bars colored by species
+  geom_errorbarh(aes(xmin = plot_xmin, xmax = plot_xmax, color = Model),
+                 height = 0.05, linewidth = 0.5)+
+  # Points: shape by Myc_type, fill by significance, outline by species
+  geom_point(aes(shape = Myc_type, fill = fill_col,
+                 color = Model, size = log1p(percBA)),
+             stroke = 1) +
+  # Y-axis with desired top-to-bottom order
+  scale_y_continuous(breaks = 1:length(levels(fixef_df_plot$component)),
+                     labels = levels(fixef_df_plot$component),
+                     trans = "reverse") +
+  # Shape legend for mycorrhizal type
+  scale_shape_manual(name = "Mycorrhizal\nType", 
+                     values = c("AM" = 24, "ECM" = 22) ) +
+  # Fill is used only for significance; no separate legend
+  scale_fill_identity(guide = "none") +
+  # Species colors and legend
+  scale_color_manual(
+    name = "Species", values = species_cols) +
+  # Size scale with interpretable legend
+  scale_size(range = c(2, 6),
+             breaks = log1p(legend_percBA),          # positions in plot scale
+             labels = paste0(legend_percBA, "%"),   # human-readable labels
+             name = "% BA" ) +
+  # X-axis breaks
+  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 1.25, 1.5),
+                     labels = c("-0.5", "0", "0.5", "2.0", "", "2.5")) +
+  # Labels & theme
+  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
+  theme_bw(base_size = 12) +
   theme(legend.position = "right",
-        axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 12, color = "black"))
 
-
-### Plot - AM only
-# Make just an AM group
-am_group <- group_means %>% filter(Myc_Type == "AM" )
-                                  # &   component != "Log(Recruit Density)")
+################# Plot - ECM species only
+##### Filter to just include ECM
+fixef_df_ECM <- filter(fixef_df_plot, Myc_type == "ECM")
 # Plot
-allSp_results %>% filter(., Myc_Type == "AM" ) %>% 
-                        # &  component != "Log(Recruit Density)")  %>% 
-  ggplot(., aes(x = estimate,  y = component, 
-                color = species_label,  shape = Significant)) +
-  geom_point(aes(size = log1p(percBA)), 
-             position = position_dodge(width = 0.6)) +   # size only here
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey30") +
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error), 
-                 height = 0, position = position_dodge(width = 0.6)) +
-  ## Add ECM and AM group means
-  geom_point(data = am_group, 
-             aes(x = mean_estimate, y = component, shape = Myc_Type), 
-             color = "black", size = 3, inherit.aes = FALSE) +
-  geom_errorbarh(data = am_group,
-                 aes(xmin = mean_estimate - std.error, 
-                     xmax = mean_estimate + std.error, y = component),
-                 color = "black", height = 0, inherit.aes = FALSE) +
-  scale_color_manual(values = species_cols) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 1, 
-                                "AM" = 17, "ECM" = 15)) +
-  scale_size(range = c(1.5, 5), 
-             name = "log(% BA + 1)") +  # nicely scaled
-  theme_bw() +
-  labs(x = "Effect Size ± SE (Log Count Scale)", 
-       y = "", color = "Species", shape = "") +
+ggplot(fixef_df_ECM, aes(x = plot_est, y = y_pos)) +
+  # Reference line at zero
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
+  # Error bars colored by species
+  geom_errorbarh(aes(xmin = plot_xmin, xmax = plot_xmax, color = Model),
+                 height = 0.05, linewidth = 0.5)+
+  # Points: shape by Myc_type, fill by significance, outline by species
+  geom_point(aes(shape = Myc_type, fill = fill_col,
+                 color = Model, size = log1p(percBA)),
+             stroke = 1) +
+  # Y-axis with desired top-to-bottom order
+  scale_y_continuous(breaks = 1:length(levels(fixef_df_plot$component)),
+                     labels = levels(fixef_df_plot$component),
+                     trans = "reverse") +
+  # Shape legend for mycorrhizal type
+  scale_shape_manual(name = "Mycorrhizal\nType", 
+                     values = c("AM" = 24, "ECM" = 22) ) +
+  # Fill is used only for significance; no separate legend
+  scale_fill_identity(guide = "none") +
+  # Species colors and legend
+  scale_color_manual(
+    name = "Species", values = species_cols) +
+  # Size scale with interpretable legend
+  scale_size(range = c(2, 6),
+             breaks = log1p(legend_percBA),          # positions in plot scale
+             labels = paste0(legend_percBA, "%"),   # human-readable labels
+             name = "% BA" ) +
+  # X-axis breaks
+  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 1.25, 1.5),
+                     labels = c("-0.5", "0", "0.5", "2.0", "", "2.5")) +
+  # Labels & theme
+  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
+  theme_bw(base_size = 12) +
   theme(legend.position = "right",
-        axis.title.x = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 10, color = "black"),
-        axis.text.y = element_text(size = 10, color = "black"))
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 12, color = "black"))
 
-
-########################################################################
-##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods - Averaged across sites and years
-########################################################################
-########################################################################
-# ######### RED MAPLE EXAMPLE
-# ######### Median only
-# # Step 1: Create a sequence of basal area values
-# ba_seq_list <- list(
-#   rm_15m = seq(0, max(rm_surv$rm_15m, na.rm = TRUE), length.out = 100),
-#   conMycNS_15m = seq(0, max(rm_surv$conMycNS_15m, na.rm = TRUE), length.out = 100),
-#   hetMyc_15m = seq(0, max(rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100)
-# )
-# 
-# # Step 2: Get median values of other covariates
-# med_vals <- list(
-#   log0yr = median(rm_surv$log0yr, na.rm = TRUE),
-#   logPrior = median(rm_surv$logPrior, na.rm = TRUE),
-#   rm_15m = median(rm_surv$rm_15m, na.rm = TRUE),
-#   conMycNS_15m = median(rm_surv$conMycNS_15m, na.rm = TRUE),
-#   hetMyc_15m = median(rm_surv$hetMyc_15m, na.rm = TRUE)
-# )
-# 
-# # Step 3: Prediction data function
-# make_pred_data_median <- function(focal_var, ba_seq) {
-#   n <- length(ba_seq)
-#   
-#   data.frame(
-#     rm_15m = if (focal_var == "rm_15m") ba_seq else 
-#       rep(med_vals$rm_15m, n),
-#     conMycNS_15m = if (focal_var == "conMycNS_15m") ba_seq else 
-#       rep(med_vals$conMycNS_15m, n),
-#     hetMyc_15m = if (focal_var == "hetMyc_15m") ba_seq else 
-#       rep(med_vals$hetMyc_15m, n),
-#     log0yr = rep(med_vals$log0yr, n),
-#     logPrior = rep(med_vals$logPrior, n),
-#     Site = rep(rm_surv$Site[1], n),
-#     survYear = rep(rm_surv$survYear[1], n),
-#     focal_label = rep(focal_var, n)
-#   )
-# }
-# 
-# # Step 4: Generate prediction data
-# pred_data <- bind_rows(
-#   make_pred_data_median("rm_15m", ba_seq_list$rm_15m),
-#   make_pred_data_median("conMycNS_15m", ba_seq_list$conMycNS_15m),
-#   make_pred_data_median("hetMyc_15m", ba_seq_list$hetMyc_15m)
-# )
-# 
-# # Step 5: Predict using only fixed effects (re.form = NA)
-# pred_data$pred_count <- predict(rmBA_15m, newdata = pred_data, type = "response", re.form = NA)
-# 
-# # Add x-axis variable
-# pred_data$x_focal <- with(pred_data,
-#                           ifelse(focal_label == "rm_15m", rm_15m,
-#                                  ifelse(focal_label == "conMycNS_15m", conMycNS_15m, hetMyc_15m)))
-# 
-# # Make sure focal_label is a factor with levels matching the color manual
-# pred_data$focal_label <- factor(pred_data$focal_label,
-#                  levels = c("rm_15m", "conMycNS_15m", "hetMyc_15m"),
-#                 labels = c("Conspecific BA", "Conmycorrhizal BA", "Heteromycorrhizal BA"))
-# 
-# # Step 6: Plot
-# ggplot(pred_data, aes(x = x_focal, y = pred_count, color = focal_label)) +
-#   geom_line(size = 1) +
-#   labs(x = "Basal Area in 15-m Radius (m²)",
-#        y = "Predicted 1-Year Seedling Count",
-#        color = "Neighborhood Type") +
-#   scale_color_manual(values = c("Conspecific BA" = "black", 
-#                                 "Conmycorrhizal BA" = "#DA3742", 
-#                                 "Heteromycorrhizal BA" = "#3885B6")) +
-#   theme_bw() +
-#   theme(axis.text = element_text(color = "black"),
-#         axis.title = element_text(size = 12),
-#         legend.text = element_text(size = 10),
-#         legend.title = element_text(size = 11))
-# 
-# ########################################################################
-# ######### 25% and 75% quantiles
-# # Step 1: Create sequence of focal BA values
-# ba_seq_list <- list(
-#   rm_15m = seq(0, max(rm_surv$rm_15m, na.rm = TRUE), length.out = 100),
-#   conMycNS_15m = seq(0, max(rm_surv$conMycNS_15m, na.rm = TRUE), length.out = 100),
-#   hetMyc_15m = seq(0, max(rm_surv$hetMyc_15m, na.rm = TRUE), length.out = 100))
-# 
-# # Step 2: Get quantile values of all covariates
-# q_vals <- list(
-#   q25 = list(
-#     log0yr = quantile(rm_surv$log0yr, 0.25, na.rm = TRUE),
-#     logPrior = quantile(rm_surv$logPrior, 0.25, na.rm = TRUE),
-#     rm_15m = quantile(rm_surv$rm_15m, 0.25, na.rm = TRUE),
-#     conMycNS_15m = quantile(rm_surv$conMycNS_15m, 0.25, na.rm = TRUE),
-#     hetMyc_15m = quantile(rm_surv$hetMyc_15m, 0.25, na.rm = TRUE)
-#   ),
-#   q75 = list(
-#     log0yr = quantile(rm_surv$log0yr, 0.75, na.rm = TRUE),
-#     logPrior = quantile(rm_surv$logPrior, 0.75, na.rm = TRUE),
-#     rm_15m = quantile(rm_surv$rm_15m, 0.75, na.rm = TRUE),
-#     conMycNS_15m = quantile(rm_surv$conMycNS_15m, 0.75, na.rm = TRUE),
-#     hetMyc_15m = quantile(rm_surv$hetMyc_15m, 0.75, na.rm = TRUE)
-#   )
-# )
-# 
-# # Step 3: Prediction data function
-# make_pred_data_conditional <- function(focal_var, ba_seq, qval) {
-#   n <- length(ba_seq)
-#   data.frame(
-#     rm_15m = if (focal_var == "rm_15m") ba_seq else 
-#       rep(qval$rm_15m, n),
-#     conMycNS_15m = if (focal_var == "conMycNS_15m") ba_seq else 
-#       rep(qval$conMycNS_15m, n),
-#     hetMyc_15m = if (focal_var == "hetMyc_15m") ba_seq else 
-#       rep(qval$hetMyc_15m, n),
-#     log0yr = rep(qval$log0yr, n),
-#     logPrior = rep(qval$logPrior, n),
-#     Site = rep(rm_surv$Site[1], n),
-#     survYear = rep(rm_surv$survYear[1], n),
-#     focal_label = rep(focal_var, n))
-# }
-# 
-# # Step 4: Generate prediction datasets
-# pred_data_25 <- bind_rows(
-#   make_pred_data_conditional("rm_15m", ba_seq_list$rm_15m, q_vals$q25),
-#   make_pred_data_conditional("conMycNS_15m", ba_seq_list$conMycNS_15m, q_vals$q25),
-#   make_pred_data_conditional("hetMyc_15m", ba_seq_list$hetMyc_15m, q_vals$q25)
-# )
-# 
-# pred_data_75 <- bind_rows(
-#   make_pred_data_conditional("rm_15m", ba_seq_list$rm_15m, q_vals$q75),
-#   make_pred_data_conditional("conMycNS_15m", ba_seq_list$conMycNS_15m, q_vals$q75),
-#   make_pred_data_conditional("hetMyc_15m", ba_seq_list$hetMyc_15m, q_vals$q75)
-# )
-# 
-# # Step 5: Predict using model (fixed effects only)
-# pred_data_25$pred_count <- predict(rmBA_15m, newdata = pred_data_25, type = "response", re.form = NA)
-# pred_data_75$pred_count <- predict(rmBA_15m, newdata = pred_data_75, type = "response", re.form = NA)
-# 
-# # Step 6: Format for plotting
-# for (df_name in c("pred_data_25", "pred_data_75")) {
-#   df <- get(df_name)
-#   
-#   df$x_focal <- with(df,
-#           ifelse(focal_label == "rm_15m", rm_15m,
-#           ifelse(focal_label == "conMycNS_15m", conMycNS_15m, hetMyc_15m)))
-#   
-#   df$focal_label <- factor(df$focal_label,
-#           levels = c("rm_15m", "conMycNS_15m", "hetMyc_15m"),
-#     labels = c("Conspecific BA", "Conmycorrhizal BA", "Heteromycorrhizal BA"))
-#   
-#   assign(df_name, df)  # Re-assign updated data frame
-# }
-# 
-# # Step 7: Plot for 25th percentile
-# ggplot(pred_data_25, aes(x = x_focal, y = pred_count, color = focal_label)) +
-#   geom_line(size = 1) +
-#   labs(x = "Basal Area in 15-m Radius (m²)",
-#        y = "Predicted 1-Year Seedling Count",
-#        color = "Neighborhood Type",
-#        title = "Predictions at 25th Percentile of All Other Covariates") +
-#   scale_color_manual(values = c("Conspecific BA" = "black", 
-#                                 "Conmycorrhizal BA" = "#DA3742", 
-# "Heteromycorrhizal BA" = "#3885B6")) +
-#   theme_bw()
-# 
-# # Step 8: Plot for 75th percentile
-# ggplot(pred_data_75, aes(x = x_focal, y = pred_count, color = focal_label)) +
-#   geom_line(size = 1) +
-#   labs(x = "Basal Area in 15-m Radius (m²)",
-#        y = "Predicted 1-Year Seedling Count",
-#        color = "Neighborhood Type",
-#        title = "Predictions at 75th Percentile of All Other Covariates") +
-#   scale_color_manual(values = c("Conspecific BA" = "black", 
-#                                 "Conmycorrhizal BA" = "#DA3742", 
-#                                 "Heteromycorrhizal BA" = "#3885B6")) +
-#   theme_bw()
-# 
-# 
-
-########################################################################
-########################################################################
-##### Plot to visualize effects of conspecific, con-myco, and hetero-myco neighborhoods on the 1-yr seedling counts for each species together!
-# Your model list
-models <- list(rm = rmBA_15m, sm = smBA_15m, ab = abBA_15m, wa = waBA_15m,
-               bc = bcBA_15m, nro = nroBA_15m, bonro = bonroBA_15m,
-               wo = woBA_15m, iw = iwBA_15m)
-
-# Your datasets (must match model order)
-data_list <- list(rm = rm_surv, sm = sm_surv, ab = ab_surv, wa = wa_surv,
-                  bc = bc_surv, nro = nro_surv, bonro = bonro_surv,
-                  wo = wo_surv, iw = iw_surv)
-
-# Your color vector
-species_cols <- c(ab = "#B4D4DA", bonro = "#6EB6D9", iw = "#3F8BBA",
-                  nro = "#1F74B1", wo = "#244D7F", bc = "#FEB1A3",
-                  rm = "#F77964", sm = "#D2241F", wa = "#AE123A")
-
-# Define conspecific BA variables per species
-conspecific_vars <- c(rm = "rm_15m", sm = "sm_15m", ab = "ab_15m", wa = "wa_15m",
-                      bc = "bc_15m", nro = "nro_15m", bonro = "bonro_15m",
-                      wo = "wo_15m", iw = "iw_15m")
-
-
-make_species_predictions <- function(focal_var) {
-  pred_list <- list()
-  
-  for (sp in names(models)) {
-    mod <- models[[sp]]
-    dat <- data_list[[sp]]
-    conspecific_var <- conspecific_vars[[sp]]
-    
-    # Define x-axis variable and interaction handling
-    interacting_var <- NULL
-    if (focal_var == "conspecific") {
-      x_var <- conspecific_var
-      x_label <- x_var
-    } else if (focal_var == "conspecific:hetMyc_15m") {
-      interaction_term <- paste0(conspecific_var, ":hetMyc_15m")
-      if (!grepl(interaction_term, paste(deparse(formula(mod)), collapse = ""))) next
-      x_var <- "hetMyc_15m"
-      interacting_var <- conspecific_var
-      x_label <- interaction_term
-    } else if (focal_var == "conMycNS_15m:hetMyc_15m") {
-      interaction_term <- "conMycNS_15m:hetMyc_15m"
-      if (!grepl(interaction_term, paste(deparse(formula(mod)), collapse = ""))) next
-      x_var <- "conMycNS_15m"
-      interacting_var <- "hetMyc_15m"
-      x_label <- interaction_term
-    } else {
-      x_var <- focal_var
-      x_label <- focal_var
-    }
-    
-    # Skip if focal or interacting variable missing
-    if (!x_var %in% names(dat) || all(is.na(dat[[x_var]]))) next
-    if (!is.null(interacting_var) && (!interacting_var %in% names(dat) || all(is.na(dat[[interacting_var]])))) next
-    
-    # Sequence of values for prediction
-    max_val <- max(dat[[x_var]], na.rm = TRUE)
-    if (!is.finite(max_val)) next
-    seq_vals <- seq(0, max_val, length.out = 100)
-    
-    # Median covariates
-    med_vals <- list(
-      log0yr = median(dat$log0yr, na.rm = TRUE),
-      logPrior = median(dat$logPrior, na.rm = TRUE),
-      conMycNS_15m = median(dat$conMycNS_15m, na.rm = TRUE),
-      hetMyc_15m = median(dat$hetMyc_15m, na.rm = TRUE),
-      conspecific = median(dat[[conspecific_var]], na.rm = TRUE)
-    )
-    
-    # Create base row for prediction data
-    pred_data <- data.frame(
-      log0yr = med_vals$log0yr,
-      logPrior = med_vals$logPrior,
-      conMycNS_15m = med_vals$conMycNS_15m,
-      hetMyc_15m = med_vals$hetMyc_15m,
-      stringsAsFactors = FALSE
-    )
-    pred_data[[conspecific_var]] <- med_vals$conspecific
-    
-    # Expand to prediction sequence
-    newdata <- pred_data[rep(1, length(seq_vals)), ]
-    
-    # Modify variables for current prediction type
-    if (focal_var == "conspecific:hetMyc_15m") {
-      newdata[[x_var]] <- seq_vals
-      newdata[[interacting_var]] <- med_vals$conspecific
-    } else if (focal_var == "conMycNS_15m:hetMyc_15m") {
-      newdata[[x_var]] <- seq_vals
-      newdata[[interacting_var]] <- seq_vals
-    } else {
-      newdata[[x_var]] <- seq_vals
-    }
-    
-    # Add dummy random effects values
-    newdata$Site <- dat$Site[1]
-    newdata$survYear <- dat$survYear[1]
-    
-    # Safe prediction
-    newdata$pred_count <- suppressWarnings(predict(mod, newdata = newdata, type = "response", re.form = NA))
-    
-    # Store x value and species for plotting
-    newdata$x_focal <- newdata[[x_var]]
-    newdata$species <- sp
-    pred_list[[sp]] <- newdata
-  }
-  
-  all_preds <- bind_rows(pred_list)
-  all_preds$species <- factor(all_preds$species, levels = names(species_cols))
-  return(all_preds)
-}
-
-# Titles and focal variable mapping
-plot_titles <- c(
-  "Conspecific Basal Area", 
-  "Conmycorrhizal Basal Area", 
-  "Heteromycorrhizal Basal Area", 
-  "Log(Prior Seedling Count + 1)",
-  "Log(Recruit Seedling Count)", 
-  "Conmyc × Heteromyc Basal Area", 
-  "Conspecific × Heteromyc Basal Area"
-)
-
-focal_vars <- c(
-  "conspecific", 
-  "conMycNS_15m", 
-  "hetMyc_15m", 
-  "logPrior", 
-  "log0yr", 
-  "conMycNS_15m:hetMyc_15m", 
-  "conspecific:hetMyc_15m"
-)
-
-# Plot each focal variable
-for (i in seq_along(focal_vars)) {
-  focal_var <- focal_vars[i]
-  pred_df <- make_species_predictions(focal_var)
-  
-  if (nrow(pred_df) == 0) next  # skip empty predictions
-  
-  p <- ggplot(pred_df, aes(x = x_focal, y = pred_count, color = species)) +
-    geom_line(size = 1) +
-    labs(
-      x = plot_titles[i],
-      y = "Predicted 1-Year Seedling Count",
-      color = "Species"
-    ) +
-    scale_color_manual(values = species_cols) +
-    theme_bw() +
-    theme(
-      axis.text = element_text(color = "black"),
-      axis.title = element_text(size = 12),
-      legend.text = element_text(size = 10),
-      legend.title = element_text(size = 11),
-      legend.position = "right"
-    )
-  
-  print(p)
-}
-
-##########
-
-# 1. Mycorrhizal type classification
-am_species <- c("bc", "rm", "sm", "wa")  # example AM species codes
-ecm_species <- c("ab", "bonro", "iw", "nro", "wo")  # example ECM species codes
-
-# 2. Prediction function (unchanged)
-make_species_predictions <- function(focal_var) {
-  pred_list <- list()
-  
-  for (sp in names(models)) {
-    mod <- models[[sp]]
-    dat <- data_list[[sp]]
-    conspecific_var <- conspecific_vars[[sp]]
-    
-    # Define x-axis variable and interaction handling
-    interacting_var <- NULL
-    if (focal_var == "conspecific") {
-      x_var <- conspecific_var
-      x_label <- x_var
-    } else if (focal_var == "conspecific:hetMyc_15m") {
-      interaction_term <- paste0(conspecific_var, ":hetMyc_15m")
-      if (!grepl(interaction_term, paste(deparse(formula(mod)), collapse = ""))) next
-      x_var <- "hetMyc_15m"
-      interacting_var <- conspecific_var
-      x_label <- interaction_term
-    } else if (focal_var == "conMycNS_15m:hetMyc_15m") {
-      interaction_term <- "conMycNS_15m:hetMyc_15m"
-      if (!grepl(interaction_term, paste(deparse(formula(mod)), collapse = ""))) next
-      x_var <- "conMycNS_15m"
-      interacting_var <- "hetMyc_15m"
-      x_label <- interaction_term
-    } else {
-      x_var <- focal_var
-      x_label <- focal_var
-    }
-    
-    if (!x_var %in% names(dat) || all(is.na(dat[[x_var]]))) next
-    if (!is.null(interacting_var) && (!interacting_var %in% names(dat) || all(is.na(dat[[interacting_var]])))) next
-    
-    max_val <- max(dat[[x_var]], na.rm = TRUE)
-    if (!is.finite(max_val)) next
-    seq_vals <- seq(0, max_val, length.out = 100)
-    
-    med_vals <- list(
-      log0yr = median(dat$log0yr, na.rm = TRUE),
-      logPrior = median(dat$logPrior, na.rm = TRUE),
-      conMycNS_15m = median(dat$conMycNS_15m, na.rm = TRUE),
-      hetMyc_15m = median(dat$hetMyc_15m, na.rm = TRUE),
-      conspecific = median(dat[[conspecific_var]], na.rm = TRUE)
-    )
-    
-    pred_data <- data.frame(
-      log0yr = med_vals$log0yr,
-      logPrior = med_vals$logPrior,
-      conMycNS_15m = med_vals$conMycNS_15m,
-      hetMyc_15m = med_vals$hetMyc_15m,
-      stringsAsFactors = FALSE
-    )
-    pred_data[[conspecific_var]] <- med_vals$conspecific
-    
-    newdata <- pred_data[rep(1, length(seq_vals)), ]
-    
-    if (focal_var == "conspecific:hetMyc_15m") {
-      newdata[[x_var]] <- seq_vals
-      newdata[[interacting_var]] <- med_vals$conspecific
-    } else if (focal_var == "conMycNS_15m:hetMyc_15m") {
-      newdata[[x_var]] <- seq_vals
-      newdata[[interacting_var]] <- seq_vals
-    } else {
-      newdata[[x_var]] <- seq_vals
-    }
-    
-    newdata$Site <- dat$Site[1]
-    newdata$survYear <- dat$survYear[1]
-    newdata$pred_count <- suppressWarnings(predict(mod, newdata = newdata, type = "response", re.form = NA))
-    newdata$x_focal <- newdata[[x_var]]
-    newdata$species <- sp
-    pred_list[[sp]] <- newdata
-  }
-  
-  all_preds <- bind_rows(pred_list)
-  all_preds$species <- factor(all_preds$species, levels = names(species_cols))
-  return(all_preds)
-}
-
-# 3. Plot labels and variables
-plot_titles <- c(
-  "Conspecific Basal Area", 
-  "Conmycorrhizal Basal Area", 
-  "Heteromycorrhizal Basal Area", 
-  "Log(Prior Seedling Count + 1)",
-  "Log(Recruit Seedling Count)", 
-  "Conmyc × Heteromyc Basal Area", 
-  "Conspecific × Heteromyc Basal Area"
-)
-
-focal_vars <- c(
-  "conspecific", 
-  "conMycNS_15m", 
-  "hetMyc_15m", 
-  "logPrior", 
-  "log0yr", 
-  "conMycNS_15m:hetMyc_15m", 
-  "conspecific:hetMyc_15m"
-)
-
-# 4. Plotting loop (AM and ECM separated)
-for (i in seq_along(focal_vars)) {
-  focal_var <- focal_vars[i]
-  pred_df <- make_species_predictions(focal_var)
-  
-  if (nrow(pred_df) == 0) next
-  
-  # AM species plot
-  am_df <- pred_df %>% filter(species %in% am_species)
-  if (nrow(am_df) > 0) {
-    p_am <- ggplot(am_df, aes(x = x_focal, y = pred_count, color = species)) +
-      geom_line(size = 1) +
-      labs(
-        x = plot_titles[i],
-        y = "Predicted 1-Year Seedling Count",
-        title = paste0(plot_titles[i], " — AM Species"),
-        color = "Species"
-      ) +
-      scale_color_manual(values = species_cols[am_species]) +
-      theme_bw() +
-      theme(
-        axis.text = element_text(color = "black"),
-        axis.title = element_text(size = 12),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        legend.position = "right"
-      )
-    print(p_am)
-  }
-  
-  # ECM species plot
-  ecm_df <- pred_df %>% filter(species %in% ecm_species)
-  if (nrow(ecm_df) > 0) {
-    p_ecm <- ggplot(ecm_df, aes(x = x_focal, y = pred_count, color = species)) +
-      geom_line(size = 1) +
-      labs(
-        x = plot_titles[i],
-        y = "Predicted 1-Year Seedling Count",
-        title = paste0(plot_titles[i], " — ECM Species"),
-        color = "Species"
-      ) +
-      scale_color_manual(values = species_cols[ecm_species]) +
-      theme_bw() +
-      theme(
-        axis.text = element_text(color = "black"),
-        axis.title = element_text(size = 12),
-        legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        legend.position = "right"
-      )
-    print(p_ecm)
-  }
-}
-
-
-######################################################
-
-
-# Main function to generate predictions per focal variable
-make_species_predictions <- function(focal_var) {
-  pred_list <- list()
-  
-  for (sp in names(models)) {
-    mod <- models[[sp]]
-    dat <- data_list[[sp]]
-    conspecific_var <- conspecific_vars[[sp]]
-    
-    # Set actual variable name to use
-    var_map <- list(
-      conspecific = conspecific_var,
-      conMycNS_15m = "conMycNS_15m",
-      hetMyc_15m = "hetMyc_15m",
-      logPrior = "logPrior"
-    )
-    var_name <- var_map[[focal_var]]
-    
-    # Skip if that variable isn't present or all NA
-    if (!var_name %in% names(dat) || all(is.na(dat[[var_name]]))) next
-    
-    # Create sequence for focal variable
-    max_val <- max(dat[[var_name]], na.rm = TRUE)
-    if (!is.finite(max_val)) next  # skip species with no usable data for var
-    
-    seq_vals <- seq(0, max_val, length.out = 100)
-    
-    # Median values for covariates
-    med_vals <- list(
-      log0yr = median(dat$log0yr, na.rm = TRUE),
-      logPrior = median(dat$logPrior, na.rm = TRUE),
-      conMycNS_15m = median(dat$conMycNS_15m, na.rm = TRUE),
-      hetMyc_15m = median(dat$hetMyc_15m, na.rm = TRUE),
-      conspecific = median(dat[[conspecific_var]], na.rm = TRUE)
-    )
-    
-    # Build base prediction data
-    pred_data <- data.frame(
-      log0yr = med_vals$log0yr,
-      logPrior = med_vals$logPrior,
-      conMycNS_15m = med_vals$conMycNS_15m,
-      hetMyc_15m = med_vals$hetMyc_15m,
-      stringsAsFactors = FALSE
-    )
-    pred_data[[conspecific_var]] <- med_vals$conspecific
-    
-    # Repeat rows for prediction sequence
-    newdata <- pred_data[rep(1, length(seq_vals)), ]
-    newdata[[var_name]] <- seq_vals
-    newdata$Site <- dat$Site[1]
-    newdata$survYear <- dat$survYear[1]
-    
-    # Predict
-    newdata$pred_count <- predict(mod, newdata = newdata, type = "response", re.form = NA)
-    newdata$x_focal <- seq_vals
-    newdata$species <- sp
-    pred_list[[sp]] <- newdata
-  }
-  
-  bind_rows(pred_list)
-  
-  all_preds <- bind_rows(pred_list)
-  all_preds$species <- factor(all_preds$species, levels = names(species_cols))
-  return(all_preds)
-  
-}
-
-
-# Labels for the x-axis
-plot_titles <- c("Conspecific Basal Area", "Conmycorrhizal Basal Area",
-                 "Heteromycorrhizal Basal Area", "Log(Prior Seedling Count + 1)")
-focal_vars <- c("conspecific", "conMycNS_15m", "hetMyc_15m", "logPrior")
-
-for (i in seq_along(focal_vars)) {
-  focal_var <- focal_vars[i]
-  pred_df <- make_species_predictions(focal_var)
-  
-  p <- ggplot(pred_df, aes(x = x_focal, y = pred_count, color = species)) +
-    geom_line(size = 1) +
-    labs(x = plot_titles[i],
-         y = "Predicted 1-Year Seedling Count",
-         color = "Species") +
-    scale_color_manual(values = species_cols) +
-    theme_bw() +
-    theme(axis.text = element_text(color = "black"),
-          axis.title = element_text(size = 12),
-          legend.text = element_text(size = 10),
-          legend.title = element_text(size = 11))
-  
-  print(p)
-}

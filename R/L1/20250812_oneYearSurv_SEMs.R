@@ -122,6 +122,7 @@ m_seedlings <- glmer(
     (1|survYear), #+ (1|SiteID), #+ (1|Sp),
   family = poisson(link = "log"), data = dat)
 
+
 ## 3) Assemble the SEM
 sem_mod <- psem(
   m_AM, m_ECM, m_CON,  # mediators
@@ -135,7 +136,58 @@ summary(sem_mod)       # path coefficients, directed separation (d-sep) tests
 sem.coefs(sem_mod)     # standardized coefficients (where applicable)
 plot(sem_mod)          # quick path plot (base plotting)
 
+##### FULL VERSION WE WANT TO FIT
 
+## 1) Biotic mediator models (Abiotic → Biotic)
+m_AM <- lmer(AM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|Sp)
+             # + (1|survYear)  #+ (1|SiteID)
+             , data = dat)
+
+m_ECM <- lmer(ECM_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|Sp)
+              #+ (1|survYear)  #+ (1|SiteID)
+              , data = dat)
+
+m_CON <- lmer(consp_15m ~ mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC + (1|Sp)
+              #+ (1|survYear)  #+ (1|SiteID) 
+              , data = dat)
+
+m_Myc <- lmer(Seedling_myc ~ mean_pdsi + mintemp + 
+                maxtemp + percOpen + Base_CEC + (1|Sp)
+              #+ (1|survYear)  #+ (1|SiteID) 
+              , data = dat) ## Recode Seedling_myc as index variable: 1 and -1
+
+## 2) Seedling outcome model (Biotic + Abiotic + Trait + Interactions + Controls)
+#### Outcome model?
+m_seedlings <- glmer(
+  Year_1_counts ~
+    # Biotic main effects
+    consp_15m + Seedling_myc + 
+    AM_15m + ECM_15m +
+    # Biotic interactions
+    consp_15m:AM_15m + consp_15m:ECM_15m +
+    Seedling_myc:AM_15m + Seedling_myc:ECM_15m +
+    #consp_15m:Seedling_myc:AM_15m +
+    #consp_15m:Seedling_myc:ECM_15m +
+    # Abiotic direct effects
+    mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC +
+    # Controls
+    logPrior + log0yr + 
+    # Random effects
+    (1|survYear), # optional: + (1|SiteID) + (1|Sp)
+  family = poisson(link = "log"), data = dat)
+
+## 3) Assemble the SEM
+sem_mod <- psem(
+  m_AM, m_ECM, m_CON,  # mediators
+  m_seedlings          # outcome
+)
+
+## 4) Inspect fit and paths
+summary(sem_mod, .progress = FALSE, .verbose = FALSE)
+
+summary(sem_mod)       # path coefficients, directed separation (d-sep) tests
+sem.coefs(sem_mod)     # standardized coefficients (where applicable)
+plot(sem_mod)          # quick path plot (base plotting)
 
 
 #########################################################
