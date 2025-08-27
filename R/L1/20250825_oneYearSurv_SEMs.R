@@ -2,7 +2,7 @@
 #################################################
 ####### Implementing an SEM to integrate biotic and abiotic!
 ####### Author: Bailey McNichol and Andrew Eagar
-####### Date: 12 August 2025
+####### Date: 25 August 2025
 #################################################
 
 ## Read in packages
@@ -19,6 +19,7 @@ library(tibble)
 library(lavaan)
 library(piecewiseSEM)
 library(DiagrammeR)
+library(performance)
 
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/Combined_demography_modeling_data.csv")
@@ -65,9 +66,14 @@ allSpDat_surv_clim$maxtemp = allSpDat_surv_clim$tmax_c -
 ### Make Site a factor
 allSpDat_surv_clim$SiteID = as.factor(allSpDat_surv_clim$SiteID)
 
-### Create binary (0/1) variable for Seedling_myc
+# ### Create binary (0/1) variable for Seedling_myc
+# allSpDat_surv_clim$Sdlg_myc_bin <- ifelse(allSpDat_surv_clim$Seedling_myc 
+#                                           == "AM", 1, 0)
+
+### Recode Seedling_myc as +0.5 for AM and -0.5 for ECM
+# makes the main slopes interpretable as average effects across mycorrhizal types, and the interactions interpretable as deviations from that average.
 allSpDat_surv_clim$Sdlg_myc_bin <- ifelse(allSpDat_surv_clim$Seedling_myc 
-                                          == "AM", 1, 0)
+                                          == "AM", 0.5, -0.5)
 
 ############################################
 ############################################
@@ -79,31 +85,45 @@ dat <- allSpDat_surv_clim[,c(1,5:7,14,15,34,38:40,
 # Rename columns
 colnames(dat) <- c("SiteID","Sp","Year_0_counts",
             "Year_1_counts","AM_BA","ECM_BA",
-            "Seedling_myc", "Consp_BA", "Log_Recruits",
+            "Seedling_myc", "ConspBA", "Log_Recruits",
             "Log_Prior","survYear", "Mean_PDSI","perc_Openness",
              "Base_CEC", "Min_Temp", "Max_Temp","Myc_type") 
 
 ## 1) Biotic mediator models (Abiotic → Biotic)
+# m_AM <- lmer(AM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
+#                perc_Openness + Base_CEC + 
+#               (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
+# 
+# m_ECM <- lmer(ECM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
+#                 perc_Openness + Base_CEC + 
+#                (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
+# 
+# m_CON <- lmer(Consp_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
+#                 perc_Openness + Base_CEC + 
+#                 (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
+
+####### Adding in Log_Recruits and Log_Prior
 m_AM <- lmer(AM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-               perc_Openness + Base_CEC +
-              (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
-
+               perc_Openness + Base_CEC + Log_Recruits + Log_Prior +
+               (1|Sp) + (1|survYear) + (1|SiteID), data = dat,
+             control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
 m_ECM <- lmer(ECM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-                perc_Openness + Base_CEC +
-               (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
-
-m_CON <- lmer(Consp_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-                perc_Openness + Base_CEC  +
-                (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
+               perc_Openness + Base_CEC + Log_Recruits + Log_Prior +
+               (1|Sp) + (1|survYear) + (1|SiteID), data = dat,
+             control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+m_CON <- lmer(ConspBA ~ Mean_PDSI + Min_Temp + Max_Temp + 
+               perc_Openness + Base_CEC + Log_Recruits + Log_Prior +
+               (1|Sp) + (1|survYear) + (1|SiteID), data = dat,
+             control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
 
 ## 2) Seedling outcome model (Biotic + Abiotic + Trait + Interactions + Controls)
 #### Outcome model?
 m_seedlings <- glmer(Year_1_counts ~
     # Biotic main effects
-    Consp_BA + Myc_type +  AM_BA + ECM_BA +
+    ConspBA + Myc_type +  AM_BA + ECM_BA +
     # Biotic interactions
     #consp_15m:AM_15m + 
-      Consp_BA:ECM_BA + Myc_type:AM_BA + Myc_type:ECM_BA +
+      ConspBA:ECM_BA + Myc_type:AM_BA + Myc_type:ECM_BA +
     # Abiotic direct effects
     Mean_PDSI + Min_Temp + Max_Temp + perc_Openness + Base_CEC +
     # Controls
@@ -120,104 +140,98 @@ sem_mod <- psem(
 ## 4) Inspect fit and paths
 summary(sem_mod, .progress = FALSE, .verbose = FALSE)
 
+#################### Plotting the SEM
+
 # Super basic plot
-plot(sem_mod)
+plot(sem_mod, cex = 0.5)
 
 ### More customized plot
 
-plot(sem_mod, node_attrs = list(
+plot(sem_mod, layout = "nicely", 
+     #  "circle", "tree", "kk", "fr","nicely", "neato",
+     node_attrs = list(
   shape = "oval",
-  width = 0.7,  # shrink node width
-  height = 0.28, # shrink node height
+  width = 0.65,  # shrink node width
+  height = 0.18, # shrink node height
   fillcolor = c(
     rep("#9dc183", 3),   # Biotic - Neighborhood BA
-    rep("white", 1),      # Response variable
-    rep("orange", 5),      # Abiotic variables
-    rep("gray", 3),      # Controls - logPrior and log0yr
-    rep("pink", 3)        # Interactions
+    rep("white", 1),     # Response variable
+    rep("orange", 5),    # Abiotic variables
+    rep("gray", 2),      # Controls - Log_Prior + Log_Recruits
+    rep("lightblue", 1),    # Trait - Myc_type
+    rep("pink", 3)       # Interactions
   ), outline = "black", color = "black",
-  fontsize = 5, fontcolor = "black"))
+  fontsize = 5, fontcolor = "black"),
+  edge_attrs = list(penwidth = 1, 
+                    # scale factor to adjust thickness
+    label = NA,fontsize = 0,fontcolor = "white",   
+    color = "black"))
 
 
+############################################
+############################################
 
-data(keeley)
+### calculations to get group-specific slopes (AM vs ECM) and put the multiplicative effects on the response scale.
+# reported estimates
+beta_AM  <- -0.0753
+beta_M_AM <-  0.0289  # Myc_type:AM_BA
 
-mod <- psem(
-  lm(rich ~ cover, data=keeley),
-  lm(cover ~ firesev, data=keeley),
-  lm(firesev ~ age, data=keeley),
-  data = keeley
-)
+beta_ECM <-  0.0780
+beta_M_ECM <- 0.0319  # Myc_type:ECM_BA
 
-plot(mod)
+# slopes
+slope_AM_for_AMseedling  <- beta_AM  + 0.5 * beta_M_AM
+slope_AM_for_ECMseedling <- beta_AM  - 0.5 * beta_M_AM
 
-### More customized plot
+slope_ECM_for_AMseedling  <- beta_ECM + 0.5 * beta_M_ECM
+slope_ECM_for_ECMseedling <- beta_ECM - 0.5 * beta_M_ECM
 
-plot(mod, node_attrs = list(
-  shape = "rectangle", color = "black",
-  fillcolor = "orange", #x = 3, y=1:4
-  ))
+slope_AM_for_AMseedling
+slope_AM_for_ECMseedling
+slope_ECM_for_AMseedling
+slope_ECM_for_ECMseedling
 
+# multiplicative effects:
+exp(slope_AM_for_AMseedling)   # multiplicative factor per unit AM_BA for AM seedlings
+exp(slope_AM_for_ECMseedling)  # for ECM seedlings
 
+### Using emmeans / emtrends on your fitted glmer m_seedlings to estimate slopes by Myc_type
 
+library(emmeans)
 
-## Fancier plot!
+# estimated slope of AM_BA for each Myc_type
+emtrends(m_seedlings, ~ Myc_type, var = "AM_BA")
 
-# 1. Extract all significant paths
-paths <- coefs(sem_mod)  # this gives you a data frame of all paths with estimates and p-values
+# same for ECM_BA
+emtrends(m_seedlings, ~ Myc_type, var = "ECM_BA")
 
-# 2. Create edge list (only significant paths if desired)
-edges <- paths[, c("Predictor", "Response", "Estimate")]
-#edges <- edges[edges$P.Value < 0.05, ]  # optional: filter by significance
+# predicted line for AM_BA across a range for each Myc_type:
+newdat <- with(dat, 
+               expand.grid(AM_BA = seq(min(AM_BA), max(AM_BA), length=30),
+                           ECM_BA = mean(ECM_BA, na.rm=TRUE),
+                           Myc_type = c(-0.5,0.5),
+                           Log_Prior = mean(Log_Prior, na.rm=TRUE),
+                           Log_Recruits = mean(Log_Recruits, na.rm=TRUE),
+                           Mean_PDSI = mean(Mean_PDSI, na.rm=TRUE),
+                           Min_Temp = mean(Min_Temp, na.rm=TRUE),
+                           Max_Temp = mean(Max_Temp, na.rm=TRUE),
+                           perc_Openness = mean(perc_Openness, na.rm=TRUE),
+                           Base_CEC = mean(Base_CEC, na.rm=TRUE),
+                           Sp = NA, survYear = NA, SiteID = NA))
 
-# 3. Make igraph object
-g <- graph_from_data_frame(edges, directed = TRUE)
+# get predictions (on response scale)
+pred <- predict(m_seedlings, newdata = newdat, re.form = NA, type = "response")
+newdat$pred <- pred
 
-# 4. Set node colors by type (you can define a vector)
-V(g)$color <- "lightblue"
-V(g)$size <- 30
-V(g)$label.cex <- 0.5
+library(ggplot2)
+ggplot(newdat, aes(x = AM_BA, y = pred, color = factor(Myc_type))) +
+  geom_line() +
+  scale_color_manual(values = c("-0.5"="blue","0.5"="red"),
+                     labels = c("ECM","AM"),
+                     name = "Myc type") +
+  labs(y = "Predicted Year_1_counts", x = "AM_BA (units)") +
+  theme_minimal()
 
-# 5. Edge width scaled by coefficient magnitude
-E(g)$width <- abs(E(g)$Estimate) * 5
-
-# 6. Plot
-plot(g, vertex.label.color = "black", layout = layout_as_tree(g))
-
-######## Maybe??
-
-# --- 1) Define nodes ---
-nodes <- create_node_df(
-  n = 12,
-  label = c("mean_pdsi", "mintemp", "maxtemp", "percOpen", "Base_CEC", 
-            "AM_15m", "ECM_15m", "consp_15m", 
-            "Sdlg_myc_bin", "logPrior", "log0yr",
-            "Year_1_counts"),
-  type = c(rep("Abiotic", 5), rep("Mediator", 3), 
-           "Trait", rep("Control", 2), "Outcome")
-)
-
-# --- 2) Define edges ---
-edges <- create_edge_df(
-  from = c(1,2,3,4,5, 1,2,3,4,5, 1,2,3,4,5, 6,7,8,9, 8,7,7, 1,2,3,4,5, 10,11),
-  to   = c(6,6,6,6,6, 7,7,7,7,7, 8,8,8,8,8, 12,12,12,12, 12,12,12, 12,12,12,12,12, 12,12)
-)
-
-# --- 3) Build graph ---
-graph <- create_graph(
-  nodes_df = nodes,
-  edges_df = edges,
-  directed = TRUE
-)
-
-# --- 4) Add colors to nodes ---
-graph <- graph %>%
-  set_node_attrs(node_attr = "color",
-                 values = c(rep("lightblue",5), rep("orange",3), "green", rep("purple",2), "red")) %>%
-  set_node_attrs(node_attr = "style", values = "filled")
-
-# --- 5) Render ---
-render_graph(graph, layout = "tree")
 
 
 
