@@ -90,31 +90,17 @@ colnames(dat) <- c("SiteID","Sp","Year_0_counts",
              "Base_CEC", "Min_Temp", "Max_Temp","Myc_type") 
 
 ## 1) Biotic mediator models (Abiotic → Biotic)
-# m_AM <- lmer(AM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-#                perc_Openness + Base_CEC + 
-#               (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
-# 
-# m_ECM <- lmer(ECM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-#                 perc_Openness + Base_CEC + 
-#                (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
-# 
-# m_CON <- lmer(Consp_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-#                 perc_Openness + Base_CEC + 
-#                 (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
+m_AM <- lmer(AM_BA ~ Mean_PDSI + Min_Temp + Max_Temp +
+               perc_Openness + Base_CEC +
+              (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
 
-####### Adding in Log_Recruits and Log_Prior
-m_AM <- lmer(AM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-               perc_Openness + Base_CEC + Log_Recruits + Log_Prior +
-               (1|Sp) + (1|survYear) + (1|SiteID), data = dat,
-             control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
-m_ECM <- lmer(ECM_BA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-               perc_Openness + Base_CEC + Log_Recruits + Log_Prior +
-               (1|Sp) + (1|survYear) + (1|SiteID), data = dat,
-             control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
-m_CON <- lmer(ConspBA ~ Mean_PDSI + Min_Temp + Max_Temp + 
-               perc_Openness + Base_CEC + Log_Recruits + Log_Prior +
-               (1|Sp) + (1|survYear) + (1|SiteID), data = dat,
-             control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+m_ECM <- lmer(ECM_BA ~ Mean_PDSI + Min_Temp + Max_Temp +
+                perc_Openness + Base_CEC +
+               (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
+
+m_CON <- lmer(ConspBA ~ Mean_PDSI + Min_Temp + Max_Temp +
+                perc_Openness + Base_CEC +
+                (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
 
 ## 2) Seedling outcome model (Biotic + Abiotic + Trait + Interactions + Controls)
 #### Outcome model?
@@ -143,7 +129,7 @@ summary(sem_mod, .progress = FALSE, .verbose = FALSE)
 #################### Plotting the SEM
 
 # Super basic plot
-plot(sem_mod, cex = 0.5)
+plot(sem_mod)
 
 ### More customized plot
 
@@ -151,17 +137,17 @@ plot(sem_mod, layout = "nicely",
      #  "circle", "tree", "kk", "fr","nicely", "neato",
      node_attrs = list(
   shape = "oval",
-  width = 0.65,  # shrink node width
+  width = 0.7,  # shrink node width
   height = 0.18, # shrink node height
   fillcolor = c(
     rep("#9dc183", 3),   # Biotic - Neighborhood BA
     rep("white", 1),     # Response variable
     rep("orange", 5),    # Abiotic variables
-    rep("gray", 2),      # Controls - Log_Prior + Log_Recruits
-    rep("lightblue", 1),    # Trait - Myc_type
+    rep("lightblue", 1),      # Trait - Myc_type 
+    rep("gray", 2),    # Controls - Log_Prior + Log_Recruits
     rep("pink", 3)       # Interactions
   ), outline = "black", color = "black",
-  fontsize = 5, fontcolor = "black"),
+  fontsize = 5.3, fontcolor = "black"),
   edge_attrs = list(penwidth = 1, 
                     # scale factor to adjust thickness
     label = NA,fontsize = 0,fontcolor = "white",   
