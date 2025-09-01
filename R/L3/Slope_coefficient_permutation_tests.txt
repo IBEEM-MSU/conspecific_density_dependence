@@ -9,24 +9,8 @@ Demography_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_de
 nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutations; it can take about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM at 999 for certain species.
 # Analyses are divided first by species, then by analysis type. Test A, Test B, Test C, and Test D correspond to the four panels of Fig. 3 in Eagar et al. 2024. Test A tests for conspecific density dependence based on seedling mycorrhizal type. Test B tests for density dependent effects related to conspecific density in interaction with the surrounding tree community's mycorrhizal dominance. Test C tests for density dependent effects related to conmycorrhizal density in interaciton with the surrounding tree community's mycorrhizal dominance. Test D tests a new hypothesis concerning density dependent effects structred by seedling mycorrhizal types in con- and heteromycorrhizal dominant communities.
 
-# Each of the four tests are done with both raw basal area values and proportional values.
-
-# We will also perform a permutation test modeling mortality responses to our abiotic variables: mean_pdsi + mintemp + maxtemp + percOpen + Base_CEC
-
-## Testing Panel D conceptual figure
-all_sp_15m3 <- glmer(Year_1_counts ~ consp_15m + Seedling_myc + 
-                       AM_15m + ECM_15m + 
-                       consp_15m:Seedling_myc:AM_15m + # Panel D
-                       consp_15m:Seedling_myc:ECM_15m + # Panel D
-                       logPrior + log0yr +
-                       (1|Site) + (1|survYear) + (1|Sp),
-                     family = poisson(link = "log"), data = allSpDat)
-summary(all_sp_15m3) 
-car::vif(all_sp_15m3) ## Some VIFs >10
-r.squaredGLMM(all_sp_15m3) 
-
 # Permutation test for all species together
-
+{
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 8 terms!!! to test in this model, so we'll need 8 dataframes to store the randomized F-value test results.
 	Rand_results_seedling_myc <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
@@ -169,12 +153,1001 @@ for(i in 1:nperm) # For loop for randomized F-values
 															r.squared = c("0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524"))
 
 	# write.csv(All_sp_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/All_sp_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
-	
-# Other species go here
+}	
 
+All_sp_GLM_slope_coefficient_modeling_results
+
+# AM species permutation test
+{
+AM_slope_modeling_data <- Demography_data %>%
+					filter(Seedling_myc == "AM")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	AM_slope_modeling_data <- AM_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- AM_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	AM_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+					   data = AM_slope_modeling_data)
+					
+	Rand_aov <- anova(AM_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations AMove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	AM_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+					   data = AM_slope_modeling_data)
+					
+	Obs_aov <- anova(AM_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(AM_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(AM_mod_BA_true)
+	
+	AM_sp_GLM_slope_coefficient_modeling_results <- data.frame(species = c("AM", "AM", "AM", "AM", "AM", "AM", "AM"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("-2.6963", "-1.3901", "0.6442", "19.3695", "1.5134", "0.5083", "0.3023"), 
+															std.error = c("1.3855", "0.5576", "0.3288", "0.2817", "0.3568", "0.7288", "0.4432"), 
+															t_value = c("-1.946", "-2.493", "1.959", "68.771", "4.241", "0.697", "0.682"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.140676", "0.140676", "0.140676", "0.140676", "0.140676", "0.140676", "0.140676"))
+
+	# write.csv(AM_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AM_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+AM_sp_GLM_slope_coefficient_modeling_results
+
+# ECM species permutation test
+{
+ECM_slope_modeling_data <- Demography_data %>%
+					filter(Seedling_myc == "ECM")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	ECM_slope_modeling_data <- ECM_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- ECM_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	ECM_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+					   data = ECM_slope_modeling_data)
+					
+	Rand_aov <- anova(ECM_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations ECMove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	ECM_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+					   data = ECM_slope_modeling_data)
+					
+	Obs_aov <- anova(ECM_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(ECM_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(ECM_mod_BA_true)
+	
+	ECM_sp_GLM_slope_coefficient_modeling_results <- data.frame(species = c("ECM", "ECM", "ECM", "ECM", "ECM", "ECM", "ECM"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("-0.42164", "0.03615", "0.47414", "20.45751", "4.77506", "-1.56672", "-0.21031"), 
+															std.error = c("2.22342", "1.18709", "0.79921", "1.04875", "1.90825", "1.08953", "0.69942"), 
+															t_value = c("-0.190", "0.030", "0.593", "19.507", "2.502", "-1.438", "-0.301"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.06353033", "0.06353033", "0.06353033", "0.06353033", "0.06353033", "0.06353033", "0.06353033"))
+
+	# write.csv(ECM_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/ECM_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+ECM_sp_GLM_slope_coefficient_modeling_results
+
+# Other species go here "ab"    "bc"    "bonro" "bs"    "iw"    "nro"   "rm"    "sm"    "wa" "wo" 
+
+# Am Beech permutation test
+{
+AB_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "ab")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	AB_slope_modeling_data <- AB_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- AB_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	ab_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = AB_slope_modeling_data)
+					
+	Rand_aov <- anova(ab_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	ab_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = AB_slope_modeling_data)
+					
+	Obs_aov <- anova(ab_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(ab_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(ab_mod_BA_true)
+	
+	AB_GLM_slope_coefficient_modeling_results <- data.frame(species = c("ab", "ab", "ab", "ab", "ab", "ab", "ab"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("20.4565", "-0.3856", "0.2352", "17.8053", "18.1290", "1.5086", "-10.5735"), 
+															std.error = c("18.0030", "3.3314", "1.6657", "2.5470", "6.1976", "9.4866", "5.2933"), 
+															t_value = c("1.136", "-0.116", "0.141", "6.991", "2.925", "0.159", "-1.998"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.07971325", "0.07971325", "0.07971325", "0.07971325", "0.07971325", "0.07971325", "0.07971325"))
+
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+AB_GLM_slope_coefficient_modeling_results
+
+# Black Cherry permutation test
+{
+BC_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "bc")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	BC_slope_modeling_data <- BC_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- BC_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	bc_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BC_slope_modeling_data)
+					
+	Rand_aov <- anova(bc_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations bcove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	bc_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BC_slope_modeling_data)
+					
+	Obs_aov <- anova(bc_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(bc_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(bc_mod_BA_true)
+	
+	BC_GLM_slope_coefficient_modeling_results <- data.frame(species = c("bc", "bc", "bc", "bc", "bc", "bc", "bc"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("-36.551", "-1.373", "-0.379", "14.980", "12.376", "13.147", "8.678"), 
+															std.error = c("18.909", "1.786", "1.271", "1.742", "2.316", "10.420", "6.099"), 
+															t_value = c("-1.933", "-0.768", "-0.298", "8.601", "5.344", "1.262", "1.423"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.04376699", "0.04376699", "0.04376699", "0.04376699", "0.04376699", "0.04376699", "0.04376699"))
+
+	# write.csv(BC_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/BC_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+BC_GLM_slope_coefficient_modeling_results
+
+# Black Oak/Red Oak hybrid/cryptic permutation test
+{
+BONRO_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "bonro")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	BONRO_slope_modeling_data <- BONRO_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- BONRO_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	bonro_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BONRO_slope_modeling_data)
+					
+	Rand_aov <- anova(bonro_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations bonroove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	bonro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BONRO_slope_modeling_data)
+					
+	Obs_aov <- anova(bonro_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(bonro_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(bonro_mod_BA_true)
+	
+	BONRO_GLM_slope_coefficient_modeling_results <- data.frame(species = c("bonro", "bonro", "bonro", "bonro", "bonro", "bonro", "bonro"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c(" -0.873", "9.470", "-6.039", "23.623", "3.015", "-4.326", "1.065"), 
+															std.error = c("8.703", "8.139", "6.427", "5.618", "10.160", "10.136", "3.665"), 
+															t_value = c("-0.100", "1.163", "-0.940", "4.205", "0.297", "-0.427", "0.291"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.05014673", "0.05014673", "0.05014673", "0.05014673", "0.05014673", "0.05014673", "0.05014673"))
+
+	# write.csv(BONRO_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/BONRO_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+BONRO_GLM_slope_coefficient_modeling_results
+
+# Basswood permutation test
+{
+BS_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "bs")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	BS_slope_modeling_data <- BS_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- BS_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	bs_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BS_slope_modeling_data)
+					
+	Rand_aov <- anova(bs_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations bsove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	bs_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BS_slope_modeling_data)
+					
+	Obs_aov <- anova(bs_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(bs_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(bs_mod_BA_true)
+	
+	BS_GLM_slope_coefficient_modeling_results <- data.frame(species = c("bs", "bs", "bs", "bs", "bs", "bs", "bs"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("-10.209", "2.484", "1.147", "21.817", "-4.597", "1.212", "2.941"), 
+															std.error = c("5.917", "2.920", "1.833", "1.833", "3.478", "3.036", "1.673"), 
+															t_value = c("-1.726", "0.851", "0.626", "11.900", "-1.321", "0.399", "1.758"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.1809216", "0.1809216", "0.1809216", "0.1809216", "0.1809216", "0.1809216", "0.1809216"))
+
+	# write.csv(BS_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/BS_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+BS_GLM_slope_coefficient_modeling_results
+
+# Ironwood permutation test
+{
+IW_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "iw")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	IW_slope_modeling_data <- IW_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- IW_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	iw_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = IW_slope_modeling_data)
+					
+	Rand_aov <- anova(iw_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations iwove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	iw_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = IW_slope_modeling_data)
+					
+	Obs_aov <- anova(iw_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(iw_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(iw_mod_BA_true)
+	
+	IW_GLM_slope_coefficient_modeling_results <- data.frame(species = c("iw", "iw", "iw", "iw", "iw", "iw", "iw"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("-735.95412", "-1.20210", "0.09158", "21.70417", "2.66558", "305.43453", "257.53997"), 
+															std.error = c("362.03699", "2.49972", "1.73290", "4.80082", "5.74275", "183.76129", "125.46559"), 
+															t_value = c("-2.033", "-0.481", "0.053", "4.521", "0.464", "1.662", "2.053"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.02530639", "0.02530639", "0.02530639", "0.02530639", "0.02530639", "0.02530639", "0.02530639"))
+
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+IW_GLM_slope_coefficient_modeling_results
 
 # Northern Red Oak permutation test
-
+{
 NRO_slope_modeling_data <- Demography_data %>%
 					filter(Sp == "nro")
 
@@ -219,7 +1192,7 @@ for(i in 1:nperm) # For loop for randomized F-values
 					
 }
 
-	# LM test with real data. We will compare these F-values to those from the permutations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+	# LM test with real data. We will compare these F-values to those from the permutations above by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
 			
 	nro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
                        AM_15m + ECM_15m + 
@@ -303,10 +1276,721 @@ for(i in 1:nperm) # For loop for randomized F-values
 	NRO_GLM_slope_coefficient_modeling_results <- data.frame(species = c("nro", "nro", "nro", "nro", "nro", "nro", "nro"), 
 															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
 															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("1.8210", "1.6555", "5.9248", "20.0173", "-0.2753", "-2.6516", "-1.4245"), 
+															std.error = c("3.8400", "2.9875", "1.9680", "1.7778", "3.5615", "1.8348", "1.0704"), 
+															t_value = c("0.474", "0.554", "3.011", "11.260", "-0.077", "-1.445", "-1.331"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.08797253", "0.08797253", "0.08797253", "0.08797253", "0.08797253", "0.08797253", "0.08797253"))
+
+	# write.csv(NRO_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/NRO_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+NRO_GLM_slope_coefficient_modeling_results
+
+# Red Maple permutation test
+{
+RM_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "rm")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	RM_slope_modeling_data <- RM_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- RM_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	rm_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = RM_slope_modeling_data)
+					
+	Rand_aov <- anova(rm_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations rmove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	rm_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = RM_slope_modeling_data)
+					
+	Obs_aov <- anova(rm_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(rm_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(rm_mod_BA_true)
+	
+	RM_GLM_slope_coefficient_modeling_results <- data.frame(species = c("rm", "rm", "rm", "rm", "rm", "rm", "rm"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("-3.2344", "-2.4341", "0.8384", "24.0490", "1.8084", "0.7081", "-0.4502"), 
+															std.error = c("2.7210", "0.9078", "0.5018", "0.4131", "0.4710", "1.3734", "0.9780"), 
+															t_value = c("-1.189", "-2.681", "1.671", "58.221", "3.839", "0.516", "-0.460"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.1836865", "0.1836865", "0.1836865", "0.1836865", "0.1836865", "0.1836865", "0.1836865"))
+
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+RM_GLM_slope_coefficient_modeling_results
+
+# Sugar Maple permutation test
+{
+SM_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "sm")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	SM_slope_modeling_data <- SM_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- SM_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	sm_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = SM_slope_modeling_data)
+					
+	Rand_aov <- anova(sm_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations smove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	sm_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = SM_slope_modeling_data)
+					
+	Obs_aov <- anova(sm_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(sm_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(sm_mod_BA_true)
+	
+	SM_GLM_slope_coefficient_modeling_results <- data.frame(species = c("sm", "sm", "sm", "sm", "sm", "sm", "sm"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("13.5689", "5.1364", "2.9874", "20.5468", "2.2080", "-6.6720", "-3.0861"), 
+															std.error = c("3.7310", "1.7865", "1.0794", "0.6003", "1.1875", "1.7335", "1.1958"), 
+															t_value = c("3.637", "2.875", "2.768", "34.227", "1.859", "-3.849", "-2.581"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.2265119", "0.2265119", "0.2265119", "0.2265119", "0.2265119", "0.2265119", "0.2265119"))
+
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+SM_GLM_slope_coefficient_modeling_results
+
+# White Ash permutation test
+{
+WA_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "wa")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	WA_slope_modeling_data <- WA_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- WA_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	wa_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = WA_slope_modeling_data)
+					
+	Rand_aov <- anova(wa_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations waove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	wa_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = WA_slope_modeling_data)
+					
+	Obs_aov <- anova(wa_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(wa_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(wa_mod_BA_true)
+	
+	WA_GLM_slope_coefficient_modeling_results <- data.frame(species = c("wa", "wa", "wa", "wa", "wa", "wa", "wa"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("5.4019", "0.6504", "1.5547", "12.9185", "0.3777", "-3.0096", "-1.8481"), 
+															std.error = c("5.6958", "1.1083", "0.8086", "0.7597", "0.8707", "2.2517", "2.5463"), 
+															t_value = c("0.948", "0.587", "1.923", "17.006", "0.434", "-1.337", "-0.726"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.09563025", "0.09563025", "0.09563025", "0.09563025", "0.09563025", "0.09563025", "0.09563025"))
+
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+WA_GLM_slope_coefficient_modeling_results
+
+# White Oak permutation test
+{
+WO_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "wo")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	WO_slope_modeling_data <- WO_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- WO_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	wo_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = WO_slope_modeling_data)
+					
+	Rand_aov <- anova(wo_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations woove by ranking their magnitude. If our observations are not t_valueally significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	wo_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = WO_slope_modeling_data)
+					
+	Obs_aov <- anova(wo_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(wo_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(wo_mod_BA_true)
+	
+	WO_GLM_slope_coefficient_modeling_results <- data.frame(species = c("wo", "wo", "wo", "wo", "wo", "wo", "wo"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
+															estimate = c("25.346", "-13.791", "8.541", "20.543", "-2.510", "1.605", "-16.908"), 
+															std.error = c("12.442", "8.897", "4.917", "3.196", "4.553", "15.105", "6.367"), 
+															t_value = c("2.037", "-1.550", "1.737", "6.428", "-0.551", "0.106", "-2.656"), 
+															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
+															r.squared = c("0.07794823", "0.07794823", "0.07794823", "0.07794823", "0.07794823", "0.07794823", "0.07794823"))
+
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
+
+WO_GLM_slope_coefficient_modeling_results
+
+Combined_GLM_slope_coefficient_modeling_results <- rbind(All_sp_GLM_slope_coefficient_modeling_results, AM_sp_GLM_slope_coefficient_modeling_results, ECM_sp_GLM_slope_coefficient_modeling_results, AB_GLM_slope_coefficient_modeling_results, BC_GLM_slope_coefficient_modeling_results, BONRO_GLM_slope_coefficient_modeling_results, BS_GLM_slope_coefficient_modeling_results, IW_GLM_slope_coefficient_modeling_results, NRO_GLM_slope_coefficient_modeling_results, RM_GLM_slope_coefficient_modeling_results, SM_GLM_slope_coefficient_modeling_results, WA_GLM_slope_coefficient_modeling_results)
+
+write.csv(Combined_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/Combined_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+
+
+# Template permutation test w/ BONRO to sub out
+{
+BONRO_slope_modeling_data <- Demography_data %>%
+					filter(Sp == "bonro")
+
+Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
+	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
+	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
+
+for(i in 1:nperm) # For loop for randomized F-values
+{
+
+	BONRO_slope_modeling_data <- BONRO_slope_modeling_data %>%
+					group_by(Cohort.Year, SiteID) %>%
+					mutate(Rand.GLM.Slope.Estimate = sample(GLM.Slope.Estimate, n())) # This randomizes the slope coefficients for each quadrat within a site and cohort year without replacing values.
+
+		# Test_data <- BONRO_slope_modeling_data %>%
+							# filter(Cohort.Year == 2002, SiteID == 3) %>%
+							# select(GLM.Slope.Estimate, Rand.GLM.Slope.Estimate)
+			
+			# as.data.frame(Test_data)
+	
+	bonro_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BONRO_slope_modeling_data)
+					
+	Rand_aov <- anova(bonro_mod_BA_rand) # Save results to store F-values below
+					
+		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
+		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
+		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
+		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
+		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
+		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
+					
+}
+
+	# LM test with real data. We will compare these F-values to those from the permutations bonroove by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
+			
+	bonro_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m +  
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel D
+                       consp_15m:ECM_15m + # Panel D
+                       log0yr + logPrior +
+                       (1|SiteID) + (1|Cohort.Year), 
+					   data = BONRO_slope_modeling_data)
+					
+	Obs_aov <- anova(bonro_mod_BA_true)
+
+		Obs_results_con_den <- as.vector(Obs_aov[1,5])
+			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
+			Ranks_con_den <- rank(All_results_con_den)
+			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+			
+		Obs_results_AM_den <- as.vector(Obs_aov[2,5])
+			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
+			Ranks_AM_den <- rank(All_results_AM_den)
+			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+			
+		Obs_results_ECM_den <- as.vector(Obs_aov[3,5])
+			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
+			Ranks_ECM_den <- rank(All_results_ECM_den)
+			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		
+		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
+			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			Ranks_con_seedlings <- rank(All_results_con_seedlings)
+			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
+			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			Ranks_other_seedlings <- rank(All_results_other_seedlings)
+			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+			
+		Obs_results_con_den_AM_den <- as.vector(Obs_aov[6,5])
+			All_results_con_den_AM_den <- rbind(Rand_results_con_den_AM_den, Obs_results_con_den_AM_den)
+			Ranks_con_den_AM_den <- rank(All_results_con_den_AM_den)
+			P_values_con_den_AM_den <- 1-Ranks_con_den_AM_den[nperm+1]/(nperm+1)	
+			
+		Obs_results_con_den_ECM_den <- as.vector(Obs_aov[7,5])
+			All_results_con_den_ECM_den <- rbind(Rand_results_con_den_ECM_den, Obs_results_con_den_ECM_den)
+			Ranks_con_den_ECM_den <- rank(All_results_con_den_ECM_den)
+			P_values_con_den_ECM_den <- 1-Ranks_con_den_ECM_den[nperm+1]/(nperm+1)
+
+	P_values_con_den
+		hist(All_results_con_den) # vs
+		Obs_results_con_den
+		
+	P_values_AM_den
+		hist(All_results_AM_den) # vs
+		Obs_results_AM_den
+		
+	P_values_ECM_den
+		hist(All_results_ECM_den) # vs
+		Obs_results_ECM_den
+
+	P_values_con_seedlings
+		hist(All_results_con_seedlings)
+		Obs_results_con_seedlings
+		
+	P_values_other_seedlings
+		hist(All_results_other_seedlings)
+		Obs_results_other_seedlings
+
+	P_values_con_den_AM_den
+		hist(All_results_con_den_AM_den)
+		Obs_results_con_den_AM_den
+
+	P_values_con_den_ECM_den
+		hist(All_results_con_den_ECM_den)
+		Obs_results_con_den_ECM_den
+		
+	r.squaredGLMM(bonro_mod_BA_true)
+	
+	# Store modeling results & export for plotting.
+
+	summary(bonro_mod_BA_true)
+	
+	BONRO_GLM_slope_coefficient_modeling_results <- data.frame(species = c("bonro", "bonro", "bonro", "bonro", "bonro", "bonro", "bonro"), 
+															term = c("Conspecific_BA", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density",
+															"Conspecific_BA_AM_den", "Conspecific_BA_ECM_den"), 
 															estimate = c("", "", "", "", "", "", ""), 
 															std.error = c("", "", "", "", "", "", ""), 
 															statistic = c("", "", "", "", "", "", ""), 
 															p.value = c(P_values_con_den, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_AM_den, P_values_con_den_ECM_den),
-															r.squared = c("", "", "", "", "", "", "", ""))
+															r.squared = c("", "", "", "", "", "", ""))
 
-	# write.csv(NRO_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/NRO_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+	# write.csv(AB_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L2/AB_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
+}
