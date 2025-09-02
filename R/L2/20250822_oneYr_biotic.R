@@ -2077,6 +2077,71 @@ ggplot(fixef_df_ECM, aes(x = estimate, y = y_pos)) +
         axis.text.x = element_text(size = 12, color = "black"))
 
 
+################################################
+##### Simple figure illustrating one-year survivorship
+library(ggplot2)
+library(dplyr)
 
+# Add survivorship column, dropping cases where Year_0_counts == 0
+allSpDat <- allSpDat %>%
+  mutate(survivorship = ifelse(Year_0_counts > 0,
+                               Year_1_counts / Year_0_counts,
+                               NA))
+
+# Example lookup tables (fill in with your actual names)
+species_names <- c("bonro" = "Quercus velutina",
+                   "wo" = "Quercus alba",
+                   "nro" = "Quercus rubra",
+  "rm" = "Acer rubrum",
+  "bc" = "Prunus serotina",
+  "ab" = "Fagus grandifolia",
+  "sm" = "Acer saccharum",
+  "iw" = "Ostrya virginiana",
+  "wa" = "Fraxinus americana",
+  "bs" = "Tilia americana")
+
+site_names <- c("1" = "49.01",
+  "2" = "59.12",
+  "3" = "8.21",
+  "4" = "39.21",
+  "5" = "16.35",
+  "6" = "60.35",
+  "7" = "7.40",
+  "8" = "40.40",
+  "9" = "21.43",
+  "10" = "25.43",
+  "11" = "6.45",
+  "12" = "24.45")
+
+# Compute site means
+site_means <- allSpDat %>%
+  group_by(SiteID, Sp) %>%
+  summarise(mean_surv = mean(survivorship, na.rm = TRUE), .groups = "drop") %>%
+  mutate(
+    Sp = recode(Sp, !!!species_names),
+    SiteID = recode(as.character(SiteID), !!!site_names),
+    # Set factor levels to preserve the order in your lookup vectors
+    Sp = factor(Sp, levels = species_names),
+    SiteID = factor(SiteID, levels = site_names)
+  )
+
+# Create italic labels for species
+species_labels <- setNames(
+  lapply(species_names, function(x) bquote(italic(.(x)))),
+  species_names
+)
+
+# Plot heatmap with italic species names
+ggplot(site_means, aes(x = SiteID, y = Sp, fill = mean_surv)) +
+  geom_tile(color = "white") +
+  scale_fill_viridis_c(option = "cividis", na.value = "grey90") +
+  scale_y_discrete(labels = species_labels) +
+  labs(x = "Site", y = "", fill = "Mean\nsurvivorship") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1,
+                  size = 11, color = "black"),
+              axis.text.y = element_text(size = 12, color = "black"),
+        axis.title.x = element_text(size = 12),
+        legend.position = "right")
 
 
