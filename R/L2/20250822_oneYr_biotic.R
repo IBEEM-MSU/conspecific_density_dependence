@@ -393,7 +393,7 @@ extract_fixef <- function(model, model_type) {
       component = case_when(
         term == "consp_15m" ~ "Conspecific BA",
         term == "AM_15m" ~ "AM BA",
-        term == "ECM_15m" ~ "EM BA",
+        term == "ECM_15m" ~ "ECM BA",
         term == "consp_15m:AM_15m" ~ "Consp. BA:AM BA",
         term == "consp_15m:ECM_15m" ~ "Consp. BA:ECM BA",
         term == "logPrior" ~ "Log(Prior Density)",
@@ -404,7 +404,7 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = factor(component, levels = c(
         "Conspecific BA", "AM BA", 
-        "EM BA", "Consp. BA:AM BA", "Consp. BA:ECM BA",
+        "ECM BA", "Consp. BA:AM BA", "Consp. BA:ECM BA",
         "Log(Recruit Density)", "Log(Prior Density)")))
 }
 
@@ -417,7 +417,7 @@ fixef_df <- bind_rows(fixef_AM, fixef_ECM)
 
 # Define desired vertical order
 desired_order <- c("Conspecific BA", "AM BA", 
-                   "EM BA", "Consp. BA:AM BA", "Consp. BA:ECM BA",
+                   "ECM BA", "Consp. BA:AM BA", "Consp. BA:ECM BA",
                    "Log(Recruit Density)", "Log(Prior Density)")
 
 # --- prepare data
@@ -1077,18 +1077,41 @@ desired_order <- c("Conspecific BA", "AM BA",
                    "ECM BA", "Log(Recruit Density)", 
                    "Log(Prior Density)")
 
-## Create a color vector with red shades for AM and blue shades for ECM 
-species_cols <- c(ab    = "#C6E0EB", 
-  bonro = "#7FB8D0",iw    = "#4A90C2",
-  nro   = "#1F5BA1",wo    = "#143D7A", 
-  bc    = "#FDCBC0",  rm    = "#FB8A74",
-  sm    = "#E63E2D", wa    = "#991F1F")
+## Species labels (italics, ordered alphabetically within AM/ECM)
+species_labels <- c(
+  # ECM
+  ab    = expression(italic("Fagus grandifolia")),
+  iw    = expression(italic("Ostrya virginiana")),
+  wo    = expression(italic("Quercus alba")),
+  nro   = expression(italic("Quercus rubra")),
+  bonro = expression(italic("Quercus velutina")),
+  # AM
+  rm    = expression(italic("Acer rubrum")),
+  sm    = expression(italic("Acer saccharum")),
+  wa    = expression(italic("Fraxinus americana")),
+  bc    = expression(italic("Prunus serotina"))
+)
 
-## Create a size vector for species to scale points by mean percent ba 
+## Colors matched to alphabetical order
+species_cols <- c(
+  # ECM (alphabetical by Latin name)
+  ab    = "#C6E0EB",   # Fagus grandifolia
+  iw    = "#4A90C2",   # Ostrya virginiana
+  wo    = "#143D7A",   # Quercus alba
+  nro   = "#1F5BA1",   # Quercus rubra
+  bonro = "#7FB8D0",   # Quercus velutina
+  # AM (alphabetical by Latin name)
+  rm    = "#FB8A74",   # Acer rubrum
+  sm    = "#E63E2D",   # Acer saccharum
+  wa    = "#991F1F",   # Fraxinus americana
+  bc    = "#FDCBC0"    # Prunus serotina
+)
+
+## Sizes for percent BA
 species_sizes <- data.frame(species = c("ab", "bonro", "iw", "nro", 
-                          "wo", "bc", "rm", "sm", "wa"), 
-                          percBA = c(2.43, 15.20, 0.11, 29.7, 10.30, 
-                                     1.03, 9.40, 15.80, 1.82))
+                                        "wo", "bc", "rm", "sm", "wa"), 
+                            percBA = c(2.43, 15.20, 0.11, 29.7, 10.30, 
+                                       1.03, 9.40, 15.80, 1.82))
 
 # Representative % BA values for legend
 legend_percBA <- c(1, 10, 20)
@@ -1098,91 +1121,14 @@ legend_percBA <- c(1, 10, 20)
 fixef_df_plot <- fixef_df %>%
   filter(estimate > -5) %>%  # exclude extreme outliers
   mutate(component = factor(component, levels = desired_order),
-    # tidy up Model and Significant
-    Model = factor(Model, levels = c("ab", "bonro", "iw",
-                                     "nro", "wo", 
-                                     "bc", "rm", "sm", "wa")),
-    Significant = factor(Significant, levels = c("yes", "no")),
-    # assign Myc_type based on Model
-    Myc_type = case_when(Model %in% c("rm", "sm", "bc", "wa") ~ "AM",
-                         TRUE ~ "ECM"),
-    # percent BA per species
-    percBA = species_sizes$percBA[match(Model, species_sizes$species)],
-    # color for species
-    color_col = species_cols[Model],
-    # species-specific vertical offset
-    y_offset = case_when(
-      Model == "rm" ~ 0.20,
-      Model == "bc" ~ 0.15,
-      Model == "sm" ~ 0.10,
-      Model == "wa" ~ 0.05,
-      Model == "ab" ~ 0,
-      Model == "nro" ~ -0.05,
-      Model == "bonro" ~ -0.10,
-      Model == "wo" ~ -0.15,
-      Model == "iw" ~ -0.20,
-      TRUE ~ 0),
-    # final y-position for plotting
-    y_pos = as.numeric(component) + y_offset,
-    # fill color: species color if significant, white otherwise
-    fill_col = ifelse(Significant == "yes", 
-                      species_cols[Model], "white"))
-
-#### Plot
-ggplot(fixef_df_plot, aes(x = estimate, y = y_pos)) +
-  # Reference line at zero
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars colored by species
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error,
-                     color = Model), height = 0.05) +
-  # Points: shape by Myc_type, fill by significance, outline by species
-  geom_point(aes(shape = Myc_type, fill = fill_col,
-                 color = Model, size = log1p(percBA)),
-             stroke = 1) +
-  # Y-axis with desired top-to-bottom order
-  scale_y_continuous(breaks = 1:length(levels(fixef_df_plot$component)),
-    labels = levels(fixef_df_plot$component),
-    trans = "reverse"   # ensures top-to-bottom ordering visually
-  ) +
-  # Shape legend for mycorrhizal type
-  scale_shape_manual(name = "Mycorrhizal\nType", 
-    values = c("AM" = 24, "ECM" = 22) ) +
-  # Fill is used only for significance; no separate legend
-  scale_fill_identity(guide = "none") +
-  # Species colors and legend
-  scale_color_manual(
-    name = "Species", values = species_cols) +
-  # Size scale with interpretable legend
-  scale_size(range = c(2, 6),
-    breaks = log1p(legend_percBA),          # positions in plot scale
-    labels = paste0(legend_percBA, "%"),   # human-readable labels
-    name = "% BA" ) +
-  # Labels & theme
-  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "right",
-    axis.text.y = element_text(size = 12, color = "black"),
-    axis.text.x = element_text(size = 12, color = "black"))
-
-###### AM vs EM only - Prepare plotting data
-fixef_df_plot <- fixef_df %>%
-  filter(estimate > -5) %>%  # exclude extreme outliers
-  mutate(component = factor(component, levels = desired_order),
-         # tidy up Model and Significant
-         Model = factor(Model, levels = c("ab", "bonro", "iw",
-                                          "nro", "wo", 
-                                          "bc", "rm", "sm", "wa")),
+         # species legend order (alphabetical within ECM/AM)
+         Model = factor(Model, levels = c("ab","iw","wo","nro","bonro",
+                                          "rm","sm","wa","bc")),
          Significant = factor(Significant, levels = c("yes", "no")),
-         # assign Myc_type based on Model
          Myc_type = case_when(Model %in% c("rm", "sm", "bc", "wa") ~ "AM",
                               TRUE ~ "ECM"),
-         # percent BA per species
-         percBA = species_sizes$percBA[match(Model, 
-                                    species_sizes$species)],
-         # color for species
+         percBA = species_sizes$percBA[match(Model, species_sizes$species)],
          color_col = species_cols[Model],
-         # species-specific vertical offset
          y_offset = case_when(
            Model == "rm" ~ 0.20,
            Model == "bc" ~ 0.15,
@@ -1194,46 +1140,59 @@ fixef_df_plot <- fixef_df %>%
            Model == "wo" ~ -0.15,
            Model == "iw" ~ -0.20,
            TRUE ~ 0),
-         # final y-position for plotting
          y_pos = as.numeric(component) + y_offset,
-         # fill color: species color if significant, white otherwise
          fill_col = ifelse(Significant == "yes", 
                            species_cols[Model], "white"))
+
+#### Plot - All species
+ggplot(fixef_df_plot, aes(x = estimate, y = y_pos)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
+  geom_errorbarh(aes(xmin = estimate - std.error, 
+                     xmax = estimate + std.error,
+                     color = Model), height = 0.05) +
+  geom_point(aes(shape = Myc_type, fill = fill_col,
+                 color = Model, size = log1p(percBA)), stroke = 1) +
+  scale_y_continuous(breaks = 1:length(levels(fixef_df_plot$component)),
+                     labels = levels(fixef_df_plot$component),
+                     trans = "reverse") +
+  scale_shape_manual(name = "Mycorrhizal\nType", 
+                     values = c("AM" = 24, "ECM" = 22)) +
+  scale_fill_identity(guide = "none") +
+  scale_color_manual(
+    name = "Species", values = species_cols, labels = species_labels) +
+  scale_size(range = c(2, 6),
+             breaks = log1p(legend_percBA),
+             labels = paste0(legend_percBA, "%"),
+             name = "% BA" ) +
+  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "right",
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 12, color = "black"))
 
 ##### Filter to just include AM
 fixef_df_AM <- filter(fixef_df_plot, Myc_type == "AM")
 
 ##### Plot - AM
 ggplot(fixef_df_AM, aes(x = estimate, y = y_pos)) +
-  # Reference line at zero
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars colored by species
   geom_errorbarh(aes(xmin = estimate - std.error, 
                      xmax = estimate + std.error,
                      color = Model), height = 0.05) +
-  # Points: shape by Myc_type, fill by significance, outline by species
   geom_point(aes(shape = Myc_type, fill = fill_col,
-                 color = Model, size = log1p(percBA)),
-             stroke = 1) +
-  # Y-axis with desired top-to-bottom order
+                 color = Model, size = log1p(percBA)), stroke = 1) +
   scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
                      labels = levels(fixef_df$component),
-                     trans = "reverse"   # ensures top-to-bottom ordering visually
-  ) +
-  # Shape legend for mycorrhizal type
+                     trans = "reverse") +
   scale_shape_manual(name = "Mycorrhizal\nType", 
-                     values = c("AM" = 24, "ECM" = 22) ) +
-  # Fill is used only for significance; no separate legend
+                     values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_identity(guide = "none") +
-  # Species colors and legend
   scale_color_manual(
-    name = "Species", values = species_cols) +
-  # Size scale with interpretable legend
+    name = "Species", values = species_cols, labels = species_labels) +
   scale_size(range = c(2, 6),
-             breaks = log1p(legend_percBA),          # positions in plot scale
-             labels = paste0(legend_percBA, "%"),   # human-readable labels
+             breaks = log1p(legend_percBA),
+             labels = paste0(legend_percBA, "%"),
              name = "% BA" ) +
-  # Labels & theme
   labs(x = "Effect size ± SE (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
@@ -1245,35 +1204,24 @@ fixef_df_ECM <- filter(fixef_df_plot, Myc_type == "ECM")
 
 ##### Plot - ECM
 ggplot(fixef_df_ECM, aes(x = estimate, y = y_pos)) +
-  # Reference line at zero
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars colored by species
   geom_errorbarh(aes(xmin = estimate - std.error, 
                      xmax = estimate + std.error,
                      color = Model), height = 0.05) +
-  # Points: shape by Myc_type, fill by significance, outline by species
   geom_point(aes(shape = Myc_type, fill = fill_col,
-                 color = Model, size = log1p(percBA)),
-             stroke = 1) +
-  # Y-axis with desired top-to-bottom order
+                 color = Model, size = log1p(percBA)), stroke = 1) +
   scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
                      labels = levels(fixef_df$component),
-                     trans = "reverse"   # ensures top-to-bottom ordering visually
-  ) +
-  # Shape legend for mycorrhizal type
+                     trans = "reverse") +
   scale_shape_manual(name = "Mycorrhizal\nType", 
-                     values = c("AM" = 24, "ECM" = 22) ) +
-  # Fill is used only for significance; no separate legend
+                     values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_identity(guide = "none") +
-  # Species colors and legend
   scale_color_manual(
-    name = "Species", values = species_cols) +
-  # Size scale with interpretable legend
+    name = "Species", values = species_cols, labels = species_labels) +
   scale_size(range = c(2, 6),
-             breaks = log1p(legend_percBA),          # positions in plot scale
-             labels = paste0(legend_percBA, "%"),   # human-readable labels
+             breaks = log1p(legend_percBA),
+             labels = paste0(legend_percBA, "%"),
              name = "% BA" ) +
-  # Labels & theme
   labs(x = "Effect size ± SE (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
@@ -1843,12 +1791,11 @@ extract_fixef <- function(model, model_type) {
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
-      Significant = ifelse(!is.na(p.value) & 
-                             p.value <= 0.05, "yes", "no"),
+      Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"),
       Model = model_type) %>%
     mutate(
       component = factor(component, levels = c(
-        "Prop. Conspecific BA", "Prop. AM BA", 
+        "Prop. Conspecific BA", "Prop. AM BA",
         "Log(Recruit Density)", "Log(Prior Density)")))
 }
 
@@ -1858,8 +1805,8 @@ fixef_SM  <- extract_fixef(sm_prop1, "sm")
 fixef_BC  <- extract_fixef(bc_prop1, "bc")
 fixef_WA  <- extract_fixef(wa_prop1, "wa")
 fixef_AB  <- extract_fixef(ab_prop1, "ab")
-fixef_NRO  <- extract_fixef(nro_prop1, "nro")
-fixef_BONRO  <- extract_fixef(bonro_prop1, "bonro")
+fixef_NRO <- extract_fixef(nro_prop1, "nro")
+fixef_BONRO <- extract_fixef(bonro_prop1, "bonro")
 fixef_WO  <- extract_fixef(wo_prop1, "wo")
 fixef_IW  <- extract_fixef(iw_prop1, "iw")
 
@@ -1871,16 +1818,40 @@ fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
 # Define desired vertical order
 desired_order <- c("Prop. Conspecific BA", 
                    "Prop. AM BA", 
-                   "Log(Recruit Density)", "Log(Prior Density)")
+                   "Log(Recruit Density)", 
+                   "Log(Prior Density)")
 
-## Create a color vector with red shades for AM and blue shades for ECM 
-species_cols <- c(ab    = "#C6E0EB", 
-                  bonro = "#7FB8D0",iw    = "#4A90C2",
-                  nro   = "#1F5BA1",wo    = "#143D7A", 
-                  bc    = "#FDCBC0",  rm    = "#FB8A74",
-                  sm    = "#E63E2D", wa    = "#991F1F")
+## Species labels (italics, alphabetized within AM & ECM)
+species_labels <- c(
+  # ECM
+  ab    = expression(italic("Fagus grandifolia")),
+  iw    = expression(italic("Ostrya virginiana")),
+  wo    = expression(italic("Quercus alba")),
+  nro   = expression(italic("Quercus rubra")),
+  bonro = expression(italic("Quercus velutina")),
+  # AM
+  rm    = expression(italic("Acer rubrum")),
+  sm    = expression(italic("Acer saccharum")),
+  wa    = expression(italic("Fraxinus americana")),
+  bc    = expression(italic("Prunus serotina"))
+)
 
-## Create a size vector for species to scale points by mean percent ba 
+## Species colors (alphabetical within AM & ECM)
+species_cols <- c(
+  # ECM
+  ab    = "#C6E0EB",   # Fagus grandifolia
+  iw    = "#4A90C2",   # Ostrya virginiana
+  wo    = "#143D7A",   # Quercus alba
+  nro   = "#1F5BA1",   # Quercus rubra
+  bonro = "#7FB8D0",   # Quercus velutina
+  # AM
+  rm    = "#FB8A74",   # Acer rubrum
+  sm    = "#E63E2D",   # Acer saccharum
+  wa    = "#991F1F",   # Fraxinus americana
+  bc    = "#FDCBC0"    # Prunus serotina
+)
+
+## Mean % basal area
 species_sizes <- data.frame(species = c("ab", "bonro", "iw", "nro", 
                                         "wo", "bc", "rm", "sm", "wa"), 
                             percBA = c(2.43, 15.20, 0.11, 29.7, 10.30, 
@@ -1890,23 +1861,16 @@ species_sizes <- data.frame(species = c("ab", "bonro", "iw", "nro",
 legend_percBA <- c(1, 10, 20)
 
 ###### Both AM and ECM
-# --- Prepare plotting data
 fixef_df_plot <- fixef_df %>%
-  filter(estimate > -5) %>%  # exclude extreme outliers
+  filter(estimate > -5) %>%
   mutate(component = factor(component, levels = desired_order),
-         # tidy up Model and Significant
-         Model = factor(Model, levels = c("ab", "bonro", "iw",
-                                          "nro", "wo", 
-                                          "bc", "rm", "sm", "wa")),
+         Model = factor(Model, levels = c("ab","iw","wo","nro","bonro",
+                                          "rm","sm","wa","bc")),
          Significant = factor(Significant, levels = c("yes", "no")),
-         # assign Myc_type based on Model
-         Myc_type = case_when(Model %in% c("rm", "sm", "bc", "wa") ~ "AM",
+         Myc_type = case_when(Model %in% c("rm","sm","bc","wa") ~ "AM",
                               TRUE ~ "ECM"),
-         # percent BA per species
          percBA = species_sizes$percBA[match(Model, species_sizes$species)],
-         # color for species
          color_col = species_cols[Model],
-         # species-specific vertical offset
          y_offset = case_when(
            Model == "rm" ~ 0.20,
            Model == "bc" ~ 0.15,
@@ -1918,158 +1882,82 @@ fixef_df_plot <- fixef_df %>%
            Model == "wo" ~ -0.15,
            Model == "iw" ~ -0.20,
            TRUE ~ 0),
-         # final y-position for plotting
          y_pos = as.numeric(component) + y_offset,
-         # fill color: species color if significant, white otherwise
-         fill_col = ifelse(Significant == "yes", 
-                           species_cols[Model], "white"))
+         fill_col = ifelse(Significant == "yes", species_cols[Model], "white"))
 
-#### Plot
+#### Plot all species
 ggplot(fixef_df_plot, aes(x = estimate, y = y_pos)) +
-  # Reference line at zero
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars colored by species
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error,
+  geom_errorbarh(aes(xmin = estimate - std.error, xmax = estimate + std.error,
                      color = Model), height = 0.05) +
-  # Points: shape by Myc_type, fill by significance, outline by species
   geom_point(aes(shape = Myc_type, fill = fill_col,
-                 color = Model, size = log1p(percBA)),
-             stroke = 1) +
-  # Y-axis with desired top-to-bottom order
+                 color = Model, size = log1p(percBA)), stroke = 1) +
   scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
                      labels = levels(fixef_df$component),
-                     trans = "reverse"   # ensures top-to-bottom ordering visually
-  ) +
-  # Shape legend for mycorrhizal type
-  scale_shape_manual(name = "Mycorrhizal\nType", 
-                     values = c("AM" = 24, "ECM" = 22) ) +
-  # Fill is used only for significance; no separate legend
+                     trans = "reverse") +
+  scale_shape_manual(name = "Mycorrhizal\nType",
+                     values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_identity(guide = "none") +
-  # Species colors and legend
-  scale_color_manual(
-    name = "Species", values = species_cols) +
-  # Size scale with interpretable legend
+  scale_color_manual(name = "Species", values = species_cols,
+                     labels = species_labels) +
   scale_size(range = c(2, 6),
-             breaks = log1p(legend_percBA),          # positions in plot scale
-             labels = paste0(legend_percBA, "%"),   # human-readable labels
-             name = "% BA" ) +
-  # Labels & theme
+             breaks = log1p(legend_percBA),
+             labels = paste0(legend_percBA, "%"),
+             name = "% BA") +
   labs(x = "Effect size ± SE (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
         axis.text.y = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 12, color = "black"))
 
-###### AM vs EM only - Prepare plotting data
-fixef_df_plot <- fixef_df %>%
-  filter(estimate > -5) %>%  # exclude extreme outliers
-  mutate(component = factor(component, levels = desired_order),
-         # tidy up Model and Significant
-         Model = factor(Model, levels = c("ab", "bonro", "iw",
-                                          "nro", "wo", 
-                                          "bc", "rm", "sm", "wa")),
-         Significant = factor(Significant, levels = c("yes", "no")),
-         # assign Myc_type based on Model
-         Myc_type = case_when(Model %in% c("rm", "sm", "bc", "wa") ~ "AM",
-                              TRUE ~ "ECM"),
-         # percent BA per species
-         percBA = species_sizes$percBA[match(Model, 
-                                             species_sizes$species)],
-         # color for species
-         color_col = species_cols[Model],
-         # species-specific vertical offset
-         y_offset = case_when(
-           Model == "rm" ~ 0.20,
-           Model == "bc" ~ 0.15,
-           Model == "sm" ~ 0.10,
-           Model == "wa" ~ 0.05,
-           Model == "ab" ~ 0,
-           Model == "nro" ~ -0.05,
-           Model == "bonro" ~ -0.10,
-           Model == "wo" ~ -0.15,
-           Model == "iw" ~ -0.20,
-           TRUE ~ 0),
-         # final y-position for plotting
-         y_pos = as.numeric(component) + y_offset,
-         # fill color: species color if significant, white otherwise
-         fill_col = ifelse(Significant == "yes", 
-                           species_cols[Model], "white"))
-
-##### Filter to just include AM
+##### AM only
 fixef_df_AM <- filter(fixef_df_plot, Myc_type == "AM")
 
-##### Plot - AM
 ggplot(fixef_df_AM, aes(x = estimate, y = y_pos)) +
-  # Reference line at zero
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars colored by species
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error,
+  geom_errorbarh(aes(xmin = estimate - std.error, xmax = estimate + std.error,
                      color = Model), height = 0.05) +
-  # Points: shape by Myc_type, fill by significance, outline by species
   geom_point(aes(shape = Myc_type, fill = fill_col,
-                 color = Model, size = log1p(percBA)),
-             stroke = 1) +
-  # Y-axis with desired top-to-bottom order
+                 color = Model, size = log1p(percBA)), stroke = 1) +
   scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
                      labels = levels(fixef_df$component),
-                     trans = "reverse"   # ensures top-to-bottom ordering visually
-  ) +
-  # Shape legend for mycorrhizal type
-  scale_shape_manual(name = "Mycorrhizal\nType", 
-                     values = c("AM" = 24, "ECM" = 22) ) +
-  # Fill is used only for significance; no separate legend
+                     trans = "reverse") +
+  scale_shape_manual(name = "Mycorrhizal\nType",
+                     values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_identity(guide = "none") +
-  # Species colors and legend
-  scale_color_manual(
-    name = "Species", values = species_cols) +
-  # Size scale with interpretable legend
+  scale_color_manual(name = "Species", values = species_cols,
+                     labels = species_labels) +
   scale_size(range = c(2, 6),
-             breaks = log1p(legend_percBA),          # positions in plot scale
-             labels = paste0(legend_percBA, "%"),   # human-readable labels
-             name = "% BA" ) +
-  # Labels & theme
+             breaks = log1p(legend_percBA),
+             labels = paste0(legend_percBA, "%"),
+             name = "% BA") +
   labs(x = "Effect size ± SE (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
         axis.text.y = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 12, color = "black"))
 
-##### Filter to just include ECM
+##### ECM only
 fixef_df_ECM <- filter(fixef_df_plot, Myc_type == "ECM")
 
-##### Plot - ECM
 ggplot(fixef_df_ECM, aes(x = estimate, y = y_pos)) +
-  # Reference line at zero
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars colored by species
-  geom_errorbarh(aes(xmin = estimate - std.error, 
-                     xmax = estimate + std.error,
+  geom_errorbarh(aes(xmin = estimate - std.error, xmax = estimate + std.error,
                      color = Model), height = 0.05) +
-  # Points: shape by Myc_type, fill by significance, outline by species
   geom_point(aes(shape = Myc_type, fill = fill_col,
-                 color = Model, size = log1p(percBA)),
-             stroke = 1) +
-  # Y-axis with desired top-to-bottom order
+                 color = Model, size = log1p(percBA)), stroke = 1) +
   scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
                      labels = levels(fixef_df$component),
-                     trans = "reverse"   # ensures top-to-bottom ordering visually
-  ) +
-  # Shape legend for mycorrhizal type
-  scale_shape_manual(name = "Mycorrhizal\nType", 
-                     values = c("AM" = 24, "ECM" = 22) ) +
-  # Fill is used only for significance; no separate legend
+                     trans = "reverse") +
+  scale_shape_manual(name = "Mycorrhizal\nType",
+                     values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_identity(guide = "none") +
-  # Species colors and legend
-  scale_color_manual(
-    name = "Species", values = species_cols) +
-  # Size scale with interpretable legend
+  scale_color_manual(name = "Species", values = species_cols,
+                     labels = species_labels) +
   scale_size(range = c(2, 6),
-             breaks = log1p(legend_percBA),          # positions in plot scale
-             labels = paste0(legend_percBA, "%"),   # human-readable labels
-             name = "% BA" ) +
-  # Labels & theme
+             breaks = log1p(legend_percBA),
+             labels = paste0(legend_percBA, "%"),
+             name = "% BA") +
   labs(x = "Effect size ± SE (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
