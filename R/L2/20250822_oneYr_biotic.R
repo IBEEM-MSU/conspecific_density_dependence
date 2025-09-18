@@ -845,7 +845,7 @@ nro_surv <- subset(allSpDat, Sp == "nro")
 
 ## Null model - species-level
 nro_15m_null <- glmer(Year_1_counts ~ 1 +
-                        (1|survYear),
+                      (1|survYear),
                       family = poisson(link = "log"), data = nro_surv) 
 summary(nro_15m_null)
 r.squaredGLMM(nro_15m_null) 
@@ -1009,7 +1009,7 @@ r.squaredGLMM(iw_15m)
 iw_15m1 <- glmer(Year_1_counts ~ consp_15m + 
                    AM_15m + ECM_15m + 
                    logPrior + log0yr +
-                   (1|survYear),
+                  (1|survYear),
                  family = poisson(link = "log"), data = iw_surv)
 summary(iw_15m1)
 car::vif(iw_15m1)
@@ -1020,7 +1020,7 @@ iw_15m2 <- glmer(Year_1_counts ~ consp_15m +
                    AM_15m + ECM_15m + 
                    consp_15m:AM_15m + # Panel B
                    consp_15m:ECM_15m + # Panel B
-                   logPrior + log0yr +
+                   logPrior + log0yr + (1|SiteID) +  
                    (1|survYear),
                  family = poisson(link = "log"), data = iw_surv)
 summary(iw_15m2)
@@ -1119,7 +1119,7 @@ legend_percBA <- c(1, 10, 20)
 ###### Both AM and ECM
 # --- Prepare plotting data
 fixef_df_plot <- fixef_df %>%
-  filter(estimate > -5) %>%  # exclude extreme outliers
+  #filter(estimate > -5) %>%  # exclude extreme outliers
   mutate(component = factor(component, levels = desired_order),
          # species legend order (alphabetical within ECM/AM)
          Model = factor(Model, levels = c("ab","iw","wo","nro","bonro",

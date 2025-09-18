@@ -542,7 +542,8 @@ r.squaredGLMM(bonro_abio_null)
 
 ##### Effects of environment and climate
 bonro_abio <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
-                   percOpen + Base_CEC + log0yr + (1|survYear),
+                   percOpen + Base_CEC + log0yr +
+                     (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = bonro_surv)
 summary(bonro_abio)
 car::vif(bonro_abio)
@@ -550,8 +551,7 @@ r.squaredGLMM(bonro_abio)
 
 ##### Effects of climate alone
 bonro_clim <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
-                   log0yr +
-                   (1|SiteID) + (1|survYear),
+                   log0yr + (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = bonro_surv)
 summary(bonro_clim)
 car::vif(bonro_clim)
