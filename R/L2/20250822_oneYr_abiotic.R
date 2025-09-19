@@ -696,6 +696,8 @@ fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
                       fixef_WA, fixef_AB, fixef_NRO,
                       fixef_BONRO, fixef_WO, fixef_IW)
 
+#write.csv(fixef_df, "./R/L1/AbioticSpeciesMods.csv", row.names = FALSE)
+
 # Define vertical order for plotting (top → bottom)
 desired_order <- c("Mean PDSI", "Min Temperature", "Max Temperature",
                    "% Canopy Openness", "Base CEC",
