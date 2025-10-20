@@ -103,7 +103,7 @@ m_CON <- lmer(ConspBA ~ Mean_PDSI + Min_Temp + Max_Temp +
                 (1|Sp) + (1|survYear) + (1|SiteID), data = dat)
 
 ## 2) Seedling outcome model (Biotic + Abiotic + Trait + Interactions + Controls)
-#### Outcome model?
+#### Outcome model
 m_seedlings <- glmer(Year_1_counts ~
     # Biotic main effects
     ConspBA + Myc_type +  AM_BA + ECM_BA +
@@ -126,21 +126,59 @@ sem_mod <- psem(
 ## 4) Inspect fit and paths
 summary(sem_mod, .progress = FALSE, .verbose = FALSE)
 
+# Extract coefficients from piecewise SEM
+coef_table <- coefs(sem_mod) %>%
+  as.data.frame() %>%
+  select(Response, Predictor, Estimate, Std.Error, Std.Estimate, DF, P.Value) %>%
+  arrange(Response, Predictor)
+
+# # Optional: round numeric columns for readability
+# coef_table <- coef_table %>%
+#   mutate(across(c(Estimate, Std.Error, DF, P.Value), ~round(., 3))) %>%
+#   mutate(across(c(Estimate, Std.Error, DF, P.Value), 
+#                 ~ifelse(. == 0, "<0.001", as.character(.))))
+
+
+# Identify which predictors exist in the data
+predictors_real <- coef_table$Predictor[coef_table$Predictor %in% names(dat)]
+
+# Compute SDs for real predictors and responses
+SDs <- dat %>%
+  select(all_of(predictors_real), all_of(unique(coef_table$Response))) %>%
+  summarise(across(everything(), \(x) sd(x, na.rm = TRUE))) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "SD")
+
+# Convert to named vector for easy lookup
+SD_lookup <- setNames(SDs$SD, SDs$Variable)
+
+# Compute standardized SEs without touching other columns
+coef_table <- coef_table %>%
+  rowwise() %>%
+  mutate(Std.Error.Std = ifelse(
+    Predictor %in% names(SD_lookup) & Response %in% names(SD_lookup),
+    Std.Error * (SD_lookup[Predictor] / SD_lookup[Response]),
+    NA_real_  # NA for interactions or missing columns
+  )) %>%
+  ungroup()
+
+# View
+coef_table
+
+write.csv(coef_table, "./R/L1/SEM_Full_Coefficients.csv", row.names = FALSE)
+
 #################### Plotting the SEM
 
 # Super basic plot
 plot(sem_mod)
 
 ### More customized plot
-
 plot(sem_mod, layout = "nicely", 
-     #  "circle", "tree", "kk", "fr","nicely", "neato",
-     node_attrs = list(
-  shape = "oval",
-  width = 0.7,  # shrink node width
+     node_attrs = list(shape = "oval",
+  width = c(0.4, 0.4, 0.4, 0.7, 
+            0.6, 0.6, 0.6, 0.6, 0.6, 
+            0.6, 0.6, 0.6, 0.9, 0.9, 0.9),
   height = 0.18, # shrink node height
-  fillcolor = c(
-    rep("#9dc183", 3),   # Biotic - Neighborhood BA
+  fillcolor = c(rep("#9dc183", 3),   # Biotic - Neighborhood BA
     rep("white", 1),     # Response variable
     rep("orange", 5),    # Abiotic variables
     rep("lightblue", 1),      # Trait - Myc_type 
@@ -148,10 +186,33 @@ plot(sem_mod, layout = "nicely",
     rep("pink", 3)       # Interactions
   ), outline = "black", color = "black",
   fontsize = 5.3, fontcolor = "black"),
-  edge_attrs = list(penwidth = 1, 
+  # edge_attrs = list(
+  #   penwidth = 1,
+  #   label = "Std.Estimate",
+  #   fontsize = 6,fontcolor = "black",
+  #   color = "black", labeldistance = 3 ))
+  edge_attrs = list(penwidth = 1,
                     # scale factor to adjust thickness
-    label = NA,fontsize = 0,fontcolor = "white",   
+    label = NA,fontsize = 0,fontcolor = "white",
     color = "black"))
+
+
+
+# # Get coefficients including Std.Estimate
+# sem_coefs <- coefs(sem_mod)
+# 
+# # Inspect
+# head(sem_coefs)
+# 
+# # Select relevant columns for plotting
+# edge_labels <- sem_coefs[, c("Response", "Predictor", "Std.Estimate")]
+# 
+# # Optionally, round for cleaner plotting
+# edge_labels$Std.Estimate <- round(edge_labels$Std.Estimate, 3)
+# 
+# edge_labels
+
+
 
 
 ############################################
