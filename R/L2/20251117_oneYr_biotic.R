@@ -53,6 +53,12 @@ allSpDat <- allSpDat %>%
   ungroup() %>%
   select(-focal_col, -focal_value)   # cleanup temporary columns
 
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 # # The model specified as glmer(Year_1_counts ~ …, family = poisson(link = "log")) is the appropriate formulation for these data because Year_1_counts represents discrete seedling counts, which are naturally modeled with a Poisson error distribution and a log link. In this framework, the log transformation is applied to the expected value of the count (i.e., log(E[Y])), not to the observed data themselves. 
 # This preserves the correct mean–variance relationship for count data, accommodates zeros, and allows predictors to be interpreted as multiplicative effects on expected seedling survival rates (with log0yr functioning as an offset corresponding to initial density). 
 # Re-structuring the model to use log(Year_1_counts) as the response would instead fit a Gaussian model to log-transformed observations, which is statistically incompatible with a Poisson likelihood, distorts the error structure, cannot properly handle zeros, and breaks the biological interpretation of coefficients as effects on survival rates. For these reasons, the original Poisson GLMM formulation is the correct and defensible model specification.
@@ -82,55 +88,97 @@ r.squaredGLMM(all_sp_15mA)
 
 ## Testing Panel B conceptual figure - Interactive spillover
 all_sp_15mB <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
+<<<<<<< HEAD
                        hetAM_15m + hetECM_15m + 
                        consp_15m:hetAM_15m + # Panel B
                        consp_15m:hetECM_15m + # Panel B
+=======
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel B
+                       consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mB)
 ## main effects of conspBA, AM_15m, and ECM_15m are significant
+<<<<<<< HEAD
 ## conspBA:Seedling_myc now marginally significant and negative (small)
 ## conspBA:AM_15m significant and negative
 ## conspBA:ECM_15m significant and negative - opposite of predicted??
 car::vif(all_sp_15mB) 
+=======
+## conspBA:Seedling_myc now significant and positive (small)
+## conspBA:AM_15m significant and positive
+## conspBA:ECM_15m significant and negative - opposite of predicted??
+car::vif(all_sp_15mB) # One VIF >10
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 r.squaredGLMM(all_sp_15mB) 
 
 ## Testing Panel C conceptual figure - Additive spillover
 all_sp_15mC <- glmer(Year_1_counts ~ consp_15m*Seedling_myc + 
+<<<<<<< HEAD
                        hetAM_15m + hetECM_15m + 
                        Seedling_myc:hetAM_15m + # Panel C
                        Seedling_myc:hetECM_15m + # Panel C
+=======
+                       AM_15m + ECM_15m + 
+                       Seedling_myc:AM_15m + # Panel C
+                       Seedling_myc:ECM_15m + # Panel C
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mC)
+<<<<<<< HEAD
 ## main effects of conspBS, AM_15m, and ECM_15m are significant
 ## conspBA:Seedling_myc, Seedling_myc:AM_15m, and Seedling_myc:ECM_15m not significant 
+=======
+## main effects of AM_15m and ECM_15m are significant
+## conspBA:Seedling_myc significant and negative
+## Seedling_myc:AM_15m and Seedling_myc:ECM_15m not significant 
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 car::vif(all_sp_15mC)
 r.squaredGLMM(all_sp_15mC) 
 
 ## Testing Panels D (B+C) conceptual figure - Additive/interactive spillover
 all_sp_15mD <- glmer(Year_1_counts ~ consp_15m*Seedling_myc + 
+<<<<<<< HEAD
                        hetAM_15m + hetECM_15m + 
                        consp_15m:hetAM_15m + # Panel B
                        consp_15m:hetECM_15m + # Panel B
                        Seedling_myc:hetAM_15m + # Panel C
                        Seedling_myc:hetECM_15m + # Panel C
+=======
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel B
+                       consp_15m:ECM_15m + # Panel B
+                       Seedling_myc:AM_15m + # Panel C
+                       Seedling_myc:ECM_15m + # Panel C
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mD)
 ## main effects of conspBA, AM_15m, and ECM_15m are significant
+<<<<<<< HEAD
 ## conspBA:AM_15m significant and negative
 ## conspBA:ECM_15m significant and negative - opposite of predicted??
 ## conspBA:Seedling_myc, Seedling_myc:AM_15m and Seedling_myc:ECM_15m are not significant 
 car::vif(all_sp_15mD)
+=======
+## conspBA:Seedling_myc significant and positive
+## conspBA:AM_15m significant and positive
+## conspBA:ECM_15m significant and negative - opposite of predicted??
+## Seedling_myc:AM_15m and Seedling_myc:ECM_15m are not significant 
+car::vif(all_sp_15mD) # One VIF > 10
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 r.squaredGLMM(all_sp_15mD) 
 
 ## Testing Panels B, C, and D of conceptual figure - Global model
 ## Super interactive model (testing everything)
 all_sp_15mBCD <- glmer(Year_1_counts ~ consp_15m*Seedling_myc + 
+<<<<<<< HEAD
                        hetAM_15m + hetECM_15m + 
                        consp_15m:hetAM_15m + # Panel B
                        consp_15m:hetECM_15m + # Panel B
@@ -151,6 +199,30 @@ summary(all_sp_15mBCD)
 ## consp_15m:Seedling_mycECM:AM_15m is significant and positive
 ## consp_15m:Seedling_mycECM:ECM_15m is significant and positive
 car::vif(all_sp_15mBCD) 
+=======
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel B
+                       consp_15m:ECM_15m + # Panel B
+                       Seedling_myc:AM_15m + # Panel C
+                       Seedling_myc:ECM_15m + # Panel C
+                       consp_15m:Seedling_myc:AM_15m + # Panel D
+                       consp_15m:Seedling_myc:ECM_15m + # Panel D
+                       logPrior + log0yr +
+                       #(1|SiteID) + 
+                       (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15mBCD) 
+## Will only run excluding a RE due to many terms/convergence issues
+## main effects of conspBA and AM_15m are significant
+## conspBA:Seedling_myc significant and positive
+## conspBA:AM_15m significant and positive
+## conspBA:ECM_15m significant and negative - opposite of predicted??
+## Seedling_myc:AM_15m is now significant and positive
+## Seedling_myc:ECM_15m is not significant 
+## consp_15m:Seedling_mycECM:AM_15m is significant and negative
+## consp_15m:Seedling_mycECM:ECM_15m is not significant 
+car::vif(all_sp_15mBCD) ## Some VIFs >10
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 r.squaredGLMM(all_sp_15mBCD) 
 
 
@@ -158,12 +230,21 @@ r.squaredGLMM(all_sp_15mBCD)
 ### Compare AICs - lowest is all_sp_15mB but all_sp_15mD close 2nd
 AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, all_sp_15mC,
     all_sp_15mD, all_sp_15mBCD)
+<<<<<<< HEAD
 # Global model is significantly better!!
 anova(all_sp_15mB, all_sp_15mBCD) 
 
 ########## Plotting effect sizes - for Panel D
 # 1. Extract fixed-effect summary from the model
 fixef_df <- broom.mixed::tidy(all_sp_15mBCD, effects = "fixed") %>%
+=======
+# Panels B and D are basically equivalent - I think we go with B because the extra model terms included in D  (Seedling_myc:AM_15m and Seedling_myc:ECM_15m) are not significant
+anova(all_sp_15mB, all_sp_15mD) # Panel B and Panel D equivalent
+
+########## Plotting effect sizes - for Panel D
+# 1. Extract fixed-effect summary from the model
+fixef_df <- broom.mixed::tidy(all_sp_15mB, effects = "fixed") %>%
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
   filter(term != "(Intercept)") %>%            # drop intercept
   select(term, estimate, std.error, p.value)
 
@@ -172,6 +253,7 @@ fixef_df <- fixef_df %>%
   mutate(component = case_when(
     term == "consp_15m" ~ "Conspecific BA",
     term == "Seedling_mycECM" ~ "Mycorrhizal type",
+<<<<<<< HEAD
     term == "hetAM_15m" ~ "AM BA",
     term == "hetECM_15m" ~ "ECM BA",
     term == "consp_15m:Seedling_mycECM" ~ "Consp. BA:Mycorrhizal type",
@@ -181,6 +263,13 @@ fixef_df <- fixef_df %>%
     term == "Seedling_mycECM:hetECM_15m" ~ "Mycorrhizal type:ECM BA",
     term == "consp_15m:Seedling_mycECM:hetAM_15m" ~ "Consp. BA:Mycorrhizal type:AM BA",
     term == "consp_15m:Seedling_mycECM:hetECM_15m" ~ "Consp. BA:Mycorrhizal type:ECM BA",
+=======
+    term == "AM_15m" ~ "AM BA",
+    term == "ECM_15m" ~ "ECM BA",
+    term == "consp_15m:Seedling_mycECM" ~ "Consp BA:Mycorrhizal type",
+    term == "consp_15m:AM_15m" ~ "Consp BA:AM BA",
+    term == "consp_15m:ECM_15m" ~ "Consp BA:ECM BA",
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
     term == "logPrior" ~ "Log(Prior Density)",
     term == "log0yr" ~ "Log(Recruit Density)",
     TRUE ~ term))
@@ -188,11 +277,16 @@ fixef_df <- fixef_df %>%
 # 3. Order components on the y-axis in the order you prefer
 desired_order <- c("Conspecific BA","AM BA",
                    "ECM BA", "Mycorrhizal type",
+<<<<<<< HEAD
                    "Consp. BA:AM BA", "Consp. BA:ECM BA","Consp. BA:Mycorrhizal type",
                    "Mycorrhizal type:AM BA","Mycorrhizal type:ECM BA",
                    "Consp. BA:Mycorrhizal type:AM BA",
                    "Consp. BA:Mycorrhizal type:ECM BA",
                    "Log(Recruit Density)", "Log(Prior Density)")
+=======
+                   "Consp BA:AM BA", "Consp BA:ECM BA","Consp BA:Mycorrhizal type",
+                   "Log(Recruit Density)","Log(Prior Density)")
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 fixef_df <- fixef_df %>%
   mutate(component = factor(component, levels = desired_order))
 
@@ -349,9 +443,18 @@ fixef_df <- fixef_df %>%
     term == "propConsp" ~ "Prop. Conspecific BA",
     term == "Seedling_mycECM" ~ "Mycorrhizal type",
     term == "propAM" ~ "Prop. AM BA",
+<<<<<<< HEAD
     term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
     term == "propConsp:propAM" ~ "Prop. Consp. BA:Prop. AM BA",
     term == "Seedling_mycECM:propAM" ~  "Myc. type ECM:Prop. AM BA",
+=======
+    term == "propConsp:Seedling_mycECM" ~ 
+      "Prop. Consp. BA:Myc. type ECM",
+    term == "propConsp:propAM" ~ 
+      "Prop. Consp. BA:Prop. AM BA",
+    term == "Seedling_mycECM:propAM" ~ 
+      "Myc. type ECM:Prop. AM BA",
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
     term == "propConsp:Seedling_mycECM:propAM" ~ 
       "Prop. Consp. BA:Myc. type ECM:\nProp. AM BA",
     term == "logPrior" ~ "Log(Prior Density)",
@@ -388,10 +491,19 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
   theme(legend.position = "none",
         axis.text.y = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 12, color = "black"))
+<<<<<<< HEAD
 
 #########################################################
 #########################################################
 #########################################################
+=======
+#########################################################
+#########################################################
+#########################################################
+
+#########################################################
+#########################################################
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 ################# Mycorrhizal Type Models - Raw Basal Area
 
 ## Subset out just AM and just ECM species
@@ -412,7 +524,11 @@ ECM_sp_15m_null <- glmer(Year_1_counts ~ 1 +
 summary(ECM_sp_15m_null)
 r.squaredGLMM(ECM_sp_15m_null) 
 
+<<<<<<< HEAD
 ## Testing Panel A conceptual figure - CDD - AM
+=======
+## Testing Panel A conceptual figure - AM
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 AM_sp_15mA <- glmer(Year_1_counts ~ consp_15m +
                       logPrior + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
@@ -422,7 +538,11 @@ summary(AM_sp_15mA)
 car::vif(AM_sp_15mA)
 r.squaredGLMM(AM_sp_15mA) 
 
+<<<<<<< HEAD
 ## Testing Panel A conceptual figure - CDD - ECM
+=======
+## Testing Panel A conceptual figure - ECM
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 ECM_sp_15mA <- glmer(Year_1_counts ~ consp_15m +
                      logPrior + log0yr +
                      (1|SiteID) + (1|survYear) + (1|Sp),
@@ -434,32 +554,57 @@ r.squaredGLMM(ECM_sp_15mA)
 
 ## Testing Panel B conceptual figure - AM
 AM_sp_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                        hetAM_15m + hetECM_15m + 
                        consp_15m:hetAM_15m + # Panel B
                        consp_15m:hetECM_15m + # Panel B
+=======
+                       AM_15m + ECM_15m + 
+                       consp_15m:AM_15m + # Panel B
+                       consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat_AM)
 summary(AM_sp_15mB)
+<<<<<<< HEAD
 ## Significant positive main effects of conspBA, AM BA, and ECM BA
 ## consp_15m:AM_15m is positive and significant
 ## consp_15m:ECM_15m is negative and significant
 car::vif(AM_sp_15mB) 
+=======
+## Significant negative main effects of conspBA and AM BA, and significant positive effect of ECM BA
+## consp_15m:AM_15m is positive and significant
+## consp_15m:ECM_15m is negative and significant
+car::vif(AM_sp_15mB) # Some VIFs >10
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 r.squaredGLMM(AM_sp_15mB) 
 
 ## Testing Panel B conceptual figure - ECM
 ECM_sp_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                        hetAM_15m + hetECM_15m + 
                        consp_15m:hetAM_15m + # Panel B
                        consp_15m:hetECM_15m + # Panel B
                        logPrior + log0yr +
+=======
+                      AM_15m + ECM_15m + 
+                      consp_15m:AM_15m + # Panel B
+                      consp_15m:ECM_15m + # Panel B
+                      logPrior + log0yr +
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                       (1|SiteID) + (1|survYear) + (1|Sp),
                     family = poisson(link = "log"), data = allSpDat_ECM)
 summary(ECM_sp_15mB)
 ## Main effects of conspBA, AM BA, and ECM BA all not significant
 ## consp_15m:AM_15m is negative and significant
+<<<<<<< HEAD
 ## consp_15m:ECM_15m is positive and significant
 car::vif(ECM_sp_15mB) 
+=======
+## consp_15m:ECM_15m is not significant
+car::vif(ECM_sp_15mB) # One VIF >15
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 r.squaredGLMM(ECM_sp_15mB) 
 
 
@@ -467,7 +612,11 @@ r.squaredGLMM(ECM_sp_15mB)
 ### Compare AICs - lowest is most complex - AM_sp_15mB
 AIC(AM_sp_15m_null, AM_sp_15mA, AM_sp_15mB)
 ## Model comparison - ECM
+<<<<<<< HEAD
 ### Compare AICs - lowest is most complex - AM_sp_15mB
+=======
+### Compare AICs - lowest is most complex (just barely) - AM_sp_15mB
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 AIC(ECM_sp_15m_null, ECM_sp_15mA, ECM_sp_15mB)
 anova(ECM_sp_15mA,ECM_sp_15mB) # B is better
 
@@ -479,10 +628,17 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = case_when(
         term == "consp_15m" ~ "Conspecific BA",
+<<<<<<< HEAD
         term == "hetAM_15m" ~ "AM BA",
         term == "hetECM_15m" ~ "ECM BA",
         term == "consp_15m:hetAM_15m" ~ "Conspecific BA:AM BA",
         term == "consp_15m:hetECM_15m" ~ "Conspecific BA:ECM BA",
+=======
+        term == "AM_15m" ~ "AM BA",
+        term == "ECM_15m" ~ "ECM BA",
+        term == "consp_15m:AM_15m" ~ "Conspecific BA:AM BA",
+        term == "consp_15m:ECM_15m" ~ "Conspecific BA:ECM BA",
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
@@ -683,6 +839,12 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
 #########################################################
 #########################################################
 #########################################################
+<<<<<<< HEAD
+=======
+
+#########################################################
+#########################################################
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 ################# Species-Level Model - RM - Raw Basal Area
 
 ##### Subset RM data
@@ -706,13 +868,20 @@ r.squaredGLMM(rm_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 rm_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                    hetAM_15m + hetECM_15m + 
                    consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
+=======
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = rm_surv)
 summary(rm_15mB)
+<<<<<<< HEAD
 ## main effects of AM_15m and ECM_15m are significant
 ## main effect of conspBA is not significant
 ## Consp_15m:AM_15m is significant and negative
@@ -739,6 +908,33 @@ AIC(rm_15m_null, rm_15mA, rm_15mB)
 #AIC(rm_15m_null, rm_15mA, rm_15mB, rm_15mB2)
 # More complex model is better
 anova(rm_15mA, rm_15mB)
+=======
+## main effects of AM_15m is significant
+## main effects of conspBA and ECM_15m are not significant
+## Neither consp_15m:AM_15m or consp_15m:ECM_15m is significant
+car::vif(rm_15mB) # One VIF >15
+r.squaredGLMM(rm_15mB) 
+
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+rm_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   logPrior + log0yr +
+                   (1|SiteID) + (1|survYear),
+                 family = poisson(link = "log"), data = rm_surv)
+summary(rm_15mB2)
+## main effects of AM_15m is significant
+## main effects of conspBA and ECM_15m are not significant
+car::vif(rm_15mB2) 
+r.squaredGLMM(rm_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(rm_15m_null, rm_15mA, rm_15mB, rm_15mB2)
+# More complex model is NOT better
+anova(rm_15mB, rm_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 #########################################################
 ################# Species-Level Test - SM - Raw Basal Area
@@ -764,15 +960,22 @@ r.squaredGLMM(sm_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 sm_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                    hetAM_15m + hetECM_15m + 
                    consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
+=======
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = sm_surv)
 summary(sm_15mB)
 ## main effects of AM_15m is not significant
 ## main effects of conspBA and ECM_15m are significant
+<<<<<<< HEAD
 ## Consp_15m:AM_15m is significant and negative
 ## Consp_15m:ECM_15m is not significant
 car::vif(sm_15mB) 
@@ -796,6 +999,29 @@ AIC(sm_15m_null, sm_15mA, sm_15mB)
 #AIC(sm_15m_null, sm_15mA, sm_15mB, sm_15mB2)
 # More complex model is better
 anova(sm_15mA, sm_15mB)
+=======
+## Neither consp_15m:AM_15m or consp_15m:ECM_15m is significant
+car::vif(sm_15mB) # One VIF >15
+r.squaredGLMM(sm_15mB) 
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+sm_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                    (1|SiteID) + (1|survYear),
+                  family = poisson(link = "log"), data = sm_surv)
+summary(sm_15mB2)
+## main effects of AM_15m, conspBA, and ECM_15m are not significant
+car::vif(sm_15mB2) 
+r.squaredGLMM(sm_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(sm_15m_null, sm_15mA, sm_15mB, sm_15mB2)
+# More complex model is NOT better
+anova(sm_15mB, sm_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 #########################################################
 ################# Species-Level Test - bc - Raw Basal Area
@@ -821,9 +1047,15 @@ r.squaredGLMM(bc_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 bc_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                    hetAM_15m + hetECM_15m + 
                    consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
+=======
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = bc_surv)
@@ -832,6 +1064,7 @@ summary(bc_15mB)
 ## main effect ECM_15m is not significant
 ## consp_15m:AM_15m is postitive and significant
 ## consp_15m:ECM_15m is not significant
+<<<<<<< HEAD
 car::vif(bc_15mB) # One VIF >14
 r.squaredGLMM(bc_15mB) 
 
@@ -852,6 +1085,27 @@ r.squaredGLMM(bc_15mB)
 ### Compare AICs 
 AIC(bc_15m_null, bc_15mA, bc_15mB)
 # AIC(bc_15m_null, bc_15mA, bc_15mB, bc_15mB2)
+=======
+car::vif(bc_15mB) # One VIF >15
+r.squaredGLMM(bc_15mB) 
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+bc_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                    (1|SiteID) + (1|survYear),
+                  family = poisson(link = "log"), data = bc_surv)
+summary(bc_15mB2)
+## main effect of conspBA is significant
+## main effects of AM_15m and ECM_15m are not significant
+car::vif(bc_15mB2) 
+r.squaredGLMM(bc_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(bc_15m_null, bc_15mA, bc_15mB, bc_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 # More complex model is NOT better
 anova(bc_15mA, bc_15mB)
 
@@ -879,13 +1133,20 @@ r.squaredGLMM(wa_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 wa_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                    hetAM_15m + hetECM_15m + 
                    consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
+=======
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = wa_surv)
 summary(wa_15mB)
+<<<<<<< HEAD
 ## Main effect of conspBA is significant 
 ## None of other main effects or their interactions are significant 
 car::vif(wa_15mB) # One VIF >30
@@ -908,6 +1169,28 @@ r.squaredGLMM(wa_15mB)
 ### Compare AICs 
 AIC(wa_15m_null, wa_15mA, wa_15mB)
 # AIC(wa_15m_null, wa_15mA, wa_15mB, wa_15mB2)
+=======
+## non of the main effects or their interactions are significant 
+car::vif(wa_15mB) # One VIF >15
+r.squaredGLMM(wa_15mB) 
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+wa_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                    (1|SiteID) + (1|survYear),
+                  family = poisson(link = "log"), data = wa_surv)
+summary(wa_15mB2)
+## main effect of conspBA is significant
+## main effects of AM_15m and ECM_15m are not significant
+car::vif(wa_15mB2) 
+r.squaredGLMM(wa_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(wa_15m_null, wa_15mA, wa_15mB, wa_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 # More complex model is NOT better
 anova(wa_15mA, wa_15mB)
 
@@ -935,14 +1218,21 @@ r.squaredGLMM(ab_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 ab_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                    hetAM_15m + hetECM_15m + 
                    #consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
+=======
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|survYear),
                  family = poisson(link = "log"), data = ab_surv)
 summary(ab_15mB)
 ## non of the main effects or their interactions are significant 
+<<<<<<< HEAD
 car::vif(ab_15mB) 
 r.squaredGLMM(ab_15mB) 
 
@@ -962,6 +1252,26 @@ r.squaredGLMM(ab_15mB)
 ### Compare AICs 
 AIC(ab_15m_null, ab_15mA, ab_15mB)
 # AIC(ab_15m_null, ab_15mA, ab_15mB, ab_15mB2)
+=======
+car::vif(ab_15mB) # One VIF >15
+r.squaredGLMM(ab_15mB) 
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+ab_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                     (1|survYear),
+                  family = poisson(link = "log"), data = ab_surv)
+summary(ab_15mB2)
+## main effects of conspBA, AM_15m, and ECM_15m are not significant
+car::vif(ab_15mB2) 
+r.squaredGLMM(ab_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(ab_15m_null, ab_15mA, ab_15mB, ab_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 # More complex model is NOT better
 anova(ab_15mA, ab_15mB)
 
@@ -989,14 +1299,21 @@ r.squaredGLMM(nro_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 nro_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                    hetAM_15m + hetECM_15m + 
                    #consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
+=======
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|survYear),
                  family = poisson(link = "log"), data = nro_surv)
 summary(nro_15mB)
 ## main effect of ECM_15m is significant
+<<<<<<< HEAD
 car::vif(nro_15mB) 
 r.squaredGLMM(nro_15mB) 
 
@@ -1018,6 +1335,28 @@ AIC(nro_15m_null, nro_15mA, nro_15mB)
 # AIC(nro_15m_null, nro_15mA, nro_15mB, nro_15mB2)
 # More complex model is better
 anova(nro_15mA, nro_15mB)
+=======
+car::vif(nro_15mB) # One VIF >15
+r.squaredGLMM(nro_15mB) 
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+nro_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = nro_surv)
+summary(nro_15mB2)
+## main effects of conspBA, AM_15m, and ECM_15m are all significant
+car::vif(nro_15mB2) 
+r.squaredGLMM(nro_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(nro_15m_null, nro_15mA, nro_15mB, nro_15mB2)
+# More complex model is NOT better
+anova(nro_15mB, nro_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 #########################################################
 ################# Species-Level Test - bonro - Raw Basal Area - No RE of site
@@ -1043,9 +1382,15 @@ r.squaredGLMM(bonro_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 bonro_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                     hetAM_15m + hetECM_15m + 
                     #consp_15m:hetAM_15m + # Panel B
                     consp_15m:hetECM_15m + # Panel B
+=======
+                    AM_15m + ECM_15m + 
+                    consp_15m:AM_15m + # Panel B
+                    consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                     logPrior + log0yr +
                     (1|survYear),
                   family = poisson(link = "log"), data = bonro_surv)
@@ -1054,6 +1399,7 @@ summary(bonro_15mB)
 car::vif(bonro_15mB) # One VIF >15
 r.squaredGLMM(bonro_15mB) 
 
+<<<<<<< HEAD
 # ## Testing Partial Panel B conceptual figure - Interactive spillover
 # ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
 # bonro_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
@@ -1072,6 +1418,25 @@ AIC(bonro_15m_null, bonro_15mA, bonro_15mB)
 # AIC(bonro_15m_null, bonro_15mA, bonro_15mB, bonro_15mB2)
 # More complex model is NOT better
 anova(bonro_15mA, bonro_15mB)
+=======
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+bonro_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                     AM_15m + ECM_15m + 
+                     logPrior + log0yr +
+                     (1|survYear),
+                   family = poisson(link = "log"), data = bonro_surv)
+summary(bonro_15mB2)
+## none of terms are significant
+car::vif(bonro_15mB2) 
+r.squaredGLMM(bonro_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(bonro_15m_null, bonro_15mA, bonro_15mB, bonro_15mB2)
+# More complex model is NOT better
+anova(bonro_15mA, bonro_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 #########################################################
 ################# Species-Level Test - wo - Raw Basal Area - Excludes RE of site
@@ -1097,9 +1462,15 @@ r.squaredGLMM(wo_15mA)
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
 wo_15mB <- glmer(Year_1_counts ~ consp_15m + 
+<<<<<<< HEAD
                     hetAM_15m + hetECM_15m + 
                     consp_15m:hetAM_15m + # Panel B
                     consp_15m:hetECM_15m + # Panel B
+=======
+                    AM_15m + ECM_15m + 
+                    consp_15m:AM_15m + # Panel B
+                    consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                     logPrior + log0yr +
                     (1|survYear),
                   family = poisson(link = "log"), data = wo_surv)
@@ -1108,6 +1479,7 @@ summary(wo_15mB)
 car::vif(wo_15mB) # One VIF >15
 r.squaredGLMM(wo_15mB) 
 
+<<<<<<< HEAD
 # ## Testing Partial Panel B conceptual figure - Interactive spillover
 # ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
 # wo_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
@@ -1126,6 +1498,25 @@ AIC(wo_15m_null, wo_15mA, wo_15mB)
 # AIC(wo_15m_null, wo_15mA, wo_15mB, wo_15mB2)
 # More complex model is NOT better
 anova(wo_15mA, wo_15mB)
+=======
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+wo_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                     AM_15m + ECM_15m + 
+                     logPrior + log0yr +
+                     (1|survYear),
+                   family = poisson(link = "log"), data = wo_surv)
+summary(wo_15mB2)
+## none of main effects or their interactions are significant
+car::vif(wo_15mB2) 
+r.squaredGLMM(wo_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(wo_15m_null, wo_15mA, wo_15mB, wo_15mB2)
+# More complex model is NOT better
+anova(wo_15mA, wo_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 #########################################################
 ################# Species-Level Test - iw - Raw Basal Area - Excludes RE of site
@@ -1150,16 +1541,24 @@ car::vif(iw_15mA)
 r.squaredGLMM(iw_15mA) 
 
 ## Testing Partial Panel B conceptual figure - Interactive spillover
+<<<<<<< HEAD
 ## ***I THINK THIS IS ONE SPECIFIC JUSTIFIABLE CASE FOR NOT INCLUDING THE INTERACTIONS DUE TO HIGHLY INFLATED PARAMETER ESTIMATES (RESULTING FROM VERY LOW IW BA)
 iw_15mB <- glmer(Year_1_counts ~ consp_15m + 
                    hetAM_15m + hetECM_15m + 
                    #consp_15m:hetAM_15m + # Panel B
                    #consp_15m:hetECM_15m + # Panel B
+=======
+iw_15mB <- glmer(Year_1_counts ~ consp_15m + 
+                   AM_15m + ECM_15m + 
+                   consp_15m:AM_15m + # Panel B
+                   consp_15m:ECM_15m + # Panel B
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
                    logPrior + log0yr +
                    (1|survYear),
                  family = poisson(link = "log"), data = iw_surv)
 summary(iw_15mB)
 ## none of main effects or their interactions are significant
+<<<<<<< HEAD
 car::vif(iw_15mB) # One VIF >30
 r.squaredGLMM(iw_15mB) 
 
@@ -1181,6 +1580,28 @@ AIC(iw_15m_null, iw_15mA, iw_15mB)
 # AIC(iw_15m_null, iw_15mA, iw_15mB, iw_15mB2)
 # More complex model is NOT better
 anova(iw_15mA, iw_15mB)
+=======
+car::vif(iw_15mB) # One VIF >15
+r.squaredGLMM(iw_15mB) 
+
+## Testing Partial Panel B conceptual figure - Interactive spillover
+## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
+iw_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
+                    AM_15m + ECM_15m + 
+                    logPrior + log0yr +
+                    (1|survYear),
+                  family = poisson(link = "log"), data = iw_surv)
+summary(iw_15mB2)
+## none of main effects or their interactions are significant
+car::vif(iw_15mB2) 
+r.squaredGLMM(iw_15mB2)
+
+## Model comparison - species-level
+### Compare AICs 
+AIC(iw_15m_null, iw_15mA, iw_15mB, iw_15mB2)
+# More complex model is NOT better
+anova(iw_15mA, iw_15mB2)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 ##################################################
 ########## Plotting effect sizes - Partial Panel C - species-level
@@ -1191,10 +1612,15 @@ extract_fixef <- function(model, model_type) {
     mutate(
       component = case_when(
         term == "consp_15m" ~ "Conspecific BA",
+<<<<<<< HEAD
         term == "hetAM_15m" ~ "AM BA",
         term == "hetECM_15m" ~ "ECM BA",
         term == "consp_15m:hetAM_15m" ~ "Conspecific BA:AM BA",
         term == "consp_15m:hetECM_15m" ~ "Conspecific BA:ECM BA",
+=======
+        term == "AM_15m" ~ "AM BA",
+        term == "ECM_15m" ~ "ECM BA",
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
         term == "logPrior" ~ "Log(Prior Density)",
         term == "log0yr" ~ "Log(Recruit Density)",
         TRUE ~ term),
@@ -1202,13 +1628,19 @@ extract_fixef <- function(model, model_type) {
       Model = model_type) %>%
     mutate(
       component = factor(component, levels = c(
+<<<<<<< HEAD
         "Conspecific BA", "AM BA", "ECM BA",
         "Conspecific BA:AM BA","Conspecific BA:ECM BA",
         "Log(Recruit Density)", 
+=======
+        "Conspecific BA", "AM BA", 
+        "ECM BA", "Log(Recruit Density)", 
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
         "Log(Prior Density)")))
 }
 
 ## Extract for each species
+<<<<<<< HEAD
 fixef_RM  <- extract_fixef(rm_15mB, "rm")
 fixef_SM  <- extract_fixef(sm_15mB, "sm")
 fixef_BC  <- extract_fixef(bc_15mB, "bc")
@@ -1218,6 +1650,17 @@ fixef_NRO  <- extract_fixef(nro_15mB, "nro")
 fixef_BONRO  <- extract_fixef(bonro_15mB, "bonro")
 fixef_WO  <- extract_fixef(wo_15mB, "wo")
 fixef_IW  <- extract_fixef(iw_15mB, "iw")
+=======
+fixef_RM  <- extract_fixef(rm_15mB2, "rm")
+fixef_SM  <- extract_fixef(sm_15mB2, "sm")
+fixef_BC  <- extract_fixef(bc_15mB2, "bc")
+fixef_WA  <- extract_fixef(wa_15mB2, "wa")
+fixef_AB  <- extract_fixef(ab_15mB2, "ab")
+fixef_NRO  <- extract_fixef(nro_15mB2, "nro")
+fixef_BONRO  <- extract_fixef(bonro_15mB2, "bonro")
+fixef_WO  <- extract_fixef(wo_15mB2, "wo")
+fixef_IW  <- extract_fixef(iw_15mB2, "iw")
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 ## Combine
 fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
@@ -1225,10 +1668,16 @@ fixef_df <- bind_rows(fixef_RM, fixef_SM, fixef_BC,
                       fixef_BONRO, fixef_WO, fixef_IW)
 
 # Define desired vertical order
+<<<<<<< HEAD
 desired_order <- c( "Conspecific BA", "AM BA", "ECM BA",
                     "Conspecific BA:AM BA","Conspecific BA:ECM BA",
                     "Log(Recruit Density)", 
                     "Log(Prior Density)")
+=======
+desired_order <- c("Conspecific BA", "AM BA", 
+                   "ECM BA", "Log(Recruit Density)", 
+                   "Log(Prior Density)")
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 ## Species labels (italics, ordered alphabetically within AM/ECM)
 species_labels <- c(
@@ -1384,7 +1833,11 @@ ggplot(fixef_df_ECM, aes(x = estimate, y = y_pos)) +
 #################################################
 #################################################
 ################# Species-level Proportional BA Models
+<<<<<<< HEAD
 ### PICK UP HERE!!!
+=======
+
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 ################# Species-Level Test - RM - Proportional Basal Area
 
 ## Null model - species-level (proportional BA)
@@ -1472,7 +1925,11 @@ AIC(sm_15m_prop_null, sm_propA, sm_propB, sm_propB2)
 # More complex model is NOT better
 anova(sm_propB, sm_propB2)
 
+<<<<<<< HEAD
 ################# 
+=======
+################# START HERE
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 ################# Species-Level Test - bc - Proportional Basal Area
 
 ## Null model - species-level (proportional BA)
@@ -1968,12 +2425,19 @@ ggplot(fixef_df_ECM, aes(x = estimate, y = y_pos)) +
         axis.text.x = element_text(size = 12, color = "black"))
 
 
+<<<<<<< HEAD
 
 
 
 ################################################
 ################################################
 ##### Simple figure illustrating one-year survivorship
+=======
+################################################
+##### Simple figure illustrating one-year survivorship
+library(ggplot2)
+library(dplyr)
+>>>>>>> 31da8f8705eee097a0f311c62ec9e8b22908f8ac
 
 # Add survivorship column, dropping cases where Year_0_counts == 0
 allSpDat <- allSpDat %>%
