@@ -54,14 +54,16 @@ allSpDat <- allSpDat %>%
   select(-focal_col, -focal_value)   # cleanup temporary columns
 
 
-# # The model specified as glmer(Year_1_counts ~ …, family = poisson(link = "log")) is the appropriate formulation for these data because Year_1_counts represents discrete seedling counts, which are naturally modeled with a Poisson error distribution and a log link. In this framework, the log transformation is applied to the expected value of the count (i.e., log(E[Y])), not to the observed data themselves. 
+# # The model specified as glmer(Year_1_counts ~ …, family = poisson(link = "log")) is the appropriate formulation for these data because Year_1_counts represents discrete seedling counts, which are naturally modeled with a Poisson error distribution and a log link. The log transformation is applied to the expected value of the count (i.e., log(E[Y])), not to the observed data themselves. 
 # This preserves the correct mean–variance relationship for count data, accommodates zeros, and allows predictors to be interpreted as multiplicative effects on expected seedling survival rates (with log0yr functioning as an offset corresponding to initial density). 
-# Re-structuring the model to use log(Year_1_counts) as the response would instead fit a Gaussian model to log-transformed observations, which is statistically incompatible with a Poisson likelihood, distorts the error structure, cannot properly handle zeros, and breaks the biological interpretation of coefficients as effects on survival rates. For these reasons, the original Poisson GLMM formulation is the correct and defensible model specification.
+# Re-structuring the model to use log(Year_1_counts) as the response would instead fit a Gaussian model to log-transformed observations, which is statistically incompatible with a Poisson likelihood, distorts the error structure, cannot handle zeros properly, and disrupts the biological interpretation of estimated coefficients as effects on survival rates. For these reasons, the original Poisson GLMM formulation is the correct and defensible model specification.
 
 #########################################################
 #########################################################
 #########################################################
 ################# All Species Models - Raw Basal Area
+
+## 
 
 ## Null model
 all_sp_15m_null <- glmer(Year_1_counts ~ 1 +
@@ -71,11 +73,15 @@ summary(all_sp_15m_null)
 r.squaredGLMM(all_sp_15m_null) 
 
 ## Testing Panel A - Classic feedback
-all_sp_15mA <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
+all_sp_15mA <- glmer.nb(Year_1_counts ~ consp_15m*Seedling_myc +
                        logPrior + log0yr +
+                       (1|SiteID) + (1|survYear) + (1|Sp), data = allSpDat) 
+summary(all_sp_15mA)
+all_sp_15mA2 <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
+                       log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat) 
-summary(all_sp_15mA)
+summary(all_sp_15mA2)
 ## main effect of conspBA is significant
 ## Seedling_myc and conspBA:Seedling_myc interactions not significant
 car::vif(all_sp_15mA)
@@ -90,6 +96,14 @@ all_sp_15mB <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mB)
+all_sp_15mB2 <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
+                       hetAM_15m + hetECM_15m + 
+                       consp_15m:hetAM_15m + # Panel B
+                       consp_15m:hetECM_15m + # Panel B
+                        log0yr +
+                       (1|SiteID) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15mB2)
 ## main effects of conspBA, AM_15m, and ECM_15m are significant
 ## conspBA:Seedling_myc now marginally significant and negative (small)
 ## conspBA:AM_15m significant and negative
@@ -106,6 +120,14 @@ all_sp_15mC <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mC)
+all_sp_15mC2 <- glmer(Year_1_counts ~ consp_15m*Seedling_myc + 
+                       hetAM_15m + hetECM_15m + 
+                       Seedling_myc:hetAM_15m + # Panel C
+                       Seedling_myc:hetECM_15m + # Panel C
+                       log0yr +
+                       (1|SiteID) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15mC2)
 ## main effects of conspBS, AM_15m, and ECM_15m are significant
 ## conspBA:Seedling_myc, Seedling_myc:AM_15m, and Seedling_myc:ECM_15m not significant 
 car::vif(all_sp_15mC)
@@ -122,6 +144,16 @@ all_sp_15mD <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mD)
+all_sp_15mD2 <- glmer(Year_1_counts ~ consp_15m*Seedling_myc + 
+                       hetAM_15m + hetECM_15m + 
+                       consp_15m:hetAM_15m + # Panel B
+                       consp_15m:hetECM_15m + # Panel B
+                       Seedling_myc:hetAM_15m + # Panel C
+                       Seedling_myc:hetECM_15m + # Panel C
+                       log0yr +
+                       (1|SiteID) + (1|survYear) + (1|Sp),
+                     family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15mD2)
 ## main effects of conspBA, AM_15m, and ECM_15m are significant
 ## conspBA:AM_15m significant and negative
 ## conspBA:ECM_15m significant and negative - opposite of predicted??
@@ -143,6 +175,18 @@ all_sp_15mBCD <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat)
 summary(all_sp_15mBCD) 
+all_sp_15mBCD2 <- glmer(Year_1_counts ~ consp_15m*Seedling_myc + 
+                         hetAM_15m + hetECM_15m + 
+                         consp_15m:hetAM_15m + # Panel B
+                         consp_15m:hetECM_15m + # Panel B
+                         Seedling_myc:hetAM_15m + # Panel C
+                         Seedling_myc:hetECM_15m + # Panel C
+                         consp_15m:Seedling_myc:hetAM_15m + # Panel D
+                         consp_15m:Seedling_myc:hetECM_15m + # Panel D
+                          log0yr +
+                         (1|SiteID) + (1|survYear) + (1|Sp),
+                       family = poisson(link = "log"), data = allSpDat)
+summary(all_sp_15mBCD2) 
 ## main effects of conspBA, AM_15m, and ECM_15m are significant
 ## conspBA:Seedling_myc significant and negative
 ## conspBA:AM_15m significant and negative
@@ -1307,6 +1351,18 @@ fixef_df_plot <- fixef_df %>%
          y_pos = as.numeric(component) + y_offset,
          fill_col = ifelse(Significant == "yes", 
                            species_cols[Model], "white"))
+
+
+fixef_df_plot %>%
+  filter(is.na(estimate) | is.na(std.error) |
+           is.na(estimate - std.error) |
+           is.na(estimate + std.error) |
+           is.na(y_pos) |
+           !is.finite(estimate) |
+           !is.finite(std.error) |
+           !is.finite(estimate - std.error) |
+           !is.finite(estimate + std.error) |
+           !is.finite(log1p(percBA)))
 
 #### Plot - All species
 ggplot(fixef_df_plot, aes(x = estimate, y = y_pos)) +
