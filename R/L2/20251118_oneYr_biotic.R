@@ -63,7 +63,6 @@ allSpDat <- allSpDat %>%
 #########################################################
 ################# All Species Models - Raw Basal Area
 
-## 
 
 ## Null model
 all_sp_15m_null <- glmer(Year_1_counts ~ 1 +
@@ -73,15 +72,11 @@ summary(all_sp_15m_null)
 r.squaredGLMM(all_sp_15m_null) 
 
 ## Testing Panel A - Classic feedback
-all_sp_15mA <- glmer.nb(Year_1_counts ~ consp_15m*Seedling_myc +
-                       logPrior + log0yr +
-                       (1|SiteID) + (1|survYear) + (1|Sp), data = allSpDat) 
-summary(all_sp_15mA)
-all_sp_15mA2 <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
+all_sp_15mA <- glmer(Year_1_counts ~ consp_15m*Seedling_myc +
                        log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = poisson(link = "log"), data = allSpDat) 
-summary(all_sp_15mA2)
+summary(all_sp_15mA)
 ## main effect of conspBA is significant
 ## Seedling_myc and conspBA:Seedling_myc interactions not significant
 car::vif(all_sp_15mA)
