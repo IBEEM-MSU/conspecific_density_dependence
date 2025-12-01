@@ -63,6 +63,9 @@ allSpDat <- allSpDat %>%
 #########################################################
 ################# All Species Models - Raw Basal Area
 
+### Compared AIC values with and without logPrior - significantly greater support for models including logPrior, so we should leave in
+### Also compared best negative binomial model in each case to a Poisson - considerably better fit and greater support for use of the negative binomial distribution
+
 ##  Helper function: VIF for glmmTMB fixed effects
 compute_vif <- function(formula, data) {
   mm <- model.matrix(formula, data = data)
@@ -89,12 +92,11 @@ all_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2, data = allSpDat)
 summary(all_sp_15mA)
-# Significant negative effect of consp
-# VIF
+## Significant negative effect of conspBA
+# VIF and R2
 vif_A <- compute_vif(~ consp_15m * Seedling_myc +
                         logPrior + log0yr, allSpDat)
-vif_A # All <=10
-# R2
+vif_A # All <4
 r2_A <- performance::r2(all_sp_15mA)
 r2_A
 
@@ -108,13 +110,14 @@ all_sp_15mB <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2, data = allSpDat)
 summary(all_sp_15mB)
-# VIF
+## Significant positive effects of conspBA, hetAM_15m, and hetECM_15m
+## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions 
+# VIF and R2
 vif_B <- compute_vif(~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m + consp_15m:hetECM_15m +
     logPrior + log0yr,  allSpDat)
-vif_B # All <7
-# R2
+vif_B # All <8
 r2_B <- performance::r2(all_sp_15mB)
 r2_B
 
@@ -129,13 +132,13 @@ all_sp_15mC <- glmmTMB(
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2,data = allSpDat)
 summary(all_sp_15mC)
-# VIF
+## Significant negative effects of conspBA and hetAM_15m
+# VIF and R2
 vif_C <- compute_vif( ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
     logPrior + log0yr, allSpDat)
 vif_C # One >16
-# R2
 r2_C <- performance::r2(all_sp_15mC)
 r2_C
 
@@ -152,29 +155,21 @@ all_sp_15mD <- glmmTMB(
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2,data = allSpDat)
 summary(all_sp_15mD)
-# VIF
+## Significant positive effects of conspBA, hetAM_15m, and hetECM_15m
+## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions 
+# VIF and R2
 vif_D <- compute_vif( ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m + consp_15m:hetECM_15m +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
     logPrior + log0yr, allSpDat)
-vif_D
-# R2
+vif_D # one >18
 r2_D <- performance::r2(all_sp_15mD)
 r2_D
 
-# Diagnostics
-simD <- DHARMa::simulateResiduals(all_sp_15mD, n = 1000)
-plot(simD)              
-DHARMa::testDispersion(simD)
-DHARMa::testZeroInflation(simD)
-DHARMa::testUniformity(simD)
-DHARMa::testOutliers(simD)
-
 ######### ######### ######### ######### ######### 
 ######### PANEL B+C+D — SUPERINTERACTIVE MODEL
-all_sp_15mBCD <- glmmTMB(
-  Year_1_counts ~ consp_15m * Seedling_myc +
+all_sp_15mBCD <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m +
     consp_15m:hetECM_15m +
@@ -188,10 +183,10 @@ all_sp_15mBCD <- glmmTMB(
 summary(all_sp_15mBCD)
 ## Significant positive main effects of consp, hetAM, and hetECM BA
 ## Significant negative consp:Seedling_mycECM interaction
-## Negative interactions between consp:hetAM and consp:hetECM 
+## Significant negative interactions between consp:hetAM and consp:hetECM 
 ## Non-significant Seedling_mycECM:hetAM_15m and Seedling_mycECM:hetECM_15m 
 ## consp:Seedling_mycECM:hetECM_15m Significant positive; ECM seedlings in ECM-heterogeneous microsites experience less negative or even reversed competitive effects.
-# VIF
+# VIF and R2
 vif_BCD <- compute_vif(
   ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
@@ -199,49 +194,40 @@ vif_BCD <- compute_vif(
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
     consp_15m:Seedling_myc:hetAM_15m +
     consp_15m:Seedling_myc:hetECM_15m +
-    logPrior + log0yr,allSpDat)
-vif_BCD # None of these high VIFs on interactions threaten the validity of the model; they simply reflect interaction-induced multicollinearity.
-# R2
+    logPrior + log0yr, allSpDat)
+vif_BCD # 3 VIFs >10; but high VIFs on interactions do not threaten the validity of the model; they simply reflect interaction-induced multicollinearity.
 r2_BCD <- performance::r2(all_sp_15mBCD)
-r2_BCD # 47% of variance explained by fixed effects, 13% by REs
-# Diagnostics
-simBCD <- DHARMa::simulateResiduals(all_sp_15mBCD, n = 1000)
-plot(simBCD)              
-DHARMa::testDispersion(simBCD) # No overdispersion
-DHARMa::testZeroInflation(simBCD) # No zero-inflation
-DHARMa::testUniformity(simBCD) # Non-uniform, but very normal with large datasets - not an indicator of poor fit
-DHARMa::testOutliers(simBCD) # ~0.28% of obs are outliers - not concerning
-
+r2_BCD # 52% of variation explained by fixed effects, additional 14% explained by REs
 
 ### Compare AICs
 ### All sites combined
 AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
-    all_sp_15mC, all_sp_15mD, all_sp_15mBCD) # D is lowest
-anova(all_sp_15mB2, all_sp_15mD2)
+    all_sp_15mC, all_sp_15mD, all_sp_15mBCD) # BCD is lowest
+anova(all_sp_15mB, all_sp_15mBCD) # And is significantly better than B
 
-#### Post-hoc tests
-
-# 1. Define a grid of ecologically meaningful predictor values
+#### Diagnostics and Post-hoc tests for super-interactive model (best supported)
+### Diagnostics
+simBCD <- DHARMa::simulateResiduals(all_sp_15mBCD, n = 1000)
+DHARMa::testDispersion(simBCD) # No overdispersion
+DHARMa::testZeroInflation(simBCD) # No zero-inflation
+DHARMa::testUniformity(simBCD) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(simBCD) # ~0.28% of observations are outliers - not concerning
+### Post-hoc tests
+# Define a grid of ecologically meaningful predictor values
 emm_BCD <- emmeans(
   all_sp_15mBCD,
   ~ Seedling_myc | consp_15m * hetAM_15m * hetECM_15m,
   type = "response",
-  at = list(
-    consp_15m   = quantile(allSpDat$consp_15m, c(.1, .5, .9)),
+  at = list(consp_15m   = quantile(allSpDat$consp_15m, c(.1, .5, .9)),
     hetAM_15m   = quantile(allSpDat$hetAM_15m, c(.1, .5, .9)),
     hetECM_15m  = quantile(allSpDat$hetECM_15m, c(.1, .5, .9))))
 emm_BCD
 pairs(emm_BCD, by = c("consp_15m", "hetAM_15m", "hetECM_15m"))
-# Across realistic ranges of conspecific density and heterospecific neighbor composition, AM and ECM seedlings have indistinguishable recruitment rates.
-
-## Model comparison
-### Compare AICs - lowest is all_sp_15mB but all_sp_15mD close 2nd
-AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, all_sp_15mC,
-    all_sp_15mD, all_sp_15mBCD)
-# Global model is significantly better!!
-anova(all_sp_15mB, all_sp_15mBCD) 
+# AM vs ECM seedling mycorrhizal type has no meaningful main effect or interactions with conspecific density or heterospecific AM/ECM densities.
+# Model diagnostics indicated no issues with dispersion or zero-inflation, with tests showing residual variation and the frequency of zeros were fully consistent with model expectations. The DHARMa uniformity test was significant, but this is common in large datasets and not indicative of poor fit. Outlier rates were extremely low (~0.28%) and within acceptable bounds, confirming that the model adequately captured the distribution of the data
 
 
+########## ########## ########## ########## ########## 
 ########## Plotting effect sizes - for Panel BCD
 
 ### Extract fixed effects 
@@ -290,8 +276,9 @@ fixef_df$component <- factor(fixef_df$component, levels = rev(desired_order))
 ### Plot
 ggplot(fixef_df, aes(x = estimate, y = component)) +
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbarh(aes(xmin = estimate - 1.96 * std.error,
-    xmax = estimate + 1.96 * std.error), height = 0.1, color = "black")+
+  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
+    xmax = estimate + 1.96 * std.error), width = 0.1,
+    orientation = "y", color = "black")+
   geom_point(aes(shape = Significant, fill = Significant),
              size = 3.2, color = "black", stroke = 0.9) +
   scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
@@ -314,27 +301,27 @@ all_sp_prop_null <- glmmTMB(Year_1_counts ~ 1 +
                          family = nbinom2, data = allSpDat) 
 summary(all_sp_prop_null)
 # R2
-performance::r2(all_sp_prop_null)
+r2_null_prop <- performance::r2(all_sp_prop_null)
+r2_null_prop
 
 ################# ################# ################# 
-## Testing Panel A conceptual figure (proportional BA)
+## Panel A (proportional BA)
 all_sp_propA <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                       logPrior + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
                     family = nbinom2, data = allSpDat) 
 summary(all_sp_propA)
-## main effect of propConsp is marginally significant
-## main effect of Seedling_myc is not signficant 
-## propConsp:Seedling_myc interaction is negative and significant
-# VIF
+## Significant negative effect of propConsp
+## propConsp:Seedling_myc interaction is negative and marginally significant
+# VIF and R2
 vif_propA <- compute_vif( ~ propConsp*Seedling_myc +
                         logPrior + log0yr, allSpDat)
-vif_propA
-# R2
+vif_propA # all <4
 r2_propA <- performance::r2(all_sp_propA)
 r2_propA
 
-## Testing Panel B conceptual figure (proportional BA)
+################# ################# ################# 
+## Panel B (proportional BA)
 all_sp_propB <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                        propAM + 
                        propConsp:propAM + # Panel B
@@ -342,19 +329,18 @@ all_sp_propB <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
 summary(all_sp_propB)
-## main effects of propConsp and propAM are significant
-## propConsp:Seedling_myc is marginally significant and positive (small)
+## Significant negative effects of propConsp and propAM
 ## propConsp:propAM is significant and positive
-# VIF
+# VIF and R2
 vif_propB <- compute_vif( ~ propConsp*Seedling_myc + 
                             propAM + propConsp:propAM + 
                             logPrior + log0yr, allSpDat)
-vif_propB
-# R2
+vif_propB # All <10
 r2_propB <- performance::r2(all_sp_propB)
 r2_propB
 
-## Testing Panel C conceptual figure (proportional BA)
+################# ################# ################# 
+## Panel C (proportional BA)
 all_sp_propC <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                         propAM + 
                         Seedling_myc:propAM + # Panel C
@@ -362,19 +348,19 @@ all_sp_propC <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
 summary(all_sp_propC)
-## main effects of propConsp and propAM are significant, but not of Seedling_myc
+## Significant positive and negative effects of propConsp and propAM, respectively
 ## propConsp:Seedling_myc interaction is significant and negative
 ## Seedling_myc:AM_15m interaction is not significant 
-# VIF
+# VIF and R2
 vif_propC <- compute_vif( ~ propConsp*Seedling_myc + 
                             propAM + Seedling_myc:propAM + 
-                            logPrior + log0yr +, allSpDat)
-vif_propC
-# R2
+                            logPrior + log0yr, allSpDat)
+vif_propC # All <9
 r2_propC <- performance::r2(all_sp_propC)
 r2_propC
 
-## Testing Panel D (B+C) conceptual figure (proportional BA)
+################# ################# ################# 
+## Panel D (B+C) (proportional BA)
 all_sp_propD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                         propAM + 
                         propConsp:propAM + # Panel B
@@ -383,54 +369,69 @@ all_sp_propD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
 summary(all_sp_propD)
-## main effects of propConsp and propAM are significant, but not of Seedling_myc
-## propConsp:Seedling_myc interaction is significant and positive
+## Significant negative effects of propConsp and propAM
+## propConsp:Seedling_myc interaction is marginally significant and positive
 ## propConsp:propAM interaction is significant and positive
-## Seedling_myc:propAM interaction is not significant 
-# VIF
+# VIF and R2
 vif_propD <- compute_vif( ~ propConsp*Seedling_myc + 
                             propAM + propConsp:propAM + 
                             Seedling_myc:propAM + 
-                            logPrior + log0yr , allSpDat)
-vif_propD
-# R2
+                            logPrior + log0yr, allSpDat)
+vif_propD # All <10
 r2_propD <- performance::r2(all_sp_propD)
 r2_propD
 
-## Testing Panels B, C, and D - Global model (proportional BA)
-## Super interactive model (testing everything)
+################# ################# ################# 
+## Super interactive model (proportional BA)
 all_sp_propBCD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                        propAM + 
                        propConsp:propAM + # Panel B
                        Seedling_myc:propAM + # Panel C
-                       propConsp:Seedling_myc:propAM + # Panel D
+                       propConsp:Seedling_myc:propAM + # 3-way interaction
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
 summary(all_sp_propBCD)
-## main effects of propConsp and propAM are significant, but not of Seedling_myc
-## propConsp:Seedling_myc interaction is significant and positive
-## propConsp:propAM interaction is significant and positive
-## Seedling_myc:propAM interaction is now significant and positive
+## Significant negative effects of propConsp and propAM 
+## propConsp:Seedling_myc, propConsp:propAMm, and Seedling_myc:propAM interactions are all significant and positive!
 ## propConsp:Seedling_myc:propAM interaction is significant and negative
-# VIF
+# VIF and R2
 vif_propBCD <- compute_vif( ~ propConsp*Seedling_myc + 
                               propAM + propConsp:propAM + 
                               Seedling_myc:propAM + 
                               propConsp:Seedling_myc:propAM + 
                               logPrior + log0yr, allSpDat)
-vif_propBCD
-# R2
+vif_propBCD # two values >10 due to interactions
 r2_propBCD <- performance::r2(all_sp_propBCD)
 r2_propBCD
 
 ## Model comparison
-### Compare AICs - lowest is all_sp_propBCD 
+### Compare AICs 
 AIC(all_sp_prop_null, all_sp_propA, all_sp_propB, all_sp_propC,
-    all_sp_propD, all_sp_propBCD)
-anova(all_sp_propB, all_sp_propBCD) # Global model is significantly better!
+    all_sp_propD, all_sp_propBCD) # lowest is all_sp_propBCD 
+anova(all_sp_propB, all_sp_propBCD) # Super-interactive model is significantly better!
 
+#### Diagnostics and Post-hoc tests for super-interactive model (best supported)
+### Diagnostics
+simBCDprop <- DHARMa::simulateResiduals(all_sp_propBCD, n = 1000)
+DHARMa::testDispersion(simBCDprop) # No overdispersion
+DHARMa::testZeroInflation(simBCDprop) # No zero-inflation
+DHARMa::testUniformity(simBCDprop) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(simBCDprop) # ~0.25% of observations are outliers
+### Post-hoc tests
+# Define a grid of ecologically meaningful predictor values
+emm_BCDprop <- emmeans(
+  all_sp_propBCD,
+  ~ Seedling_myc | propConsp * propAM,
+  type = "response",
+  at = list(propConsp  = quantile(allSpDat$propConsp, c(.1, .5, .9)),
+            propAM  = quantile(allSpDat$propAM, c(.1, .5, .9))))
+emm_BCDprop
+pairs(emm_BCDprop, by = c("propConsp", "propAM"))
+# Model diagnostics indicated excellent fit, with no evidence of overdispersion (dispersion = 0.85, p = 0.79) or zero inflation (ratioObsSim = 0.88, p = 0.21). Although DHARMa’s uniformity and outlier tests showed significant deviations, the magnitude was trivial (<0.3% outliers) and expected for large-sample GLMMs, and residual plots showed no structured patterns.
+# Post-hoc comparisons revealed no reliable differences in seedling abundance between AM and ECM species across proportional conspecific or heterospecific basal area gradients. All nine AM–ECM contrasts yielded ratios near 1.0 with non-significant p-values except for a single marginal comparison at high conspecific and high AM basal area, which we interpret cautiously given the lack of a consistent pattern.
 
+########## ########## ########## ########## ########## 
 ########## Plotting effect sizes 
 ### Extract fixed effects 
 fixef_df <- broom.mixed::tidy(
@@ -473,9 +474,9 @@ fixef_df$component <- factor(fixef_df$component, levels = rev(desired_order))
 ### Plot
 ggplot(fixef_df, aes(x = estimate, y = component)) +
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbarh(aes(xmin = estimate - 1.96 * std.error,
+  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
                      xmax = estimate + 1.96 * std.error), 
-                 height = 0.1, color = "black")+
+                orientation = "y",width = 0.1, color = "black")+
   geom_point(aes(shape = Significant, fill = Significant), 
              size = 3.5, color = "black", stroke = 1) +
   scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
@@ -495,53 +496,59 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
 allSpDat_AM = subset(allSpDat, Seedling_myc == "AM")
 allSpDat_ECM = subset(allSpDat, Seedling_myc == "ECM")
 
+# For ECM seedlings, negative-binomial GLMMs consistently showed non-identifiable dispersion parameters (approaching 0 or extremely large), indicating that after accounting for random effects there was no meaningful overdispersion to estimate. Poisson GLMMs provided stable convergence, lower AIC values, and acceptable residual diagnostics. Therefore, all ECM models were fit using Poisson errors.
+# Because AM and ECM seedlings differed strongly in their variance structure, we fit each guild using the distribution that best matched its data-generating process. AM seedling counts were overdispersed even after accounting for random effects, and negative binomial GLMMs gave stable fits and lower AIC values. In contrast, ECM seedling counts showed no estimable overdispersion—negative binomial models produced boundary estimates or convergence warnings—while Poisson GLMMs yielded stable fits and acceptable residual diagnostics. Thus, Poisson error was used for ECM seedlings and negative binomial error for AM seedlings. Importantly, both model sets used the same fixed and random effects, the same link function, and the same biological predictors, ensuring comparability of ecological interpretations across guilds.
+
+########## ########## ########## ########## ########## 
 ##### Null model - AM
 AM_sp_15m_null <- glmmTMB(Year_1_counts ~ 1 +
                            (1|SiteID) + (1|survYear) + (1|Sp),
                          family = nbinom2, data = allSpDat_AM) 
 summary(AM_sp_15m_null)
 # R2
-r2_null <- performance::r2(AM_sp_15m_null)
-r2_null
+r2_nullAM <- performance::r2(AM_sp_15m_null)
+r2_nullAM
 
 ##### Null model - ECM
-ECM_sp_15m_null <- glmmTMB(Year_1_counts ~ 1 +
+ECM_sp_15m_null <- glmer(Year_1_counts ~ 1 +
                             (1|SiteID) + (1|survYear) + (1|Sp),
-                          family = nbinom2, data = allSpDat_ECM) 
+                         family = poisson(link = "log"), data = allSpDat_ECM) 
 summary(ECM_sp_15m_null)
 # R2
-r2_null <- performance::r2(ECM_sp_15m_null)
-r2_null
+r2_nullECM <- performance::r2(ECM_sp_15m_null)
+r2_nullECM
 
-##### Testing Panel A conceptual figure - CDD - AM
+########## ########## ########## ########## ########## 
+##### Panel A - CDD - AM
 AM_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m +
                       logPrior + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
                     family = nbinom2, data = allSpDat_AM) 
 summary(AM_sp_15mA)
-## Main effect of ConspBA is negative and significant
-# VIF
+## Significant negative effect of ConspBA 
+# VIF and R2
 vif_AMa <- compute_vif(~ consp_15m +
                         logPrior + log0yr, allSpDat_AM)
 vif_AMa # All <2
-# R2
-performance::r2(AM_sp_15mA)
+r2_A_AM <- performance::r2(AM_sp_15mA)
+r2_A_AM
 
-##### Testing Panel A conceptual figure - CDD - ECM
-ECM_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m +
+##### Panel A - CDD - ECM
+ECM_sp_15mA <- glmer(Year_1_counts ~ consp_15m +
                         logPrior + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
-                      family = nbinom2, data = allSpDat_ECM) 
+                       family = poisson(link = "log"), data = allSpDat_ECM) 
 summary(ECM_sp_15mA)
-## Main effect of ConspBA is negative and significant
-# VIF
+## Significant negative effect of ConspBA 
+# VIF and R2
 vif_ECMa <- compute_vif(~ consp_15m +
                          logPrior + log0yr, allSpDat_ECM)
 vif_ECMa # All <2
-# R2
-performance::r2(ECM_sp_15mA)
+r2_A_ECM <- performance::r2(ECM_sp_15mA)
+r2_A_ECM
 
-######## Testing Panel B conceptual figure - AM
+########## ########## ########## ########## ########## 
+######## Panel B - AM
 AM_sp_15mB <- glmmTMB(Year_1_counts ~ consp_15m + 
                        hetAM_15m + hetECM_15m + 
                        consp_15m:hetAM_15m + # Panel B
@@ -551,66 +558,62 @@ AM_sp_15mB <- glmmTMB(Year_1_counts ~ consp_15m +
                      family = nbinom2, data = allSpDat_AM)
 summary(AM_sp_15mB)
 ## Significant positive main effects of conspBA, AM BA, and ECM BA
-## consp_15m:AM_15m is positive and significant
-## consp_15m:ECM_15m is negative and significant
-# VIF
+## consp_15m:AM_15m and consp_15m:ECM_15m are negative and significant
+# VIF and R2
 vif_AMb <- compute_vif(~ consp_15m + 
                          hetAM_15m + hetECM_15m + 
                          consp_15m:hetAM_15m + # Panel B
                          consp_15m:hetECM_15m + # Panel B
                          logPrior + log0yr, allSpDat_AM)
-vif_AMb # All <2
-# R2
-performance::r2(AM_sp_15mB)
+vif_AMb # All <6
+r2_B_AM <- performance::r2(AM_sp_15mB)
+r2_B_AM
 
-## Testing Panel B conceptual figure - ECM - HAS TO BE POISSON
-ECM_sp_15mB <- glmmTMB(Year_1_counts ~ consp_15m + 
+######## Panel B - ECM
+# For ECM seedlings, negative-binomial GLMMs failed to converge and estimated a dispersion parameter effectively equal to zero (α < 1×10⁻⁸), indicating no detectable overdispersion after accounting for random effects. We therefore used a Poisson GLMM for this group, which showed stable convergence and acceptable residual diagnostics.
+ECM_sp_15mB <- glmer(Year_1_counts ~ consp_15m + 
                          hetAM_15m + hetECM_15m + 
                          consp_15m:hetAM_15m + # Panel B
                          consp_15m:hetECM_15m + # Panel B
                          logPrior + log0yr +
-                         (1|SiteID) + 
-                         (1|survYear) + (1|Sp),
-                  family = poisson, data = allSpDat_ECM,
-                  control = glmmTMBControl(optimizer=optim, optArgs=list(method="BFGS")))
+                         (1|SiteID) + (1|survYear) + (1|Sp),
+                         family = poisson(link = "log"), data = allSpDat_ECM)
 summary(ECM_sp_15mB)
-
-
-# Compare AIC
-AIC(m_pois, m_nb1, m_nb2)
-anova(m_pois, m_nb1)
-
-# basic checks
-table(allSpDat_ECM$Sp)             # observations per species
-table(allSpDat_ECM$SiteID)         # obs per site (should be 4 sites * plots)
-length(unique(allSpDat_ECM$Sp))
-length(unique(allSpDat_ECM$SiteID))
-
-# check random-effect variances from a simpler model
-mod_simple <- glmmTMB(Year_1_counts ~ 1 + (1|SiteID) + (1|survYear) + (1|Sp),
-                      family = nbinom2, data = allSpDat_ECM)
-summary(mod_simple)
-VarCorr(mod_simple)
-
-## Main effects of conspBA, AM BA, and ECM BA all not significant
+## Non-significant main effects of conspBA, AM BA, and ECM BA
 ## consp_15m:AM_15m is negative and significant
 ## consp_15m:ECM_15m is positive and significant
-# VIF
+# VIF and R2
 vif_ECMb <- compute_vif(~ consp_15m + 
                          hetAM_15m + hetECM_15m + 
                          consp_15m:hetAM_15m + # Panel B
                          consp_15m:hetECM_15m + # Panel B
                          logPrior + log0yr, allSpDat_ECM)
-vif_ECMb # All <2
-# R2
-performance::r2(ECM_sp_15mB)
+vif_ECMb # All <7
+r2_B_ECM <- performance::r2(ECM_sp_15mB)
+r2_B_ECM
 
-## Model comparison - AM
-### Compare AICs - lowest is most complex - AM_sp_15mB
-AIC(AM_sp_15m_null, AM_sp_15mA, AM_sp_15mA2, AM_sp_15mB, AM_sp_15mB2)
+########## ########## ########## ########## ########## 
+##### Model comparison - AM
+### Compare AICs  
+AIC(AM_sp_15m_null, AM_sp_15mA, AM_sp_15mB) # Lowest is AM_sp_15mB
 ## Model comparison - ECM
-AIC(ECM_sp_15m_null, ECM_sp_15mA, ECM_sp_15mA2, ECM_sp_15mB, ECM_sp_15mB2)
-anova(ECM_sp_15mA,ECM_sp_15mB) # B is better
+### Compare AICs  
+AIC(ECM_sp_15m_null, ECM_sp_15mA, ECM_sp_15mB) # Lowest is ECM_sp_15mB
+anova(ECM_sp_15mA, ECM_sp_15mB) # B is significantly better
+
+### Diagnostics - AM
+sim_AM_B <- DHARMa::simulateResiduals(AM_sp_15mB, n = 1000)
+DHARMa::testDispersion(sim_AM_B) # No overdispersion
+DHARMa::testZeroInflation(sim_AM_B) # No zero-inflation
+DHARMa::testUniformity(sim_AM_B) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(sim_AM_B) # ~0.30% of observations are outliers
+
+### Diagnostics - ECM
+sim_ECM_B <- DHARMa::simulateResiduals(ECM_sp_15mB, n = 1000)
+DHARMa::testDispersion(sim_ECM_B) # No overdispersion
+DHARMa::testZeroInflation(sim_ECM_B) # No zero-inflation
+DHARMa::testUniformity(sim_ECM_B) # Non-uniform, but normal with large datasets 
+DHARMa::testOutliers(sim_ECM_B) # ~0.16% of observations are outliers
 
 ########## Plotting effect sizes - for Panel B (most complex mycorrhizal version)
 extract_fixef <- function(model, model_type) {
@@ -648,95 +651,104 @@ desired_order <- c("Conspecific BA", "AM BA",
                    "ECM BA", "Conspecific BA:AM BA","Conspecific BA:ECM BA",
                    "Log(Recruit Density)", "Log(Prior Density)")
 
-# --- prepare data
+# Prepare data
 fixef_df <- fixef_df %>%
-  mutate(# enforce consistent factor order
-    component = factor(component, levels = rev(desired_order)),
-    # tidy up Model and Significant
+  mutate(component = factor(component, levels = rev(desired_order)),
     Model = factor(Model, levels = c("AM", "ECM")),
-    Significant = factor(Significant, levels = c("yes", "no")),
-    # shift large estimates for plotting
-    plot_est = ifelse(estimate > 1, estimate - 1, estimate),
-    plot_xmin = ifelse(estimate > 1, estimate - 1, estimate) - std.error,
-    plot_xmax = ifelse(estimate > 1, estimate - 1, estimate) + std.error)
+     Significant = factor(Significant, levels = c("yes", "no")))
 
 ######## Plot
 offset <- 0.05
-ggplot(fixef_df, aes(x = plot_est, y = component)) +
+ggplot(fixef_df, aes(x = estimate, y = component)) +
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbarh(aes(xmin = plot_xmin, xmax = plot_xmax,
-                     y = as.numeric(component) + 
-                       ifelse(Model == "AM", offset, -offset)),
-                 height = 0.05, color = "black") +
-  geom_point(aes(shape = Model, fill = Significant,
-        y = as.numeric(component) + 
-           ifelse(Model == "AM", offset, -offset)),
-             size = 3, color = "black", stroke = 1) +
-  scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
-                     labels = levels(fixef_df$component)) +
+  geom_errorbar(aes( xmin = estimate - 1.96 * std.error,
+      xmax = estimate + 1.96 * std.error),
+    width = 0.1, color = "black",
+    position = position_nudge(y = ifelse(fixef_df$Model == "AM", offset, -offset))) +
+  geom_point(aes(shape = Model, fill = Significant),
+    size = 3, color = "black", stroke = 1,
+    position = position_nudge(y = ifelse(fixef_df$Model == "AM", offset, -offset))) +
   scale_shape_manual(values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  scale_x_continuous(breaks = c(-0.5, 0, 0.5, 1, 1.25, 1.5),
-    labels = c("-0.5", "0", "0.5", "1.5", "2.0", "2.5")) +
-  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
+  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
     axis.text.y = element_text(size = 12, color = "black"),
     axis.text.x = element_text(size = 12, color = "black")) +
-  guides(fill = guide_legend(override.aes = 
-          list(shape = 21, color = "black", size = 3.5)))
+  guides(fill = guide_legend(override.aes =
+              list(shape = 21, color = "black", size = 3.5)))
+
 
 #########################################################
 #########################################################
 ################# Mycorrhizal Type Models - Proportional Basal Area
 
-## Null model - AM - Proportional BA
-AM_sp_15m_nullprop <- glmer(Year_1_counts ~ 1 +
-                          (1|SiteID) + (1|survYear) + (1|Sp),
-                        family = poisson(link = "log"), data = allSpDat_AM) 
+########## ########## ########## ########## ########## 
+##### Null model - AM (Proportional BA)
+AM_sp_15m_nullprop <- glmmTMB(Year_1_counts ~ 1 +
+                            (1|SiteID) + (1|survYear) + (1|Sp),
+                          family = nbinom2, data = allSpDat_AM) 
 summary(AM_sp_15m_nullprop)
-r.squaredGLMM(AM_sp_15m_nullprop) 
+# R2
+r2_nullAMprop <- performance::r2(AM_sp_15m_nullprop)
+r2_nullAMprop
 
-## Null model - ECM - Proportional BA
+##### Null model - ECM (Proportional BA)
 ECM_sp_15m_nullprop <- glmer(Year_1_counts ~ 1 +
                            (1|SiteID) + (1|survYear) + (1|Sp),
                          family = poisson(link = "log"), data = allSpDat_ECM) 
 summary(ECM_sp_15m_nullprop)
-r.squaredGLMM(ECM_sp_15m_nullprop) 
+# R2
+r2_nullECMprop <- performance::r2(ECM_sp_15m_nullprop)
+r2_nullECMprop
 
-## Testing Panel A conceptual figure - AM - Proportional BA
-AM_sp_15mpropA <- glmer(Year_1_counts ~ propConsp +
+########## ########## ########## ########## ########## 
+#### Panel A - AM (Proportional BA)
+AM_sp_15mpropA <- glmmTMB(Year_1_counts ~ propConsp +
                      logPrior + log0yr +
                      (1|SiteID) + (1|survYear) + (1|Sp),
-                   family = poisson(link = "log"), data = allSpDat_AM) 
+                     family = nbinom2, data = allSpDat_AM) 
 summary(AM_sp_15mpropA)
-## Main effect of ConspBA is negative and significant
-car::vif(AM_sp_15mpropA)
-r.squaredGLMM(AM_sp_15mpropA) 
+## Significant negative effect of ConspBA 
+# VIF and R2
+vif_AMaProp <- compute_vif(~ propConsp +
+                         logPrior + log0yr, allSpDat_AM)
+vif_AMaProp # All <2
+r2_A_AMprop <- performance::r2(AM_sp_15mpropA)
+r2_A_AMprop
 
-## Testing Panel A conceptual figure - ECM - Proportional BA
+#### Panel A - ECM (Proportional BA)
 ECM_sp_15mpropA <- glmer(Year_1_counts ~ propConsp +
                       logPrior + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
                     family = poisson(link = "log"), data = allSpDat_ECM) 
 summary(ECM_sp_15mpropA)
 ## Main effect of ConspBA is not significant
-car::vif(ECM_sp_15mpropA)
-r.squaredGLMM(ECM_sp_15mpropA) 
+# VIF and R2
+vif_ECMaProp <- compute_vif(~ propConsp +
+                             logPrior + log0yr, allSpDat_ECM)
+vif_ECMaProp # All <2
+r2_A_ECMprop <- performance::r2(ECM_sp_15mpropA)
+r2_A_ECMprop
 
-## Testing Panel B conceptual figure - AM - Proportional BA
-AM_sp_15mpropB <- glmer(Year_1_counts ~ propConsp + 
+########## ########## ########## ########## ########## 
+#### Panel B - AM (Proportional BA)
+AM_sp_15mpropB <- glmmTMB(Year_1_counts ~ propConsp + 
                       propAM + propConsp:propAM + 
                       logPrior + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
-                    family = poisson(link = "log"), data = allSpDat_AM)
+                      family = nbinom2, data = allSpDat_AM)
 summary(AM_sp_15mpropB)
 ## Significant negative main effects of propConsp and propAM
 ## propConsp:propAM is positive and significant
-car::vif(AM_sp_15mpropB)
-r.squaredGLMM(AM_sp_15mpropB) 
+# VIF and R2
+vif_AMbProp <- compute_vif(~ propConsp +
+                             logPrior + log0yr, allSpDat_AM)
+vif_AMbProp # All <2
+r2_B_AMprop <- performance::r2(AM_sp_15mpropB)
+r2_B_AMprop
 
-## Testing Panel B conceptual figure - ECM - Proportional BA
+#### Panel B - ECM (Proportional BA)
 ECM_sp_15mpropB <- glmer(Year_1_counts ~ propConsp + 
                        propAM + propConsp:propAM + 
                        logPrior + log0yr +
@@ -745,17 +757,34 @@ ECM_sp_15mpropB <- glmer(Year_1_counts ~ propConsp +
 summary(ECM_sp_15mpropB)
 ## Non-significant main effects of propConsp and propAM
 ## propConsp:propAM is negative and significant
-car::vif(ECM_sp_15mpropB)
-r.squaredGLMM(ECM_sp_15mpropB) 
+# VIF and R2
+vif_ECMbProp <- compute_vif(~ propConsp +
+                             logPrior + log0yr, allSpDat_ECM)
+vif_ECMbProp # All <2
+r2_B_ECMprop <- performance::r2(ECM_sp_15mpropB)
+r2_B_ECMprop
 
 
+########## ########## ########## ########## ########## 
 ## Model comparison - AM
-### Compare AICs - lowest is most complex - AM_sp_15mpropB
-AIC(AM_sp_15m_nullprop, AM_sp_15mpropA, AM_sp_15mpropB)
+AIC(AM_sp_15m_nullprop, AM_sp_15mpropA, AM_sp_15mpropB) # AM_sp_15mpropB is lowest
 ## Model comparison - ECM
-### Compare AICs - lowest is most complex - ECM_sp_15mpropB
-AIC(ECM_sp_15m_nullprop, ECM_sp_15mpropA, ECM_sp_15mpropB)
-anova(ECM_sp_15mpropA, ECM_sp_15mpropB)
+AIC(ECM_sp_15m_nullprop, ECM_sp_15mpropA, ECM_sp_15mpropB) # ECM_sp_15mpropB is lowest
+anova(ECM_sp_15mpropA, ECM_sp_15mpropB) # And is significantly more supported
+
+### Diagnostics - AM
+sim_AMprop_B <- DHARMa::simulateResiduals(AM_sp_15mpropB, n = 1000)
+DHARMa::testDispersion(sim_AMprop_B) # No overdispersion
+DHARMa::testZeroInflation(sim_AMprop_B) # No zero-inflation
+DHARMa::testUniformity(sim_AMprop_B) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(sim_AMprop_B) # ~0.30% of observations are outliers
+
+### Diagnostics - ECM
+sim_ECMprop_B <- DHARMa::simulateResiduals(ECM_sp_15mpropB, n = 1000)
+DHARMa::testDispersion(sim_ECMprop_B) # No overdispersion
+DHARMa::testZeroInflation(sim_ECMprop_B) # No zero-inflation
+DHARMa::testUniformity(sim_ECMprop_B) # Non-uniform, but normal with large datasets 
+DHARMa::testOutliers(sim_ECMprop_B) # ~0.16% of observations are outliers
 
 ########## Plotting effect sizes - for Panel B - proportional BA
 extract_fixef <- function(model, model_type) {
@@ -779,8 +808,8 @@ extract_fixef <- function(model, model_type) {
 }
 
 ## Extract for both models
-fixef_AM  <- extract_fixef(AM_sp_15m1prop, "AM")
-fixef_ECM <- extract_fixef(ECM_sp_15m1prop, "ECM")
+fixef_AM  <- extract_fixef(AM_sp_15mpropB, "AM")
+fixef_ECM <- extract_fixef(ECM_sp_15mpropB, "ECM")
 
 ## Combine
 fixef_df <- bind_rows(fixef_AM, fixef_ECM)
@@ -801,25 +830,23 @@ fixef_df <- fixef_df %>%
 offset <- 0.05
 ggplot(fixef_df, aes(x = estimate, y = component)) +
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  # Error bars with same offset as points
-  geom_errorbarh(aes(xmin = estimate - std.error, xmax = estimate + std.error,
-          y = as.numeric(component) + ifelse(Model == "AM", offset, -offset)),
-                 height = 0.05, color = "black") +
-  # Points with the same vertical offset
-  geom_point(aes(shape = Model, fill = Significant,
-        y = as.numeric(component) + ifelse(Model == "AM", offset, -offset)),
-             size = 3, color = "black", stroke = 1) +
-  scale_y_continuous(breaks = 1:length(levels(fixef_df$component)),
-                     labels = levels(fixef_df$component)) +
+  geom_errorbar(aes( xmin = estimate - 1.96 * std.error,
+                     xmax = estimate + 1.96 * std.error),
+                width = 0.1, color = "black",
+    position = position_nudge(y = ifelse(fixef_df$Model == "AM", offset, -offset))) +
+  geom_point(aes(shape = Model, fill = Significant),
+             size = 3, color = "black", stroke = 1,
+    position = position_nudge(y = ifelse(fixef_df$Model == "AM", offset, -offset))) +
   scale_shape_manual(values = c("AM" = 24, "ECM" = 22)) +
   scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± SE (log count scale)", y = NULL) +
+  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
   theme_bw(base_size = 12) +
   theme(legend.position = "right",
-    axis.text.y = element_text(size = 12, color = "black"),
-    axis.text.x = element_text(size = 12, color = "black")) +
-  guides(fill = guide_legend(override.aes = 
-                    list(shape = 21, color = "black", size = 3.5)))
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.text.x = element_text(size = 12, color = "black")) +
+  guides(fill = guide_legend(override.aes =
+                               list(shape = 21, color = "black", size = 3.5)))
+
 
 #########################################################
 #########################################################
@@ -830,56 +857,54 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
 rm_surv <- subset(allSpDat, Sp == "rm")
 
 ## Null model - species-level
-rm_15m_null <- glmer(Year_1_counts ~ 1 +
+rm_15m_null <- glmmTMB(Year_1_counts ~ 1 +
                      (1|SiteID) + (1|survYear),
-                     family = poisson(link = "log"), data = rm_surv) 
+                     family = nbinom2, data = rm_surv) 
 summary(rm_15m_null)
-r.squaredGLMM(rm_15m_null) 
+# R2
+rm_15m_null_r2 <- performance::r2(rm_15m_null)
+rm_15m_null_r2
 
-## Testing Panel A conceptual figure - CNDD - species-level
-rm_15mA <- glmer(Year_1_counts ~ consp_15m +
-                      logPrior + log0yr +
-                      (1|SiteID) + (1|survYear),
-                    family = poisson(link = "log"), data = rm_surv)
-summary(rm_15mA) # conspBA highly significant
-car::vif(rm_15mA)
-r.squaredGLMM(rm_15mA) 
+########## ########## ########## ########## ########## 
+##### Partial Panel A - CNDD - RM
+rm_15mA <- glmmTMB(Year_1_counts ~ consp_15m +
+                   logPrior + log0yr +
+                   (1|SiteID) + (1|survYear),
+                 family = nbinom2, data = rm_surv)
+summary(rm_15mA)
+# Significant negative effect of conspBA 
+# VIF and R2
+vif_rm_15mA <- compute_vif(~ consp_15m +
+                             logPrior + log0yr, rm_surv)
+vif_rm_15mA # All <2
+rm_15mA_r2 <- performance::r2(rm_15mA)
+rm_15mA_r2
 
-## Testing Partial Panel B conceptual figure - Interactive spillover
-rm_15mB <- glmer(Year_1_counts ~ consp_15m + 
+########## ########## ########## ########## ########## 
+###### Partial Panel B - RM
+rm_15mB <- glmmTMB(Year_1_counts ~ consp_15m + 
                    hetAM_15m + hetECM_15m + 
                    consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
-                 family = poisson(link = "log"), data = rm_surv)
+                 family = nbinom2, data = rm_surv)
 summary(rm_15mB)
-## main effects of AM_15m and ECM_15m are significant
-## main effect of conspBA is not significant
+## Significant negative and positive effects of AM_15m and ECM_15m, respectively
 ## Consp_15m:AM_15m is significant and negative
-## Consp_15m:ECM_15m is marginally significant and negative
-car::vif(rm_15mB) # One VIF >12
-r.squaredGLMM(rm_15mB) 
+# VIF and R2
+vif_rm_15mB <- compute_vif(~ consp_15m + 
+                             hetAM_15m + hetECM_15m + 
+                             consp_15m:hetAM_15m + 
+                             consp_15m:hetECM_15m + 
+                             logPrior + log0yr, rm_surv)
+vif_rm_15mB # Two are >10 (but interactions, so okay)
+rm_15mB_r2 <- performance::r2(rm_15mB)
+rm_15mB_r2
 
-# ## Testing Partial Panel B conceptual figure - Interactive spillover
-# ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
-# rm_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
-#                    hetAM_15m + hetECM_15m + 
-#                    logPrior + log0yr +
-#                    (1|SiteID) + (1|survYear),
-#                  family = poisson(link = "log"), data = rm_surv)
-# summary(rm_15mB2)
-# ## Main effects of conspBA and AM_15m are significant
-# ## Main effects of ECM_15m is not significant
-# car::vif(rm_15mB2) 
-# r.squaredGLMM(rm_15mB2)
-
-## Model comparison - species-level
-### Compare AICs 
-AIC(rm_15m_null, rm_15mA, rm_15mB)
-#AIC(rm_15m_null, rm_15mA, rm_15mB, rm_15mB2)
-# More complex model is better
-anova(rm_15mA, rm_15mB)
+########## ########## ########## ########## ########## 
+## Model comparison - RM
+AIC(rm_15m_null, rm_15mA, rm_15mB) # B is significantly better
 
 
 #########################################################
