@@ -777,14 +777,14 @@ sim_AMprop_B <- DHARMa::simulateResiduals(AM_sp_15mpropB, n = 1000)
 DHARMa::testDispersion(sim_AMprop_B) # No overdispersion
 DHARMa::testZeroInflation(sim_AMprop_B) # No zero-inflation
 DHARMa::testUniformity(sim_AMprop_B) # Non-uniform, but normal with large datasets - not an indicator of poor fit
-DHARMa::testOutliers(sim_AMprop_B) # ~0.30% of observations are outliers
+DHARMa::testOutliers(sim_AMprop_B) # ~0.37% of observations are outliers
 
 ### Diagnostics - ECM
 sim_ECMprop_B <- DHARMa::simulateResiduals(ECM_sp_15mpropB, n = 1000)
 DHARMa::testDispersion(sim_ECMprop_B) # No overdispersion
 DHARMa::testZeroInflation(sim_ECMprop_B) # No zero-inflation
 DHARMa::testUniformity(sim_ECMprop_B) # Non-uniform, but normal with large datasets 
-DHARMa::testOutliers(sim_ECMprop_B) # ~0.16% of observations are outliers
+DHARMa::testOutliers(sim_ECMprop_B) # ~0.09% of observations are outliers
 
 ########## Plotting effect sizes - for Panel B - proportional BA
 extract_fixef <- function(model, model_type) {
@@ -850,13 +850,13 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
 
 #########################################################
 #########################################################
-#########################################################
 ################# Species-Level Model - RM - Raw Basal Area
 
 ##### Subset RM data
 rm_surv <- subset(allSpDat, Sp == "rm")
 
-## Null model - species-level
+########## ########## ########## ########## ########## 
+##### Null model - RM
 rm_15m_null <- glmmTMB(Year_1_counts ~ 1 +
                      (1|SiteID) + (1|survYear),
                      family = nbinom2, data = rm_surv) 
@@ -906,6 +906,13 @@ rm_15mB_r2
 ## Model comparison - RM
 AIC(rm_15m_null, rm_15mA, rm_15mB) # B is significantly better
 
+### Diagnostics - RM
+sim_rm_B <- DHARMa::simulateResiduals(rm_15mB, n = 1000)
+DHARMa::testDispersion(sim_rm_B) # No overdispersion
+DHARMa::testZeroInflation(sim_rm_B) # Mild under-inflation
+DHARMa::testUniformity(sim_rm_B) # Non-uniform 
+DHARMa::testOutliers(sim_rm_B) # ~0.12% of observations are outliers
+
 
 #########################################################
 ################# Species-Level Test - SM - Raw Basal Area
@@ -913,56 +920,64 @@ AIC(rm_15m_null, rm_15mA, rm_15mB) # B is significantly better
 ##### Subset sm data
 sm_surv <- subset(allSpDat, Sp == "sm")
 
-## Null model - species-level
-sm_15m_null <- glmer(Year_1_counts ~ 1 +
-                       (1|SiteID) + (1|survYear),
-                     family = poisson(link = "log"), data = sm_surv) 
+########## ########## ########## ########## ########## 
+##### Null model - SM
+sm_15m_null <- glmmTMB(Year_1_counts ~ 1 +
+                         (1|SiteID) + (1|survYear),
+                       family = nbinom2, data = sm_surv) 
 summary(sm_15m_null)
-r.squaredGLMM(sm_15m_null) 
+# R2
+sm_15m_null_r2 <- performance::r2(sm_15m_null)
+sm_15m_null_r2
 
-## Testing Panel A conceptual figure - CNDD - species-level
-sm_15mA <- glmer(Year_1_counts ~ consp_15m +
-                   logPrior + log0yr +
-                   (1|SiteID) + (1|survYear),
-                 family = poisson(link = "log"), data = sm_surv)
-summary(sm_15mA) # conspBA highly significant
-car::vif(sm_15mA)
-r.squaredGLMM(sm_15mA) 
+########## ########## ########## ########## ########## 
+##### Partial Panel A - CNDD - sm
+sm_15mA <- glmmTMB(Year_1_counts ~ consp_15m +
+                     logPrior + log0yr +
+                     (1|SiteID) + (1|survYear),
+                   family = nbinom2, data = sm_surv)
+summary(sm_15mA)
+# Significant positive effect of conspBA 
+# VIF and R2
+vif_sm_15mA <- compute_vif(~ consp_15m +
+                             logPrior + log0yr, sm_surv)
+vif_sm_15mA # All <2
+sm_15mA_r2 <- performance::r2(sm_15mA)
+sm_15mA_r2
 
-## Testing Partial Panel B conceptual figure - Interactive spillover
-sm_15mB <- glmer(Year_1_counts ~ consp_15m + 
-                   hetAM_15m + hetECM_15m + 
-                   consp_15m:hetAM_15m + # Panel B
-                   consp_15m:hetECM_15m + # Panel B
-                   logPrior + log0yr +
-                   (1|SiteID) + (1|survYear),
-                 family = poisson(link = "log"), data = sm_surv)
+########## ########## ########## ########## ########## 
+###### Partial Panel B - sm
+sm_15mB <- glmmTMB(Year_1_counts ~ consp_15m + 
+                     hetAM_15m + hetECM_15m + 
+                     consp_15m:hetAM_15m + # Panel B
+                     consp_15m:hetECM_15m + # Panel B
+                     logPrior + log0yr +
+                     (1|SiteID) + (1|survYear),
+                   family = nbinom2, data = sm_surv)
 summary(sm_15mB)
-## main effects of AM_15m is not significant
-## main effects of conspBA and ECM_15m are significant
+## Significant positive effects of consp, AM_15m, and ECM_15m
 ## Consp_15m:AM_15m is significant and negative
-## Consp_15m:ECM_15m is not significant
-car::vif(sm_15mB) 
-r.squaredGLMM(sm_15mB) 
+# VIF and R2
+vif_sm_15mB <- compute_vif(~ consp_15m + 
+                             hetAM_15m + hetECM_15m + 
+                             consp_15m:hetAM_15m + 
+                             consp_15m:hetECM_15m + 
+                             logPrior + log0yr, sm_surv)
+vif_sm_15mB # All <10
+sm_15mB_r2 <- performance::r2(sm_15mB)
+sm_15mB_r2
 
-# ## Testing Partial Panel B conceptual figure - Interactive spillover
-# ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
-# sm_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
-#                     hetAM_15m + hetECM_15m + 
-#                     logPrior + log0yr +
-#                     (1|SiteID) + (1|survYear),
-#                   family = poisson(link = "log"), data = sm_surv)
-# summary(sm_15mB2)
-# ## main effects of AM_15m, conspBA, and ECM_15m are all significant
-# car::vif(sm_15mB2) 
-# r.squaredGLMM(sm_15mB2)
-
-## Model comparison - species-level
-### Compare AICs 
-AIC(sm_15m_null, sm_15mA, sm_15mB)
-#AIC(sm_15m_null, sm_15mA, sm_15mB, sm_15mB2)
-# More complex model is better
+########## ########## ########## ########## ########## 
+## Model comparison - sm
+AIC(sm_15m_null, sm_15mA, sm_15mB) # B is significantly better
 anova(sm_15mA, sm_15mB)
+
+### Diagnostics - sm
+sim_sm_B <- DHARMa::simulateResiduals(sm_15mB, n = 1000)
+DHARMa::testDispersion(sim_sm_B) # No overdispersion
+DHARMa::testZeroInflation(sim_sm_B) # Mild under-inflation
+DHARMa::testUniformity(sim_sm_B) # Non-uniform 
+DHARMa::testOutliers(sim_sm_B) # ~0.47% of observations are outliers
 
 #########################################################
 ################# Species-Level Test - bc - Raw Basal Area
@@ -970,23 +985,30 @@ anova(sm_15mA, sm_15mB)
 ##### Subset bc data
 bc_surv <- subset(allSpDat, Sp == "bc")
 
-## Null model - species-level
+########## ########## ########## ########## ########## 
+##### Null model - BC
 bc_15m_null <- glmer(Year_1_counts ~ 1 +
                        (1|SiteID) + (1|survYear),
                      family = poisson(link = "log"), data = bc_surv) 
 summary(bc_15m_null)
-r.squaredGLMM(bc_15m_null) 
+bc_15m_null_r2 <- performance::r2(bc_15m_null)
+bc_15m_null_r2
 
-## Testing Panel A conceptual figure - CNDD - species-level
+########## ########## ########## ########## ########## 
+##### Partial Panel A - CNDD - BC
 bc_15mA <- glmer(Year_1_counts ~ consp_15m +
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = bc_surv)
-summary(bc_15mA) # conspBA highly significant
-car::vif(bc_15mA)
-r.squaredGLMM(bc_15mA) 
+summary(bc_15mA) 
+## Significant negative effect of conspBA 
+# VIF and R2
+car::vif(bc_15mA) # All <2
+bc_15mA_r2 <- performance::r2(bc_15mA)
+bc_15mA_r2
 
-## Testing Partial Panel B conceptual figure - Interactive spillover
+########## ########## ########## ########## ########## 
+##### Partial Panel B - BC
 bc_15mB <- glmer(Year_1_counts ~ consp_15m + 
                    hetAM_15m + hetECM_15m + 
                    consp_15m:hetAM_15m + # Panel B
@@ -995,32 +1017,24 @@ bc_15mB <- glmer(Year_1_counts ~ consp_15m +
                    (1|SiteID) + (1|survYear),
                  family = poisson(link = "log"), data = bc_surv)
 summary(bc_15mB)
-## main effects of conspBA and AM_15m are significant
-## main effect ECM_15m is not significant
-## consp_15m:AM_15m is postitive and significant
-## consp_15m:ECM_15m is not significant
-car::vif(bc_15mB) # One VIF >14
-r.squaredGLMM(bc_15mB) 
+## Significant negative effects of conspBA and AM_15m
+## consp_15m:AM_15m is positive and significant
+# VIF and R2
+car::vif(bc_15mB) # One >10
+bc_15mB_r2 <- performance::r2(bc_15mB)
+bc_15mB_r2
 
-# ## Testing Partial Panel B conceptual figure - Interactive spillover
-# ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
-# bc_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
-#                     hetAM_15m + hetECM_15m + 
-#                     logPrior + log0yr +
-#                     (1|SiteID) + (1|survYear),
-#                   family = poisson(link = "log"), data = bc_surv)
-# summary(bc_15mB2)
-# ## main effect of conspBA is significant
-# ## main effects of AM_15m and ECM_15m are not significant
-# car::vif(bc_15mB2) 
-# r.squaredGLMM(bc_15mB2)
+########## ########## ########## ########## ########## 
+## Model comparison - bc
+AIC(bc_15m_null, bc_15mA, bc_15mB) 
+anova(bc_15mA, bc_15mB) # B is not significantly better than A
 
-## Model comparison - species-level
-### Compare AICs 
-AIC(bc_15m_null, bc_15mA, bc_15mB)
-# AIC(bc_15m_null, bc_15mA, bc_15mB, bc_15mB2)
-# More complex model is NOT better
-anova(bc_15mA, bc_15mB)
+### Diagnostics - bc
+sim_bc_B <- DHARMa::simulateResiduals(bc_15mB, n = 1000)
+DHARMa::testDispersion(sim_bc_B) # No overdispersion
+DHARMa::testZeroInflation(sim_bc_B) # No zero-inflation
+DHARMa::testUniformity(sim_bc_B) # Non-uniform 
+DHARMa::testOutliers(sim_bc_B) # ~0.08% of observations are outliers
 
 #########################################################
 ################# Species-Level Test - wa - Raw Basal Area
@@ -1028,55 +1042,64 @@ anova(bc_15mA, bc_15mB)
 ##### Subset wa data
 wa_surv <- subset(allSpDat, Sp == "wa")
 
-## Null model - species-level
-wa_15m_null <- glmer(Year_1_counts ~ 1 +
-                       (1|SiteID) + (1|survYear),
-                     family = poisson(link = "log"), data = wa_surv) 
+########## ########## ########## ########## ########## 
+##### Null model - wa
+wa_15m_null <- glmmTMB(Year_1_counts ~ 1 +
+                         (1|SiteID) + (1|survYear),
+                       family = nbinom2, data = wa_surv) 
 summary(wa_15m_null)
-r.squaredGLMM(wa_15m_null) 
+# R2
+wa_15m_null_r2 <- performance::r2(wa_15m_null)
+wa_15m_null_r2
 
-## Testing Panel A conceptual figure - CNDD - species-level
-wa_15mA <- glmer(Year_1_counts ~ consp_15m +
-                   logPrior + log0yr +
-                   (1|SiteID) + (1|survYear),
-                 family = poisson(link = "log"), data = wa_surv)
-summary(wa_15mA) # conspBA highly significant
-car::vif(wa_15mA)
-r.squaredGLMM(wa_15mA) 
+########## ########## ########## ########## ########## 
+##### Partial Panel A - CNDD - wa
+wa_15mA <- glmmTMB(Year_1_counts ~ consp_15m +
+                     logPrior + log0yr +
+                     (1|SiteID) + (1|survYear),
+                   family = nbinom2, data = wa_surv)
+summary(wa_15mA)
+# Significant negative effect of conspBA 
+# VIF and R2
+vif_wa_15mA <- compute_vif(~ consp_15m +
+                             logPrior + log0yr, wa_surv)
+vif_wa_15mA # All <2
+wa_15mA_r2 <- performance::r2(wa_15mA)
+wa_15mA_r2
 
-## Testing Partial Panel B conceptual figure - Interactive spillover
-wa_15mB <- glmer(Year_1_counts ~ consp_15m + 
-                   hetAM_15m + hetECM_15m + 
-                   consp_15m:hetAM_15m + # Panel B
-                   consp_15m:hetECM_15m + # Panel B
-                   logPrior + log0yr +
-                   (1|SiteID) + (1|survYear),
-                 family = poisson(link = "log"), data = wa_surv)
+########## ########## ########## ########## ########## 
+###### Partial Panel B - wa
+wa_15mB <- glmmTMB(Year_1_counts ~ consp_15m + 
+                     hetAM_15m + hetECM_15m + 
+                     consp_15m:hetAM_15m + # Panel B
+                     consp_15m:hetECM_15m + # Panel B
+                     logPrior + log0yr +
+                     (1|SiteID) + (1|survYear),
+                   family = nbinom2, data = wa_surv)
 summary(wa_15mB)
-## Main effect of conspBA is significant 
-## None of other main effects or their interactions are significant 
-car::vif(wa_15mB) # One VIF >30
-r.squaredGLMM(wa_15mB) 
+## Significant negative effects of conspBA
+## Consp_15m:AM_15m is marginally significant and positive
+# VIF and R2
+vif_wa_15mB <- compute_vif(~ consp_15m + 
+                             hetAM_15m + hetECM_15m + 
+                             consp_15m:hetAM_15m + 
+                             consp_15m:hetECM_15m + 
+                             logPrior + log0yr, wa_surv)
+vif_wa_15mB # Two are >10
+wa_15mB_r2 <- performance::r2(wa_15mB)
+wa_15mB_r2
 
-# ## Testing Partial Panel B conceptual figure - Interactive spillover
-# ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
-# wa_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
-#                     hetAM_15m + hetECM_15m + 
-#                     logPrior + log0yr +
-#                     (1|SiteID) + (1|survYear),
-#                   family = poisson(link = "log"), data = wa_surv)
-# summary(wa_15mB2)
-# ## main effect of conspBA is significant
-# ## main effects of AM_15m and ECM_15m are not significant
-# car::vif(wa_15mB2) 
-# r.squaredGLMM(wa_15mB2)
+########## ########## ########## ########## ########## 
+## Model comparison - wa
+AIC(wa_15m_null, wa_15mA, wa_15mB) 
+anova(wa_15mA, wa_15mB) # B is not significantly better
 
-## Model comparison - species-level
-### Compare AICs 
-AIC(wa_15m_null, wa_15mA, wa_15mB)
-# AIC(wa_15m_null, wa_15mA, wa_15mB, wa_15mB2)
-# More complex model is NOT better
-anova(wa_15mA, wa_15mB)
+### Diagnostics - wa
+sim_wa_B <- DHARMa::simulateResiduals(wa_15mB, n = 1000)
+DHARMa::testDispersion(sim_wa_B) # No overdispersion
+DHARMa::testZeroInflation(sim_wa_B) # No zero-inflation
+DHARMa::testUniformity(sim_wa_B) # Non-uniform 
+DHARMa::testOutliers(sim_wa_B) # ~0.44% of observations are outliers
 
 #########################################################
 ################# Species-Level Test - ab - Raw Basal Area - Excludes RE of SiteID
@@ -1084,58 +1107,59 @@ anova(wa_15mA, wa_15mB)
 ##### Subset ab data
 ab_surv <- subset(allSpDat, Sp == "ab")
 
-## Null model - species-level
+########## ########## ########## ########## ########## 
+##### Null model - AB
 ab_15m_null <- glmer(Year_1_counts ~ 1 +
                        (1|survYear),
                      family = poisson(link = "log"), data = ab_surv) 
 summary(ab_15m_null)
-r.squaredGLMM(ab_15m_null) 
+# R2
+ab_15m_null_r2 <- performance::r2(ab_15m_null)
+ab_15m_null_r2
 
-## Testing Panel A conceptual figure - CNDD - species-level
+########## ########## ########## ########## ########## 
+##### Partial Panel A - CNDD - AB
 ab_15mA <- glmer(Year_1_counts ~ consp_15m +
                    logPrior + log0yr +
                    (1|survYear),
                  family = poisson(link = "log"), data = ab_surv)
-summary(ab_15mA) # conspBA is not significant
-car::vif(ab_15mA)
-r.squaredGLMM(ab_15mA) 
+summary(ab_15mA) 
+# conspBA is not significant
+# VIF and R2
+car::vif(ab_15mA) # All <2
+ab_15m_A_r2 <- performance::r2(ab_15mA)
+ab_15m_A_r2
 
-## Testing Partial Panel B conceptual figure - Interactive spillover
+########## ########## ########## ########## ########## 
+##### Partial Panel B - AB
 ab_15mB <- glmer(Year_1_counts ~ consp_15m + 
                    hetAM_15m + hetECM_15m + 
-                   #consp_15m:hetAM_15m + # Panel B
+                   consp_15m:hetAM_15m + # Panel B
                    consp_15m:hetECM_15m + # Panel B
-                   AM_15m + ECM_15m + 
-                   consp_15m:AM_15m + # Panel B
-                   consp_15m:ECM_15m + # Panel B
                    logPrior + log0yr +
-                   (1|survYear),
-                 family = poisson(link = "log"), data = ab_surv)
+                  (1|survYear),
+                 family = poisson(link = "log"), data = ab_surv,
+                 control = glmerControl(optimizer = "bobyqa"))
 summary(ab_15mB)
-## none of the main effects or their interactions are significant 
-car::vif(ab_15mB) 
-r.squaredGLMM(ab_15mB) 
+# VIF and R2
+car::vif(ab_15mB) # A few >15 - interactions
+ab_15m_B_r2 <- performance::r2(ab_15mB)
+ab_15m_B_r2
 
-# ## Testing Partial Panel B conceptual figure - Interactive spillover
-# ## Removed consp_15m:AM_15m and consp_15m:ECM_15m interactions
-# ab_15mB2 <- glmer(Year_1_counts ~ consp_15m + 
-#                     hetAM_15m + hetECM_15m + 
-#                     logPrior + log0yr +
-#                      (1|survYear),
-#                   family = poisson(link = "log"), data = ab_surv)
-# summary(ab_15mB2)
-# ## main effects of conspBA, AM_15m, and ECM_15m are not significant
-# car::vif(ab_15mB2) 
-# r.squaredGLMM(ab_15mB2)
+########## ########## ########## ########## ########## 
+## Model comparison - AB
+AIC(ab_15m_null, ab_15mA, ab_15mB) 
+anova(ab_15mA, ab_15mB) # B is not significantly better
 
-## Model comparison - species-level
-### Compare AICs 
-AIC(ab_15m_null, ab_15mA, ab_15mB)
-# AIC(ab_15m_null, ab_15mA, ab_15mB, ab_15mB2)
-# More complex model is NOT better
-anova(ab_15mA, ab_15mB)
+### Diagnostics - wa
+sim_ab_B <- DHARMa::simulateResiduals(ab_15mB, n = 1000)
+DHARMa::testDispersion(sim_ab_B) # No overdispersion
+DHARMa::testZeroInflation(sim_ab_B) # No zero-inflation
+DHARMa::testUniformity(sim_ab_B) # Non-uniform 
+DHARMa::testOutliers(sim_ab_B) # ~0.40% of observations are outliers
 
 #########################################################
+#################   START HERE
 ################# Species-Level Test - nro - Raw Basal Area - removed RE of site
 
 ##### Subset nro data
