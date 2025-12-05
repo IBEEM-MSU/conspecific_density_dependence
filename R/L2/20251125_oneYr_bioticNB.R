@@ -95,6 +95,7 @@ all_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2, data = allSpDat)
 summary(all_sp_15mA)
+
 ## Significant negative effect of conspBA
 # VIF and R2
 vif_A <- compute_vif(~ consp_15m * Seedling_myc +
@@ -534,6 +535,30 @@ plotD <- plot(predD) +
 predBCD <- ggpredict(
   all_sp_15mBCD,
   terms = c("consp_15m [all]", "hetECM_15m [quartiles]", "Seedling_myc")
+)
+
+plotBCD <- plot(predBCD) +
+  labs(title = "Super Interactive Model (BCD+)")
+
+predBCD <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("consp_15m [all]", "Seedling_myc")
+)
+
+plotBCD <- plot(predBCD) +
+  labs(title = "Super Interactive Model (BCD+)")
+
+predBCD <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("hetECM_15m [all]", "Seedling_myc")
+)
+
+plotBCD <- plot(predBCD) +
+  labs(title = "Super Interactive Model (BCD+)")
+
+predBCD <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("hetAM_15m [all]", "Seedling_myc")
 )
 
 plotBCD <- plot(predBCD) +
@@ -1075,6 +1100,18 @@ vif_AMb # All <6
 r2_B_AM <- performance::r2(AM_sp_15mB)
 r2_B_AM
 
+predB <- ggpredict(AM_sp_15mB,
+                  terms = c("consp_15m [all]", "hetAM_15m [quartiles]"))
+
+plotB <- plot(predB) +
+  labs(title = "Panel B – Interactive Spillover")
+
+predBECM <- ggpredict(ECM_sp_15mB,
+                   terms = c("consp_15m [all]", "hetAM_15m [quartiles]"))
+
+plotBECM <- plot(predBECM) +
+  labs(title = "Panel B – Interactive Spillover")
+
 ######## Panel B - ECM
 # For ECM seedlings, negative-binomial GLMMs failed to converge and estimated a dispersion parameter effectively equal to zero (α < 1×10⁻⁸), indicating no detectable overdispersion after accounting for random effects. We therefore used a Poisson GLMM for this group, which showed stable convergence and acceptable residual diagnostics.
 ECM_sp_15mB <- glmer(Year_1_counts ~ consp_15m + 
@@ -1432,6 +1469,10 @@ rm_15mA <- glmmTMB(Year_1_counts ~ consp_15m +
                    logPrior + log0yr +
                    (1|SiteID) + (1|survYear),
                  family = nbinom2, data = rm_surv)
+rm_15mA2 <- glmer(Year_1_counts ~ consp_15m +
+                     logPrior + log0yr +
+                     (1|SiteID) + (1|survYear),
+                   family = poisson(link = "log"), data = rm_surv)
 summary(rm_15mA)
 # Significant negative effect of conspBA 
 # VIF and R2
