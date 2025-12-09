@@ -99,6 +99,9 @@ propHetAM <- ifelse(is.na(denom_het) | denom_het == 0, NA_real_, AM_het_numer / 
 # add proportiron of heterospecific AM BA to allSpDat
 allSpDat$propHetAM   <- propHetAM
 
+
+
+
 ## Trim the unnecessary columns
 allSpDat_Final <- allSpDat[,c(1:34,38:42,44:47)]
 
