@@ -35,14 +35,18 @@ allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
 #########################################################
 ################# All Species Models - Raw Basal Area
 
-##  Helper function: VIF for glmmTMB fixed effects
+#####  Helper function: VIF for glmmTMB fixed effects
 compute_vif <- function(formula, data) {
-  mm <- model.matrix(formula, data = data)
-  mm_df <- as.data.frame(mm[, -1])  # Remove intercept
-  fake_y <- rnorm(nrow(mm_df))
-  lm_fake <- lm(fake_y ~ ., data = mm_df)
-  car::vif(lm_fake)
+  mm <- model.matrix(formula, data)
+  # Remove intercept
+  mm <- mm[, colnames(mm) != "(Intercept)", drop = FALSE]
+  if (ncol(mm) < 2)
+    stop("Need at least 2 predictors to compute VIF.")
+  dummy <- rnorm(nrow(mm))
+  lm_obj <- lm(dummy ~ ., data = as.data.frame(mm))
+  car::vif(lm_obj)
 }
+
 
 ######### ######### ######### ######### ######### 
 ######### Null model
@@ -61,7 +65,6 @@ all_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2, data = allSpDat)
 summary(all_sp_15mA)
-
 ## Significant negative effect of conspBA
 # VIF and R2
 vif_A <- compute_vif(~ consp_15m * Seedling_myc +
@@ -157,8 +160,7 @@ summary(all_sp_15mBCD)
 ## Non-significant Seedling_mycECM:hetAM_15m and Seedling_mycECM:hetECM_15m 
 ## consp:Seedling_mycECM:hetECM_15m Significant positive; ECM seedlings in ECM-heterogeneous microsites experience less negative or even reversed competitive effects.
 # VIF and R2
-vif_BCD <- compute_vif(
-  ~ consp_15m * Seedling_myc +
+vif_BCD <- compute_vif(~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m + consp_15m:hetECM_15m +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
@@ -283,144 +285,415 @@ ame_myc
 # illustrating ecological mechanisms tested in Panels A–D
 # visualizing the implications of our best-supported model 
 
-# Typical/central values for conditioning variables
+# =========================================================
+# 1. Central values and quartiles
+# =========================================================
 mid_consp  <- median(allSpDat$consp_15m,  na.rm = TRUE)
 mid_hetAM  <- median(allSpDat$hetAM_15m,  na.rm = TRUE)
 mid_hetECM <- median(allSpDat$hetECM_15m, na.rm = TRUE)
 
-hetAM_quart <- quantile(allSpDat$hetAM_15m,  probs = c(.1, .5, .9), na.rm = TRUE)
-hetECM_quart <- quantile(allSpDat$hetECM_15m, probs = c(.1, .5, .9), na.rm = TRUE)
+hetAM_quart  <- quantile(allSpDat$hetAM_15m,  probs = c(.1,.5,.9), na.rm = TRUE)
+hetECM_quart <- quantile(allSpDat$hetECM_15m, probs = c(.1,.5,.9), na.rm = TRUE)
 
-## Panel A — Classic feedback (consp × mycorrhizal type)
-pred_A <- ggpredict(all_sp_15mBCD,
-  terms = c( "consp_15m", "Seedling_myc",
-    paste0("hetAM_15m[", mid_hetAM, "]"),
-    paste0("hetECM_15m[", mid_hetECM, "]")))
-plot_A <- plot(pred_A) +
-  labs(title = "Panel A — Classic feedback (conspecific BA × mycorrhizal type)",
-       x = "Conspecific basal area (m²)", y = "Predicted survival") +
-  theme_bw() +
+### Colors
+### Colors
+col_AM  <- "#c0352b"   # AM red
+col_ECM <- "#2b4ac0"   # ECM blue
+
+reds  <- colorRampPalette(c("#f7b4ad", col_AM,  "#7a1b14"))
+blues <- colorRampPalette(c("#b3c4f7", col_ECM, "#16245c"))
+
+# 3-level gradients for context levels (low, medium, high)
+AM_grad  <- reds(3)
+ECM_grad <- blues(3)
+
+# Combined color lookup – used in all Panel B/D interaction plots
+color_map_combo <- c(
+  # AM seedling panel
+  "AM_Low"    = AM_grad[1],
+  "AM_Medium" = AM_grad[2],
+  "AM_High"   = AM_grad[3],
+  # ECM seedling panel
+  "ECM_Low"   = ECM_grad[1],
+  "ECM_Medium"= ECM_grad[2],
+  "ECM_High"  = ECM_grad[3])
+
+desired_order <- c("AM_Low","AM_Medium","AM_High",
+                   "ECM_Low","ECM_Medium","ECM_High")
+
+### Theme
+base_theme <- theme_bw() +
   theme(legend.position = "right",
-        axis.text.y = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 12, color = "black"),
-        axis.title.y = element_text(size = 14, color = "black"),
-        axis.title.x = element_text(size = 14, color = "black"))
+    axis.text  = element_text(size = 12, color="black"),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(size=15, face="bold"))
+
+# =========================================================
+## -------- PANEL A — Classic feedback (consp × seedling type)
+## Predict 
+pred_A <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("consp_15m", "Seedling_myc",
+            paste0("hetAM_15m[",  mid_hetAM,  "]"),
+            paste0("hetECM_15m[", mid_hetECM, "]")),
+  bias_correction = TRUE)
+
+## Build dataframe cleanly
+df_A <- data.frame(
+  x         = pred_A$x,
+  predicted = pred_A$predicted,
+  conf.low  = pred_A$conf.low,
+  conf.high = pred_A$conf.high,
+  seed_type = factor(pred_A$group, levels = c("AM","ECM")))
+
+### Create combo variable (even though no Low/Med/High here)
+df_A$combo <- df_A$seed_type
+df_A$combo <- factor(df_A$combo,
+                     levels = c("AM", "ECM"),
+                     labels = c("AM_Medium","ECM_Medium"))  # middle level color
+
+plot_A <- ggplot(df_A,
+                 aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  scale_color_manual(values = color_map_combo,
+                     name = "Seedling type",
+                     labels = c("AM","ECM")) +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(title = "Panel A — Classic feedback",
+       x = "Conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+
 plot_A
 
-## Panel B — Interactive spillover (consp × heterospecific AM/ECM)
-# B1. Consp × hetAM × seedling type
-# Generate predictions
-pred_B_AM <- ggpredict(all_sp_15mBCD, 
-           terms = c("consp_15m",
-    paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
-    "Seedling_myc", paste0("hetECM_15m[", mid_hetECM, "]")))
+# =========================================================
+## ---------------------PANEL B1 ------ Consp × hetAM 
+## Predict 
+pred_B_AM <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("consp_15m",
+            paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
+            "Seedling_myc",
+            paste0("hetECM_15m[", mid_hetECM, "]")))
 
-# Round quartile labels in the legend
-pred_B_AM$group <- factor(round(as.numeric(as.character(pred_B_AM$group)), 2))
+## Build dataframe cleanly
+df_B_AM <- data.frame(x         = pred_B_AM$x,
+  predicted = pred_B_AM$predicted,
+  conf.low  = pred_B_AM$conf.low,
+  conf.high = pred_B_AM$conf.high,
+  seed_type = factor(pred_B_AM$facet, levels = c("AM","ECM")),
+  hetAM_raw = pred_B_AM$group)
 
-# Plot
-plot_B_AM <- plot(pred_B_AM) +
-  labs(title = "Panel B — Interactive Spillover (hetAM × consp × mycorrhizal type)",
-    x = "Conspecific basal area (m²)",y = "Predicted survival", color = "hetAM (m²)") +
-  scale_color_viridis_d(option = "viridis") +
-  theme_bw() +
-  theme(legend.position = "right",
-    axis.text.y = element_text(size = 12, color = "black"),
-    axis.text.x = element_text(size = 12, color = "black"),
-    axis.title.y = element_text(size = 14, color = "black"),
-    axis.title.x = element_text(size = 14, color = "black"))
+## Assign human-readable labels
+df_B_AM$hetAM <- factor(
+  df_B_AM$hetAM_raw,
+  levels = unique(pred_B_AM$group),
+  labels = c("Low","Medium","High"))
 
+## Interaction label for color: AM_Low, AM_Medium, etc.
+df_B_AM$combo <- interaction(df_B_AM$seed_type, df_B_AM$hetAM, sep="_")
+df_B_AM$combo <- factor(df_B_AM$combo, levels = desired_order)
+
+## Plot
+plot_B_AM <- ggplot(df_B_AM,
+                    aes(x = x, y = predicted,
+                        color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  facet_wrap(~ seed_type, ncol = 2,
+             labeller = labeller(seed_type = c(
+              AM  = "AM seedlings", ECM = "ECM seedlings"))) +
+  scale_color_manual(values = color_map_combo, name = "AM BA Level") +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(title = "Panel B1 — Interactive spillover (AM BA × Conspecific BA)",
+    x = "Conspecific basal area (m²)",
+    y = "Predicted survival") +
+  base_theme
 plot_B_AM
 
-# Generate predictions
-pred_B_AM <- ggpredict(
+# =========================================================
+## -------- PANEL B2 ----------- Consp × hetECM
+## Predict 
+pred_B_ECM <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("consp_15m",
+            paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
+            "Seedling_myc",
+            paste0("hetAM_15m[", mid_hetAM, "]")))
+
+## Build dataframe cleanly
+df_B_ECM <- data.frame(
+  x         = pred_B_ECM$x,
+  predicted = pred_B_ECM$predicted,
+  conf.low  = pred_B_ECM$conf.low,
+  conf.high = pred_B_ECM$conf.high,
+  seed_type = factor(pred_B_ECM$facet, levels = c("AM","ECM")),
+  hetECM_raw = pred_B_ECM$group)
+
+## Assign human-readable labels
+df_B_ECM$hetECM <- factor(
+  df_B_ECM$hetECM_raw,
+  levels = unique(pred_B_ECM$group),
+  labels = c("Low","Medium","High"))
+
+## Interaction label for color: AM_Low, AM_Medium, etc.
+df_B_ECM$combo <- interaction(df_B_ECM$seed_type, df_B_ECM$hetECM, sep="_")
+df_B_ECM$combo <- factor(df_B_ECM$combo, levels = desired_order)
+
+## Plot
+plot_B_ECM <- ggplot(df_B_ECM,
+                     aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  facet_wrap(~ seed_type, ncol=2,
+             labeller = labeller(seed_type = c(
+               AM="AM seedlings", ECM="ECM seedlings"))) +
+  scale_color_manual(values = color_map_combo,
+                     name = "ECM BA Level") +
+  scale_fill_manual(values = color_map_combo, guide="none") +
+  labs(title = "Panel B2 — Interactive spillover (ECM BA × Conspecific BA)",
+       x = "Conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+plot_B_ECM
+
+# =========================================================
+## -------- PANEL C1 -------- Additive AM effect
+## Predict
+pred_C_AM <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("hetAM_15m","Seedling_myc",
+            paste0("consp_15m[", mid_consp, "]"),
+            paste0("hetECM_15m[", mid_hetECM, "]")))
+
+## Build dataframe cleanly
+df_C_AM <- data.frame(
+  x         = pred_C_AM$x,
+  predicted = pred_C_AM$predicted,
+  conf.low  = pred_C_AM$conf.low,
+  conf.high = pred_C_AM$conf.high,
+  seed_type = factor(pred_C_AM$group, levels = c("AM","ECM")))
+
+### Middle-level AM spillover for both seedling types
+df_C_AM$combo <- factor(df_C_AM$seed_type,
+                        levels = c("AM","ECM"),
+                        labels = c("AM_Medium","ECM_Medium"))
+
+## Plot
+plot_C_AM <- ggplot(df_C_AM,
+                    aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  scale_color_manual(values = color_map_combo,
+                     name = "Seedling type",
+                     labels = c("AM","ECM")) +
+  scale_fill_manual(values = color_map_combo, guide="none") +
+  labs(title = "Panel C1 — Additive AM spillover",
+       x = "Heterospecific AM basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+plot_C_AM
+
+# =========================================================
+## -------- PANEL C2 --------- Additive ECM effect
+## Predict
+pred_C_ECM <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("hetECM_15m","Seedling_myc",
+            paste0("consp_15m[", mid_consp, "]"),
+            paste0("hetAM_15m[", mid_hetAM, "]")))
+
+## Build dataframe cleanly
+df_C_ECM <- data.frame(
+  x         = pred_C_ECM$x,
+  predicted = pred_C_ECM$predicted,
+  conf.low  = pred_C_ECM$conf.low,
+  conf.high = pred_C_ECM$conf.high,
+  seed_type = factor(pred_C_ECM$group, levels = c("AM","ECM")))
+
+### Medium-level ECM spillover for both seedling types
+df_C_ECM$combo <- factor(df_C_ECM$seed_type,
+                         levels = c("AM","ECM"),
+                         labels = c("AM_Medium","ECM_Medium"))
+
+## Plot
+plot_C_ECM <- ggplot(df_C_ECM,
+                     aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  scale_color_manual(values = color_map_combo,
+                     name = "Seedling type",
+                     labels = c("AM","ECM")) +
+  scale_fill_manual(values = color_map_combo, guide="none") +
+  labs(title = "Panel C2 — Additive ECM spillover",
+       x = "Heterospecific ECM basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+plot_C_ECM
+
+# =========================================================
+## -------- PANEL D1 ------ Consp × hetAM (Panel D logic)
+## Predict 
+pred_D_AM <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("consp_15m",
+            paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
+            "Seedling_myc",
+            paste0("hetECM_15m[", mid_hetECM, "]"))
+)
+
+## Build dataframe cleanly
+df_D_AM <- data.frame(
+  x         = pred_D_AM$x,
+  predicted = pred_D_AM$predicted,
+  conf.low  = pred_D_AM$conf.low,
+  conf.high = pred_D_AM$conf.high,
+  seed_type = factor(pred_D_AM$facet, levels = c("AM","ECM")),
+  hetAM_raw = pred_D_AM$group
+)
+
+## Assign human-readable labels for spillover levels
+df_D_AM$hetAM <- factor(
+  df_D_AM$hetAM_raw,
+  levels = unique(pred_D_AM$group),
+  labels = c("Low","Medium","High")
+)
+
+## Build combo variable (AM_Low, ECM_Low, etc.)
+df_D_AM$combo <- interaction(df_D_AM$seed_type, df_D_AM$hetAM, sep="_")
+df_D_AM$combo <- factor(df_D_AM$combo, levels = desired_order)
+
+## Plot
+plot_D_AM <- ggplot(df_D_AM,
+                    aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  facet_wrap(~ seed_type, ncol = 2,
+             labeller = labeller(seed_type = c(
+               AM  = "AM seedlings",
+               ECM = "ECM seedlings"))) +
+  scale_color_manual(values = color_map_combo,
+                     name = "AM BA Level") +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(title = "Panel D1 — Full model: AM spillover × Conspecific BA",
+       x = "Conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+
+plot_D_AM
+
+
+# =========================================================
+## -------- PANEL D1 - Full interaction: consp × hetAM
+# Predict
+pred_D <- ggpredict(
   all_sp_15mBCD,
   terms = c(
     "consp_15m",
-    paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
     "Seedling_myc",
-    paste0("hetECM_15m[", mid_hetECM, "]")
-  )
+    paste0("hetAM_15m[", paste(hetAM_quart, collapse=","), "]"),
+    paste0("hetECM_15m[", paste(hetECM_quart, collapse=","), "]")
+  ))
+
+
+# Dataframe
+df_D_AM <- data.frame(
+  x         = pred_D_AM$x,
+  predicted = pred_D_AM$predicted,
+  conf.low  = pred_D_AM$conf.low,
+  conf.high = pred_D_AM$conf.high,
+  seed_type = factor(pred_D_AM$facet, levels = c("AM","ECM")),
+  hetAM_raw = pred_D_AM$group)
+
+# Fix labels correctly
+df_D_AM$hetAM <- factor(
+  df_D_AM$hetAM_raw,
+  levels = unique(pred_D_AM$group),
+  labels = c("Low","Medium","High"))
+
+# Interaction label
+df_D_AM$combo <- interaction(df_D_AM$seed_type, df_D_AM$hetAM, sep="_")
+df_D_AM$combo <- factor(df_D_AM$combo, levels = desired_order)
+
+# Plot
+plot_D_AM <- ggplot(df_D_AM,
+                    aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  facet_wrap(~ seed_type, ncol = 2,
+             labeller = labeller(seed_type = c(
+               AM = "AM seedlings",
+               ECM = "ECM seedlings"))) +
+  scale_color_manual(values = color_map_combo,
+                     name = "AM BA Level") +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(title = "Panel D1 — Additive & Interactive Spillover (AM × consp BA)",
+       x = "Conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+
+plot_D_AM
+
+
+# =========================================================
+## -------- PANEL D2 -------- Consp × hetECM (Panel D logic)
+## Predict 
+pred_D_ECM <- ggpredict(
+  all_sp_15mBCD,
+  terms = c("consp_15m",
+            paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
+            "Seedling_myc",
+            paste0("hetAM_15m[", mid_hetAM, "]"))
 )
 
-# Round quartile labels
-pred_B_AM$group <- factor(round(as.numeric(as.character(pred_B_AM$group)), 2))
+## Build dataframe cleanly
+df_D_ECM <- data.frame(
+  x         = pred_D_ECM$x,
+  predicted = pred_D_ECM$predicted,
+  conf.low  = pred_D_ECM$conf.low,
+  conf.high = pred_D_ECM$conf.high,
+  seed_type = factor(pred_D_ECM$facet, levels = c("AM","ECM")),
+  hetECM_raw = pred_D_ECM$group
+)
 
-# Custom color palette: red for AM, blue for ECM
-myco_colors <- c("AM" = "#c0352b",   # rich red
-                 "ECM" = "#2b4ac0")  # rich blue
+## Assign human-readable labels
+df_D_ECM$hetECM <- factor(
+  df_D_ECM$hetECM_raw,
+  levels = unique(pred_D_ECM$group),
+  labels = c("Low","Medium","High")
+)
 
-plot_B_AM <- plot(pred_B_AM) +
-  aes(color = Seedling_myc) +   # <-- override default color grouping
-  scale_color_manual(values = myco_colors, name = "Seedling type") +
-  labs(
-    title = "Panel B — Interactive Spillover (hetAM × consp × mycorrhizal type)",
-    x = "Conspecific basal area (m²)",
-    y = "Predicted survival",
-    linetype = "hetAM (m²)"
-  ) +
-  theme_bw() +
-  theme(
-    legend.position = "right",
-    axis.text = element_text(size = 12, color = "black"),
-    axis.title = element_text(size = 14, color = "black"),
-    plot.title = element_text(size = 15, face = "bold")
-  )
+## Color-group label: AM_Low, AM_Medium, …
+df_D_ECM$combo <- interaction(df_D_ECM$seed_type, df_D_ECM$hetECM, sep="_")
+df_D_ECM$combo <- factor(df_D_ECM$combo, levels = desired_order)
 
-plot_B_AM
+## Plot
+plot_D_ECM <- ggplot(df_D_ECM,
+                     aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  facet_wrap(~ seed_type, ncol = 2,
+             labeller = labeller(seed_type = c(
+               AM="AM seedlings",
+               ECM="ECM seedlings"))) +
+  scale_color_manual(values = color_map_combo,
+                     name = "ECM BA Level") +
+  scale_fill_manual(values = color_map_combo, guide="none") +
+  labs(title = "Panel D2 — Additive & Interactive Spillover (ECM × Consp BA)",
+       x = "Conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
 
-
-# B2. Consp × hetECM × seedling type
-pred_B_ECM <- ggpredict(all_sp_15mBCD,
-  terms = c( "consp_15m",
-    paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
-    "Seedling_myc",paste0("hetAM_15m[", mid_hetAM, "]")))
-
-plot_B_ECM <- plot(pred_B_ECM) +
-  labs(title = "Panel B — Interactive Spillover (hetECM × consp × mycorrhizal type)")
-
-## Panel C — Additive spillover (hetAM or hetECM independent of consp)
-# C1. Additive AM - seedlings
-pred_C_AM <- ggpredict(all_sp_15mBCD,
-  terms = c("hetAM_15m","Seedling_myc",
-    paste0("consp_15m[", mid_consp, "]"),
-    paste0("hetECM_15m[", mid_hetECM, "]")))
-
-plot_C_AM <- plot(pred_C_AM) +
-  labs(title = "Panel C — Additive Spillover (heterospecific AM BA)")
-
-# C2. Additive ECM - seedlings
-pred_C_ECM <- ggpredict( all_sp_15mBCD,
-  terms = c("hetECM_15m", "Seedling_myc",
-    paste0("consp_15m[", mid_consp, "]"),
-    paste0("hetAM_15m[", mid_hetAM, "]")))
-
-plot_C_ECM <- plot(pred_C_ECM) +
-  labs(title = "Panel C — Additive Spillover (heterospecific ECM BA)")
-
-## Panel D — Full interaction structure (superinteractive)
-# D1. Consp × seedling type across heterospecific AM levels
-pred_D_AM <- ggpredict(all_sp_15mBCD,
-  terms = c( "consp_15m", "Seedling_myc",
-    paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
-    paste0("hetECM_15m[", mid_hetECM, "]")))
-
-plot_D_AM <- plot(pred_D_AM) +
-  labs(title = "Panel D — Full Model (3-way: consp × type × hetAM)")
-
-# D2. Consp × seedling type across heterospecific ECM levels
-pred_D_ECM <- ggpredict(all_sp_15mBCD,
-  terms = c( "consp_15m", "Seedling_myc",
-    paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
-    paste0("hetAM_15m[", mid_hetAM, "]")))
-
-plot_D_ECM <- plot(pred_D_ECM) +
-  labs(title = "Panel D — Full Model (3-way: consp × type × hetECM)")
-
-
-
-
-
+plot_D_ECM
 
 
 #########################################################
@@ -453,54 +726,11 @@ vif_propA # all <4
 r2_propA <- performance::r2(all_sp_propA)
 r2_propA
 
-########## Plotting effect sizes - Panel A (proportional)
-### Extract fixed effects 
-fixef_df_aProp <- broom.mixed::tidy(
-  all_sp_propA, effects = "fixed",
-  component = "cond") %>%
-  filter(term != "(Intercept)") %>%
-  select(term, estimate, std.error, p.value)
-### Map raw term names to clean labels you want shown on the plot
-fixef_df_aProp <- fixef_df_aProp %>%
-  mutate(component = case_when(
-    term == "propConsp" ~ "Prop. Conspecific BA",
-    term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
-    term == "logPrior" ~ "Log(Prior Density)",
-    term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ term))
-# Order components on the y-axis in the order you prefer
-desired_order_aProp <- c("Prop. Conspecific BA","Mycorrhizal type", 
-                   "Prop. Consp. BA:Myc. type ECM",
-                   "Log(Recruit Density)","Log(Prior Density)")
-fixef_df_aProp <- fixef_df_aProp %>%
-  mutate(component = factor(component, levels = desired_order_aProp))
-# Significance flag (alpha = 0.05)
-fixef_df_aProp <- fixef_df_aProp %>%
-  mutate(Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"))
-# Make your factor for y-axis
-fixef_df_aProp$component <- factor(fixef_df_aProp$component, levels = rev(desired_order_aProp))
-### Plot
-ggplot(fixef_df_aProp, aes(x = estimate, y = component)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-                    xmax = estimate + 1.96 * std.error), 
-                orientation = "y",width = 0.1, color = "black")+
-  geom_point(aes(shape = Significant, fill = Significant), 
-             size = 3.5, color = "black", stroke = 1) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.y = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 12, color = "black"))
-
 ################# ################# ################# 
 ## Panel B (proportional BA)
 all_sp_propB <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
-                       propAM + 
-                       propConsp:propAM + # Panel B
+                       propHetAM + 
+                       propConsp:propHetAM + # Panel B
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
@@ -509,212 +739,74 @@ summary(all_sp_propB)
 ## propConsp:propAM is significant and positive
 # VIF and R2
 vif_propB <- compute_vif( ~ propConsp*Seedling_myc + 
-                            propAM + propConsp:propAM + 
+                            propHetAM + propConsp:propHetAM + 
                             logPrior + log0yr, allSpDat)
 vif_propB # All <10
 r2_propB <- performance::r2(all_sp_propB)
 r2_propB
 
-########## Plotting effect sizes - Panel B (proportional)
-### Extract fixed effects 
-fixef_df_bProp <- broom.mixed::tidy(
-  all_sp_propB, effects = "fixed",
-  component = "cond") %>%
-  filter(term != "(Intercept)") %>%
-  select(term, estimate, std.error, p.value)
-### Map raw term names to clean labels you want shown on the plot
-fixef_df_bProp <- fixef_df_bProp %>%
-  mutate(component = case_when(
-    term == "propConsp" ~ "Prop. Conspecific BA",
-    term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "propAM" ~ "Prop. AM BA",
-    term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
-    term == "propConsp:propAM" ~ "Prop. Consp. BA:Prop. AM BA",
-    term == "logPrior" ~ "Log(Prior Density)",
-    term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ term))
-# Order components on the y-axis in the order you prefer
-desired_order_bProp <- c("Prop. Conspecific BA","Prop. AM BA", "Mycorrhizal type", 
-                         "Prop. Consp. BA:Prop. AM BA", "Prop. Consp. BA:Myc. type ECM",
-                         "Log(Recruit Density)","Log(Prior Density)")
-fixef_df_bProp <- fixef_df_bProp %>%
-  mutate(component = factor(component, levels = desired_order_bProp))
-# Significance flag (alpha = 0.05)
-fixef_df_bProp <- fixef_df_bProp %>%
-  mutate(Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"))
-# Make your factor for y-axis
-fixef_df_bProp$component <- factor(fixef_df_bProp$component, levels = rev(desired_order_bProp))
-### Plot
-ggplot(fixef_df_bProp, aes(x = estimate, y = component)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-                    xmax = estimate + 1.96 * std.error), 
-                orientation = "y",width = 0.1, color = "black")+
-  geom_point(aes(shape = Significant, fill = Significant), 
-             size = 3.5, color = "black", stroke = 1) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.y = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 12, color = "black"))
-
 ################# ################# ################# 
 ## Panel C (proportional BA)
 all_sp_propC <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
-                        propAM + 
-                        Seedling_myc:propAM + # Panel C
+                        propHetAM + 
+                        Seedling_myc:propHetAM + # Panel C
                         logPrior + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
 summary(all_sp_propC)
 ## Significant positive and negative effects of propConsp and propAM, respectively
-## propConsp:Seedling_myc interaction is significant and negative
-## Seedling_myc:AM_15m interaction is not significant 
+## propConsp:Seedling_myc and Seedling_myc:AM_15m interactions not significant 
 # VIF and R2
 vif_propC <- compute_vif( ~ propConsp*Seedling_myc + 
-                            propAM + Seedling_myc:propAM + 
+                            propHetAM + Seedling_myc:propHetAM + 
                             logPrior + log0yr, allSpDat)
-vif_propC # All <9
+vif_propC # All <5
 r2_propC <- performance::r2(all_sp_propC)
 r2_propC
-
-########## Plotting effect sizes - Panel C (proportional)
-### Extract fixed effects 
-fixef_df_cProp <- broom.mixed::tidy(
-  all_sp_propC, effects = "fixed",
-  component = "cond") %>%
-  filter(term != "(Intercept)") %>%
-  select(term, estimate, std.error, p.value)
-### Map raw term names to clean labels you want shown on the plot
-fixef_df_cProp <- fixef_df_cProp %>%
-  mutate(component = case_when(
-    term == "propConsp" ~ "Prop. Conspecific BA",
-    term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "propAM" ~ "Prop. AM BA",
-    term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
-    term == "Seedling_mycECM:propAM" ~ "Prop. AM BA:Myc. type ECM",
-    term == "logPrior" ~ "Log(Prior Density)",
-    term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ term))
-# Order components on the y-axis in the order you prefer
-desired_order_cProp <- c("Prop. Conspecific BA","Prop. AM BA", "Mycorrhizal type", 
-                         "Prop. Consp. BA:Myc. type ECM","Prop. AM BA:Myc. type ECM",
-                         "Log(Recruit Density)","Log(Prior Density)")
-fixef_df_cProp <- fixef_df_cProp %>%
-  mutate(component = factor(component, levels = desired_order_cProp))
-# Significance flag (alpha = 0.05)
-fixef_df_cProp <- fixef_df_cProp %>%
-  mutate(Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"))
-# Make your factor for y-axis
-fixef_df_cProp$component <- factor(fixef_df_cProp$component, levels = rev(desired_order_cProp))
-### Plot
-ggplot(fixef_df_cProp, aes(x = estimate, y = component)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-                    xmax = estimate + 1.96 * std.error), 
-                orientation = "y",width = 0.1, color = "black")+
-  geom_point(aes(shape = Significant, fill = Significant), 
-             size = 3.5, color = "black", stroke = 1) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.y = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 12, color = "black"))
 
 ################# ################# ################# 
 ## Panel D (B+C) (proportional BA)
 all_sp_propD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
-                        propAM + 
-                        propConsp:propAM + # Panel B
-                        Seedling_myc:propAM + # Panel C
+                        propHetAM + 
+                        propConsp:propHetAM + # Panel B
+                        Seedling_myc:propHetAM + # Panel C
                         logPrior + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
 summary(all_sp_propD)
 ## Significant negative effects of propConsp and propAM
-## propConsp:Seedling_myc interaction is marginally significant and positive
 ## propConsp:propAM interaction is significant and positive
 # VIF and R2
 vif_propD <- compute_vif( ~ propConsp*Seedling_myc + 
-                            propAM + propConsp:propAM + 
-                            Seedling_myc:propAM + 
+                            propHetAM + propConsp:propHetAM + 
+                            Seedling_myc:propHetAM + 
                             logPrior + log0yr, allSpDat)
-vif_propD # All <10
+vif_propD # All <7
 r2_propD <- performance::r2(all_sp_propD)
 r2_propD
-
-########## Plotting effect sizes - Panel C (proportional)
-### Extract fixed effects 
-fixef_df_dProp <- broom.mixed::tidy(
-  all_sp_propD, effects = "fixed",
-  component = "cond") %>%
-  filter(term != "(Intercept)") %>%
-  select(term, estimate, std.error, p.value)
-### Map raw term names to clean labels you want shown on the plot
-fixef_df_dProp <- fixef_df_dProp %>%
-  mutate(component = case_when(
-    term == "propConsp" ~ "Prop. Conspecific BA",
-    term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "propAM" ~ "Prop. AM BA",
-    term == "propConsp:propAM" ~ "Prop. Consp. BA:Prop. AM BA",
-    term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
-    term == "Seedling_mycECM:propAM" ~ "Prop. AM BA:Myc. type ECM",
-    term == "logPrior" ~ "Log(Prior Density)",
-    term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ term))
-# Order components on the y-axis in the order you prefer
-desired_order_dProp <- c("Prop. Conspecific BA","Prop. AM BA", "Mycorrhizal type", 
-                         "Prop. Consp. BA:Prop. AM BA",
-                         "Prop. Consp. BA:Myc. type ECM","Prop. AM BA:Myc. type ECM",
-                         "Log(Recruit Density)","Log(Prior Density)")
-fixef_df_dProp <- fixef_df_dProp %>%
-  mutate(component = factor(component, levels = desired_order_dProp))
-# Significance flag (alpha = 0.05)
-fixef_df_dProp <- fixef_df_dProp %>%
-  mutate(Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"))
-# Make your factor for y-axis
-fixef_df_dProp$component <- factor(fixef_df_dProp$component, levels = rev(desired_order_dProp))
-### Plot
-ggplot(fixef_df_dProp, aes(x = estimate, y = component)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-                    xmax = estimate + 1.96 * std.error), 
-                orientation = "y",width = 0.1, color = "black")+
-  geom_point(aes(shape = Significant, fill = Significant), 
-             size = 3.5, color = "black", stroke = 1) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.y = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 12, color = "black"))
 
 ################# ################# ################# 
 ## Super interactive model (proportional BA)
 all_sp_propBCD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
-                       propAM + 
-                       propConsp:propAM + # Panel B
-                       Seedling_myc:propAM + # Panel C
-                       propConsp:Seedling_myc:propAM + # 3-way interaction
+                       propHetAM + 
+                       propConsp:propHetAM + # Panel B
+                       Seedling_myc:propHetAM + # Panel C
+                       propConsp:Seedling_myc:propHetAM + # 3-way interaction
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
 summary(all_sp_propBCD)
 ## Significant negative effects of propConsp and propAM 
-## propConsp:Seedling_myc, propConsp:propAMm, and Seedling_myc:propAM interactions are all significant and positive!
+## propConsp:Seedling_myc and propConsp:propAMm interactions are significant and positive!
+## Seedling_myc:propAM interaction not significant
 ## propConsp:Seedling_myc:propAM interaction is significant and negative
 # VIF and R2
 vif_propBCD <- compute_vif( ~ propConsp*Seedling_myc + 
-                              propAM + propConsp:propAM + 
-                              Seedling_myc:propAM + 
-                              propConsp:Seedling_myc:propAM + 
+                              propHetAM + propConsp:propHetAM + 
+                              Seedling_myc:propHetAM + 
+                              propConsp:Seedling_myc:propHetAM + 
                               logPrior + log0yr, allSpDat)
-vif_propBCD # two values >10 due to interactions
+vif_propBCD # four values >10 due to interactions
 r2_propBCD <- performance::r2(all_sp_propBCD)
 r2_propBCD
 

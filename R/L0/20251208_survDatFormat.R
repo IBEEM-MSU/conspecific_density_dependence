@@ -18,89 +18,103 @@ allSpDat <- read.csv("./data/L3/Combined_demography_modeling_data.csv")
 ## Add survYear
 allSpDat$survYear = allSpDat$Cohort.Year + 1
 
-## Create two new columns, hetAM_15m and hetECM_15m, that exclude conspecific BA from calculations of AM and ECM associating basal area
-
-# Define species as AM or ECM associating
+# species definitions 
 AM_species  <- c("bc", "rm", "sm", "wa")
 ECM_species <- c("ab", "bonro", "bs", "iw", "nro", "wo")
 
-# Create placeholder columns
-allSpDat$hetAM_15m  <- NA
-allSpDat$hetECM_15m <- NA
-
-# Match and substract
-allSpDat <- allSpDat %>%
-  rowwise() %>%
-  mutate(
-    # Identify the column containing the focal species' basal area
-    focal_col = paste0(Sp, "_15m"),
-    focal_value = get(focal_col),
-    # Calculate heterospecific AM and ECM basal area
-    hetAM_15m = ifelse(Sp %in% AM_species,
-                       AM_15m - focal_value,   # subtract conspecific
-                       AM_15m),  # all AM are heterospecific for ECM species
-    hetECM_15m = ifelse(Sp %in% ECM_species,
-                        ECM_15m - focal_value,  # subtract conspecific
-                        ECM_15m)) %>%    # all ECM are heterospecific for AM species
-  ungroup() %>%
-  select(-focal_col, -focal_value)   # cleanup temporary columns
-
-# make sure data.frame
-allSpDat <- as.data.frame(allSpDat)
-
-# define species BA columns (exact names in your DF)
+# BA column names in DF (exact)
 species_cols <- c("ab_15m","ae_15m","bc_15m","bo_15m","bonro_15m","bs_15m",
                   "bta_15m","hem_15m","iw_15m","jp_15m","nro_15m","qa_15m",
                   "rm_15m","sm_15m","svb_15m","wa_15m","wo_15m","wp_15m")
 
-# get numeric matrix of BA and row sums (total BA)
+# Coerce BA columns to numeric (safe)
+allSpDat[species_cols] <- lapply(allSpDat[species_cols],
+                                 function(x) as.numeric(as.character(x)))
+
+# --- 0/0 SAFE DIVISION FUNCTION ---
+safe_div <- function(num, den) {
+  out <- num / den
+  out[den == 0] <- 0     # 0/0 → 0
+  out
+}
+
+# Compute raw BA matrix and totals
 ba_mat <- as.matrix(allSpDat[, species_cols])
-# If these columns might be factors/characters, coerce to numeric safely:
-ba_mat <- apply(ba_mat, 2, function(x) as.numeric(as.character(x)))
-total_ba <- rowSums(ba_mat, na.rm = TRUE)       # use na.rm just in case
+ba_mat_zeroNA <- ba_mat
+ba_mat_zeroNA[is.na(ba_mat_zeroNA)] <- 0
 
-# handle rows with total_ba == 0 by setting totals to NA (avoids dividing by zero)
-total_ba_zero <- total_ba == 0
-total_ba[total_ba_zero] <- NA_real_
+total_ba <- rowSums(ba_mat_zeroNA)
+rows_all_NA <- apply(ba_mat, 1, function(r) all(is.na(r)))
 
-# compute proportions (each row sums to 1 unless total_ba was 0)
-ba_props_mat <- sweep(ba_mat, 1, total_ba, "/")  # NA where total_ba was 0
-
-# conspecific BA proportion:
-# construct expected conspecific column names from Sp (e.g., 'ab' -> 'ab_15m')
+# Build conspecific column names and find indices
 cons_col_names <- paste0(allSpDat$Sp, "_15m")
-cons_idx <- match(cons_col_names, species_cols)   # NA if species code not in list
-# extract conspecific BA (numeric), 0 when species column missing
-n <- nrow(ba_mat)
-cons_ba <- rep(0, n)
-valid_rows <- !is.na(cons_idx)
-cons_ba[valid_rows] <- ba_mat[cbind(which(valid_rows), cons_idx[valid_rows])]
-cons_ba_prop <- cons_ba / rowSums(ba_mat, na.rm = TRUE)   # will be NA when total_ba was 0
+cons_idx <- match(cons_col_names, species_cols)
 
-# define AM species columns (based on your mapping)
-AM_species_cols <- c("sm_15m","ae_15m","wa_15m","rm_15m","bc_15m","svb_15m")
-AM_idx <- match(AM_species_cols, species_cols)
+# Extract conspecific BA safely
+n <- nrow(allSpDat)
+cons_ba <- numeric(n)
+cons_missing_flag <- logical(n)
 
-# AM total proportion (AM BA / total BA)
-AM_total_ba <- rowSums(ba_mat[, AM_idx, drop = FALSE], na.rm = TRUE)
-AM_total_prop <- AM_total_ba / rowSums(ba_mat, na.rm = TRUE)   # NA when total_ba == 0
+valid_rows <- which(!is.na(cons_idx))
+if(length(valid_rows)>0) {
+  cons_ba_vals <- ba_mat[cbind(valid_rows, cons_idx[valid_rows])]
+  cons_ba[valid_rows] <- cons_ba_vals
+  cons_missing_flag[valid_rows] <- is.na(cons_ba_vals)
+}
+cons_ba[is.na(cons_ba)] <- 0
 
-# conspecific BA that is in AM pool (if conspecific is AM; else 0)
-cons_in_AM <- ifelse(cons_col_names %in% AM_species_cols, cons_ba, 0)
-cons_in_AM_prop <- cons_in_AM / rowSums(ba_mat, na.rm = TRUE)
+# Compute guild totals (AM and ECM)
+AM_species_cols  <- paste0(AM_species, "_15m")
+ECM_species_cols <- paste0(ECM_species, "_15m")
 
-# numerator and denominator for heterospecific AM proportion
-denom_het <- 1 - cons_ba_prop  # heterospecific BA proportion
-AM_het_numer <- AM_total_prop - cons_in_AM_prop  # AM BA excluding conspecific (if any)
+AM_idx  <- match(AM_species_cols, species_cols)
+ECM_idx <- match(ECM_species_cols, species_cols)
 
-# final: proportion of heterospecific BA that is AM
-propHetAM <- ifelse(is.na(denom_het) | denom_het == 0, NA_real_, AM_het_numer / denom_het)
+AM_ba <- if(all(is.na(AM_idx))) rep(0, n) else rowSums(ba_mat_zeroNA[, AM_idx, drop = FALSE], na.rm = TRUE)
+ECM_ba <- if(all(is.na(ECM_idx))) rep(0, n) else rowSums(ba_mat_zeroNA[, ECM_idx, drop = FALSE], na.rm = TRUE)
 
-# add proportiron of heterospecific AM BA to allSpDat
-allSpDat$propHetAM   <- propHetAM
+# Raw heterospecific BA totals
+focal_value <- cons_ba
+focal_value_na <- cons_missing_flag
 
+focal_value_for_calc <- focal_value
+focal_value_for_calc[focal_value_na] <- 0
 
+hetAM_raw  <- ifelse(allSpDat$Sp %in% AM_species, AM_ba - focal_value_for_calc, AM_ba)
+hetECM_raw <- ifelse(allSpDat$Sp %in% ECM_species, ECM_ba - focal_value_for_calc, ECM_ba)
 
+hetAM_raw  <- pmax(hetAM_raw, 0)
+hetECM_raw <- pmax(hetECM_raw, 0)
+
+allSpDat$hetAM_15m  <- hetAM_raw
+allSpDat$hetECM_15m <- hetECM_raw
+
+# Total BA for proportions
+total_ba_for_prop <- total_ba
+total_ba_for_prop[total_ba_for_prop == 0] <- NA_real_
+
+# --- PROPORTIONS WITH 0/0 PROTECTION ---
+
+# Conspecific BA proportion
+cons_ba_prop <- safe_div(cons_ba, total_ba_for_prop)
+
+# AM total proportion
+AM_total_prop <- safe_div(AM_ba, total_ba_for_prop)
+
+# Conspecific BA in AM guild
+cons_in_AM <- ifelse(allSpDat$Sp %in% AM_species, cons_ba, 0)
+cons_in_AM_prop <- safe_div(cons_in_AM, total_ba_for_prop)
+
+# Heterospecific BA proportion denominator
+denom_het <- 1 - cons_ba_prop   # already safe because cons_ba_prop handled
+
+# AM heterospecific numerator
+AM_het_numer <- AM_total_prop - cons_in_AM_prop
+
+# Final proportion of heterospecific BA that is AM
+propHetAM <- safe_div(AM_het_numer, denom_het)
+
+allSpDat$propHetAM <- propHetAM
 
 ## Trim the unnecessary columns
 allSpDat_Final <- allSpDat[,c(1:34,38:42,44:47)]
