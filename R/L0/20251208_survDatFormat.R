@@ -83,6 +83,7 @@ focal_value_for_calc[focal_value_na] <- 0
 hetAM_raw  <- ifelse(allSpDat$Sp %in% AM_species, AM_ba - focal_value_for_calc, AM_ba)
 hetECM_raw <- ifelse(allSpDat$Sp %in% ECM_species, ECM_ba - focal_value_for_calc, ECM_ba)
 
+# Prevent small negative values
 hetAM_raw  <- pmax(hetAM_raw, 0)
 hetECM_raw <- pmax(hetECM_raw, 0)
 
@@ -121,6 +122,5 @@ allSpDat_Final <- allSpDat[,c(1:34,38:42,44:47)]
 
 ## Write the final data file for analyses
 write.csv(allSpDat_Final, "./data/L3/final_seedling_demogr_modeling_data.csv")
-
 
 

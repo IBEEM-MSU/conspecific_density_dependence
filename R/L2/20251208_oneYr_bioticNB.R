@@ -183,8 +183,8 @@ simBCD <- DHARMa::simulateResiduals(all_sp_15mBCD, n = 1000)
 DHARMa::testDispersion(simBCD) # No overdispersion
 DHARMa::testZeroInflation(simBCD) # No zero-inflation
 DHARMa::testUniformity(simBCD) # Non-uniform, but normal with large datasets - not an indicator of poor fit
-DHARMa::testOutliers(simBCD) # ~0.33% of observations are outliers - not concerning
-# Model diagnostics indicated no issues with dispersion or zero-inflation, with tests showing residual variation and the frequency of zeros were fully consistent with model expectations. The DHARMa uniformity test was significant, but this is common in large datasets and not indicative of poor fit. Outlier rates were extremely low (~0.33%) and within acceptable bounds, confirming that the model adequately captured the distribution of the data
+DHARMa::testOutliers(simBCD) # ~0.28% of observations are outliers - not concerning
+# Model diagnostics indicated no issues with dispersion or zero-inflation, with tests showing residual variation and the frequency of zeros were fully consistent with model expectations. The DHARMa uniformity test was significant, but this is common in large datasets and not indicative of poor fit. Outlier rates were extremely low (~0.28%) and within acceptable bounds, confirming that the model adequately captured the distribution of the data
 
 ########## ########## ########## ########## ########## 
 ########## Plotting effect sizes - for Panel BCD
@@ -589,60 +589,6 @@ plot_D_AM <- ggplot(df_D_AM,
 
 plot_D_AM
 
-
-# =========================================================
-## -------- PANEL D1 - Full interaction: consp × hetAM
-# Predict
-pred_D <- ggpredict(
-  all_sp_15mBCD,
-  terms = c(
-    "consp_15m",
-    "Seedling_myc",
-    paste0("hetAM_15m[", paste(hetAM_quart, collapse=","), "]"),
-    paste0("hetECM_15m[", paste(hetECM_quart, collapse=","), "]")
-  ))
-
-
-# Dataframe
-df_D_AM <- data.frame(
-  x         = pred_D_AM$x,
-  predicted = pred_D_AM$predicted,
-  conf.low  = pred_D_AM$conf.low,
-  conf.high = pred_D_AM$conf.high,
-  seed_type = factor(pred_D_AM$facet, levels = c("AM","ECM")),
-  hetAM_raw = pred_D_AM$group)
-
-# Fix labels correctly
-df_D_AM$hetAM <- factor(
-  df_D_AM$hetAM_raw,
-  levels = unique(pred_D_AM$group),
-  labels = c("Low","Medium","High"))
-
-# Interaction label
-df_D_AM$combo <- interaction(df_D_AM$seed_type, df_D_AM$hetAM, sep="_")
-df_D_AM$combo <- factor(df_D_AM$combo, levels = desired_order)
-
-# Plot
-plot_D_AM <- ggplot(df_D_AM,
-                    aes(x = x, y = predicted, color = combo, fill = combo)) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
-              alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
-  facet_wrap(~ seed_type, ncol = 2,
-             labeller = labeller(seed_type = c(
-               AM = "AM seedlings",
-               ECM = "ECM seedlings"))) +
-  scale_color_manual(values = color_map_combo,
-                     name = "AM BA Level") +
-  scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel D1 — Additive & Interactive Spillover (AM × consp BA)",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
-  base_theme
-
-plot_D_AM
-
-
 # =========================================================
 ## -------- PANEL D2 -------- Consp × hetECM (Panel D logic)
 ## Predict 
@@ -651,8 +597,7 @@ pred_D_ECM <- ggpredict(
   terms = c("consp_15m",
             paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
             "Seedling_myc",
-            paste0("hetAM_15m[", mid_hetAM, "]"))
-)
+            paste0("hetAM_15m[", mid_hetAM, "]")))
 
 ## Build dataframe cleanly
 df_D_ECM <- data.frame(
@@ -661,15 +606,13 @@ df_D_ECM <- data.frame(
   conf.low  = pred_D_ECM$conf.low,
   conf.high = pred_D_ECM$conf.high,
   seed_type = factor(pred_D_ECM$facet, levels = c("AM","ECM")),
-  hetECM_raw = pred_D_ECM$group
-)
+  hetECM_raw = pred_D_ECM$group)
 
 ## Assign human-readable labels
 df_D_ECM$hetECM <- factor(
   df_D_ECM$hetECM_raw,
   levels = unique(pred_D_ECM$group),
-  labels = c("Low","Medium","High")
-)
+  labels = c("Low","Medium","High"))
 
 ## Color-group label: AM_Low, AM_Medium, …
 df_D_ECM$combo <- interaction(df_D_ECM$seed_type, df_D_ECM$hetECM, sep="_")
@@ -813,34 +756,24 @@ r2_propBCD
 ## Model comparison
 ### Compare AICs 
 AIC(all_sp_prop_null, all_sp_propA, all_sp_propB, all_sp_propC,
-    all_sp_propD, all_sp_propBCD) # lowest is all_sp_propBCD 
-anova(all_sp_propB, all_sp_propBCD) # Super-interactive model is significantly better!
+    all_sp_propD, all_sp_propBCD) # lowest is all_sp_propB 
+anova(all_sp_propB, all_sp_propD) # Panel D is NOT significantly better!
 
-#### Diagnostics and Post-hoc tests for super-interactive model (best supported)
-### Diagnostics
-simBCDprop <- DHARMa::simulateResiduals(all_sp_propBCD, n = 1000)
-DHARMa::testDispersion(simBCDprop) # No overdispersion
-DHARMa::testZeroInflation(simBCDprop) # No zero-inflation
-DHARMa::testUniformity(simBCDprop) # Non-uniform, but normal with large datasets - not an indicator of poor fit
-DHARMa::testOutliers(simBCDprop) # ~0.25% of observations are outliers
-### Post-hoc tests
-# Define a grid of ecologically meaningful predictor values
-emm_BCDprop <- emmeans(
-  all_sp_propBCD,
-  ~ Seedling_myc | propConsp * propAM,
-  type = "response",
-  at = list(propConsp  = quantile(allSpDat$propConsp, c(.1, .5, .9)),
-            propAM  = quantile(allSpDat$propAM, c(.1, .5, .9))))
-emm_BCDprop
-pairs(emm_BCDprop, by = c("propConsp", "propAM"))
-# Model diagnostics indicated excellent fit, with no evidence of overdispersion (dispersion = 0.85, p = 0.79) or zero inflation (ratioObsSim = 0.88, p = 0.21). Although DHARMa’s uniformity and outlier tests showed significant deviations, the magnitude was trivial (<0.3% outliers) and expected for large-sample GLMMs, and residual plots showed no structured patterns.
+#### #### #### #### #### #### #### #### #### #### #### #### #### 
+#### Diagnostics and Post-hoc tests for Panel B (best supported)
+simBprop <- DHARMa::simulateResiduals(all_sp_propB, n = 1000)
+DHARMa::testDispersion(simBprop) # No overdispersion
+DHARMa::testZeroInflation(simBprop) # No zero-inflation
+DHARMa::testUniformity(simBprop) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(simBprop) # ~0.32% of observations are outliers
+# Model diagnostics indicated excellent fit, with no evidence of overdispersion or zero inflation. Although DHARMa’s uniformity and outlier tests showed significant deviations, the magnitude was trivial (<0.4% outliers) and expected for large-sample GLMMs, and residual plots showed no structured patterns.
 # Post-hoc comparisons revealed no reliable differences in seedling abundance between AM and ECM species across proportional conspecific or heterospecific basal area gradients. All nine AM–ECM contrasts yielded ratios near 1.0 with non-significant p-values except for a single marginal comparison at high conspecific and high AM basal area, which we interpret cautiously given the lack of a consistent pattern.
 
 ########## ########## ########## ########## ########## 
-########## Plotting effect sizes - Superinteractive model
+########## Plotting effect sizes - Panel B
 ### Extract fixed effects 
 fixef_df <- broom.mixed::tidy(
-  all_sp_propBCD, effects = "fixed",
+  all_sp_propB, effects = "fixed",
   component = "cond") %>%
   filter(term != "(Intercept)") %>%
   select(term, estimate, std.error, p.value)
@@ -850,12 +783,9 @@ fixef_df <- fixef_df %>%
   mutate(component = case_when(
     term == "propConsp" ~ "Prop. Conspecific BA",
     term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "propAM" ~ "Prop. AM BA",
+    term == "propHetAM" ~ "Prop. AM BA",
     term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
-    term == "propConsp:propAM" ~ "Prop. Consp. BA:Prop. AM BA",
-    term == "Seedling_mycECM:propAM" ~  "Myc. type ECM:Prop. AM BA",
-    term == "propConsp:Seedling_mycECM:propAM" ~ 
-    "Prop. Consp. BA:Myc. type ECM:\nProp. AM BA",
+    term == "propConsp:propHetAM" ~ "Prop. Consp. BA:Prop. AM BA",
     term == "logPrior" ~ "Log(Prior Density)",
     term == "log0yr" ~ "Log(Recruit Density)",
     TRUE ~ term))
@@ -863,8 +793,7 @@ fixef_df <- fixef_df %>%
 # 3. Order components on the y-axis in the order you prefer
 desired_order <- c("Prop. Conspecific BA","Prop. AM BA",
                    "Mycorrhizal type",  "Prop. Consp. BA:Myc. type ECM",
-                   "Prop. Consp. BA:Prop. AM BA", "Myc. type ECM:Prop. AM BA",
-                   "Prop. Consp. BA:Myc. type ECM:\nProp. AM BA",
+                   "Prop. Consp. BA:Prop. AM BA", 
                    "Log(Recruit Density)","Log(Prior Density)")
 fixef_df <- fixef_df %>%
   mutate(component = factor(component, levels = desired_order))
@@ -880,7 +809,7 @@ fixef_df$component <- factor(fixef_df$component, levels = rev(desired_order))
 ggplot(fixef_df, aes(x = estimate, y = component)) +
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
   geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-                     xmax = estimate + 1.96 * std.error), 
+                    xmax = estimate + 1.96 * std.error), 
                 orientation = "y",width = 0.1, color = "black")+
   geom_point(aes(shape = Significant, fill = Significant), 
              size = 3.5, color = "black", stroke = 1) +
@@ -891,6 +820,173 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
   theme(legend.position = "none",
         axis.text.y = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 12, color = "black"))
+
+############ Estimated marginal means at specific predictor combinations
+# Gives predicted survival for AM vs ECM seedlings at low/medium/high levels of the proportion of conspecific and AM BA (i.e., predictions under specific values of confounders)
+emm_Bprop <- emmeans(all_sp_propB,
+  ~ Seedling_myc | propConsp * propHetAM,
+  type = "response",
+  at = list(propConsp  = quantile(allSpDat$propConsp, c(.1, .5, .9)),
+            propAM  = quantile(allSpDat$propHetAM, c(.1, .5, .9))))
+emm_Bprop
+pairs(emm_Bprop, by = c("propConsp", "propHetAM"))
+
+############ marginal effects / average partial effects
+# Computes average marginal effect (AME) of each continuous predictor
+# Gives the closest analog to “the effect of X on survival,” even in the presence of interactions
+
+ame_continuous <- function(model, var){
+  emtrends(model, specs = ~1, var = var)
+}
+# Marginal effect of proportion of conspecific BA
+ameProp_consp <- ame_continuous(all_sp_propB, "propConsp")
+ameProp_consp
+# Marginal effect of proportion of heterospecific AM BA
+ameProp_hetAM <- ame_continuous(all_sp_propB, "propHetAM")
+ameProp_hetAM
+# Marginal effect of seedling mycorrhizal guild
+ameProp_myc <- emmeans(all_sp_propB, pairwise ~ Seedling_myc)
+ameProp_myc
+
+
+################################################## 
+##### Plot predictions for Panel B
+
+# These plots are not showing the marginal effects, but rather are conditional predictions, not derivatives. They are the appropriate method for: 
+# showing how effects vary across the interaction space
+# illustrating ecological mechanisms tested in Panels A and B
+# visualizing the implications of our best-supported model 
+
+# =========================================================
+# 1. Central values and quartiles
+# =========================================================
+mid_propConsp  <- median(allSpDat$propConsp,  na.rm = TRUE)
+mid_propHetAM  <- median(allSpDat$propHetAM,  na.rm = TRUE)
+
+propHetAM_quart  <- quantile(allSpDat$propHetAM,  probs = c(.1,.5,.9), na.rm = TRUE)
+
+### Colors
+### Colors
+col_AM  <- "#c0352b"   # AM red
+col_ECM <- "#2b4ac0"   # ECM blue
+
+reds  <- colorRampPalette(c("#f7b4ad", col_AM,  "#7a1b14"))
+blues <- colorRampPalette(c("#b3c4f7", col_ECM, "#16245c"))
+
+# 3-level gradients for context levels (low, medium, high)
+AM_grad  <- reds(3)
+ECM_grad <- blues(3)
+
+# Combined color lookup – used in all Panel B/D interaction plots
+color_map_combo <- c(
+  # AM seedling panel
+  "AM_Low"    = AM_grad[1],
+  "AM_Medium" = AM_grad[2],
+  "AM_High"   = AM_grad[3],
+  # ECM seedling panel
+  "ECM_Low"   = ECM_grad[1],
+  "ECM_Medium"= ECM_grad[2],
+  "ECM_High"  = ECM_grad[3])
+
+desired_order <- c("AM_Low","AM_Medium","AM_High",
+                   "ECM_Low","ECM_Medium","ECM_High")
+
+### Theme
+base_theme <- theme_bw() +
+  theme(legend.position = "right",
+        axis.text  = element_text(size = 12, color="black"),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(size=15, face="bold"))
+
+# =========================================================
+## -------- PANEL A — Classic feedback (propConsp × seedling type)
+## Predict 
+pred_A <- ggpredict(
+  all_sp_propB,
+  terms = c("propConsp", "Seedling_myc",
+            paste0("propHetAM[",  mid_propHetAM,  "]")),
+  bias_correction = TRUE)
+
+## Build dataframe cleanly
+df_A <- data.frame(
+  x         = pred_A$x,
+  predicted = pred_A$predicted,
+  conf.low  = pred_A$conf.low,
+  conf.high = pred_A$conf.high,
+  seed_type = factor(pred_A$group, levels = c("AM","ECM")))
+
+### Create combo variable (even though no Low/Med/High here)
+df_A$combo <- df_A$seed_type
+df_A$combo <- factor(df_A$combo,
+                     levels = c("AM", "ECM"),
+                     labels = c("AM_Medium","ECM_Medium"))  # middle level color
+
+plot_A <- ggplot(df_A,
+                 aes(x = x, y = predicted, color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  scale_color_manual(values = color_map_combo,
+                     name = "Seedling type",
+                     labels = c("AM","ECM")) +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(title = "Panel A — Classic feedback",
+       x = "Prop. conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+
+plot_A
+
+# =========================================================
+## ----------------PANEL B1 ------ propConsp × propHetAM 
+## Predict 
+pred_B_AM <- ggpredict(
+  all_sp_propB,
+  terms = c("propConsp",
+            paste0("propHetAM[", paste(propHetAM_quart, collapse = ","), "]"),
+            "Seedling_myc"))
+
+## Build dataframe cleanly
+df_B_AM <- data.frame(x         = pred_B_AM$x,
+                      predicted = pred_B_AM$predicted,
+                      conf.low  = pred_B_AM$conf.low,
+                      conf.high = pred_B_AM$conf.high,
+                      seed_type = factor(pred_B_AM$facet, levels = c("AM","ECM")),
+                      hetAM_raw = pred_B_AM$group)
+
+## Assign human-readable labels
+df_B_AM$hetAM <- factor(
+  df_B_AM$hetAM_raw,
+  levels = unique(pred_B_AM$group),
+  labels = c("Low","Medium","High"))
+
+## Interaction label for color: AM_Low, AM_Medium, etc.
+df_B_AM$combo <- interaction(df_B_AM$seed_type, df_B_AM$hetAM, sep="_")
+df_B_AM$combo <- factor(df_B_AM$combo, levels = desired_order)
+
+## Plot
+plot_B_AM <- ggplot(df_B_AM,
+                    aes(x = x, y = predicted,
+                        color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(size = 0.8) +
+  facet_wrap(~ seed_type, ncol = 2,
+             labeller = labeller(seed_type = c(
+               AM  = "AM seedlings", ECM = "ECM seedlings"))) +
+  scale_color_manual(values = color_map_combo, name = "Prop. AM BA") +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(title = "Panel B1 — Interactive spillover (Prop. AM BA × Consp. BA)",
+       x = "Prop. conspecific basal area (m²)",
+       y = "Predicted survival") +
+  base_theme
+plot_B_AM
+
+
+
+
+
+
 
 #########################################################
 #########################################################
