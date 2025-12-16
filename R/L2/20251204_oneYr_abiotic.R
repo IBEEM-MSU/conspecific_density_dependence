@@ -34,9 +34,6 @@ clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
 clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"
 clim_env_allSites$survYear = as.factor(clim_env_allSites$survYear)
 
-# Add X column (quadrat by the 0.5)
-allSpDat$X = allSpDat$quadrat - 0.5
-
 # Add true site number
 allSpDat$SiteNo = ifelse(allSpDat$SiteID == 1, "49.01",
                   ifelse(allSpDat$SiteID == 2, "59.12",
