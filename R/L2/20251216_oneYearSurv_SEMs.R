@@ -76,6 +76,45 @@ allSpDat_surv_clim$Sdlg_myc_bin <- ifelse(allSpDat_surv_clim$Seedling_myc
                                           == "AM", 0.5, -0.5)
 
 
+#### Read in csv with all survivorship data for all species
+allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
+allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
+
+## Environmental/climate data
+clim_env_allSites <- read.csv("./data/L1/clim_envVars_allSites.csv")
+clim_env_allSites$Site = as.character(clim_env_allSites$Site)
+clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
+clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"
+clim_env_allSites$survYear = as.factor(clim_env_allSites$survYear)
+
+# Add true site number
+allSpDat$SiteNo = ifelse(allSpDat$SiteID == 1, "49.01",
+                         ifelse(allSpDat$SiteID == 2, "59.12",
+                                ifelse(allSpDat$SiteID == 3, "8.21",
+                                       ifelse(allSpDat$SiteID == 4, "39.21",
+                                              ifelse(allSpDat$SiteID == 5, "16.35",
+                                                     ifelse(allSpDat$SiteID == 6, "60.35",
+                                                            ifelse(allSpDat$SiteID == 7, "7.40",
+                                                                   ifelse(allSpDat$SiteID == 8, "40.40",
+                                                                          ifelse(allSpDat$SiteID == 9, "21.43",
+                                                                                 ifelse(allSpDat$SiteID == 10, "25.43",
+                                                                                        ifelse(allSpDat$SiteID == 11, "6.45", "24.45")))))))))))
+
+# Create TransectID
+allSpDat$TransectID = paste0(allSpDat$SiteNo, allSpDat$X)
+
+### Left join to add climate variables to data
+allSpDat$survYear = as.factor(allSpDat$survYear)
+allSpDat_surv_clim <- allSpDat %>%
+  left_join(clim_env_allSites, by = c("TransectID", "survYear"))
+
+### Center min and max temps by the minimum of each
+allSpDat_surv_clim$mintemp = allSpDat_surv_clim$tmin_c - 
+  min(allSpDat_surv_clim$tmin_c) 
+allSpDat_surv_clim$maxtemp = allSpDat_surv_clim$tmax_c - 
+  min(allSpDat_surv_clim$tmax_c)
+### Make Site a factor
+allSpDat_surv_clim$SiteID = as.factor(allSpDat_surv_clim$SiteID)
 
 
 
