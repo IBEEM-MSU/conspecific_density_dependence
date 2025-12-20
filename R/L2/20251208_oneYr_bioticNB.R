@@ -266,16 +266,19 @@ ame_continuous <- function(model, var){
 }
 # Marginal effect of conspecific BA
 ame_consp <- ame_continuous(all_sp_15mBCD, "consp_15m")
-ame_consp
+ame_consp %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific AM BA
 ame_hetAM <- ame_continuous(all_sp_15mBCD, "hetAM_15m")
-ame_hetAM
+ame_hetAM %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific ECM BA
 ame_hetECM <- ame_continuous(all_sp_15mBCD, "hetECM_15m")
-ame_hetECM
+ame_hetECM %>%
+  summary(infer = TRUE)
 # Marginal effect of seedling mycorrhizal guild
 ame_myc <- emmeans(all_sp_15mBCD, pairwise ~ Seedling_myc)
-ame_myc
+ame_myc 
 
 ################################################## 
 ##### Plot predictions for superinteractive model
@@ -356,14 +359,13 @@ plot_A <- ggplot(df_A,
                  aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
+  geom_line(linewidth = 0.8) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM")) +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel A — Classic feedback",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year seedling counts") +
   base_theme
 
 plot_A
@@ -371,12 +373,12 @@ plot_A
 # =========================================================
 ## ---------------------PANEL B1 ------ Consp × hetAM 
 ## Predict 
-pred_B_AM <- ggpredict(
-  all_sp_15mBCD,
+pred_B_AM <- ggpredict(all_sp_15mBCD,
   terms = c("consp_15m",
             paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
             "Seedling_myc",
-            paste0("hetECM_15m[", mid_hetECM, "]")))
+            paste0("hetECM_15m[", mid_hetECM, "]")),
+  bias_correction = TRUE)
 
 ## Build dataframe cleanly
 df_B_AM <- data.frame(x         = pred_B_AM$x,
@@ -387,8 +389,7 @@ df_B_AM <- data.frame(x         = pred_B_AM$x,
   hetAM_raw = pred_B_AM$group)
 
 ## Assign human-readable labels
-df_B_AM$hetAM <- factor(
-  df_B_AM$hetAM_raw,
+df_B_AM$hetAM <- factor(df_B_AM$hetAM_raw,
   levels = unique(pred_B_AM$group),
   labels = c("Low","Medium","High"))
 
@@ -402,27 +403,26 @@ plot_B_AM <- ggplot(df_B_AM,
                         color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
+  geom_line(linewidth = 0.8) +
   facet_wrap(~ seed_type, ncol = 2,
              labeller = labeller(seed_type = c(
               AM  = "AM seedlings", ECM = "ECM seedlings"))) +
   scale_color_manual(values = color_map_combo, name = "AM BA Level") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel B1 — Interactive spillover (AM BA × Conspecific BA)",
-    x = "Conspecific basal area (m²)",
-    y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+    y = "Predicted one-year seedling counts") +
   base_theme
 plot_B_AM
 
 # =========================================================
 ## -------- PANEL B2 ----------- Consp × hetECM
 ## Predict 
-pred_B_ECM <- ggpredict(
-  all_sp_15mBCD,
+pred_B_ECM <- ggpredict(all_sp_15mBCD,
   terms = c("consp_15m",
             paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
             "Seedling_myc",
-            paste0("hetAM_15m[", mid_hetAM, "]")))
+            paste0("hetAM_15m[", mid_hetAM, "]")),
+  bias_correction = TRUE)
 
 ## Build dataframe cleanly
 df_B_ECM <- data.frame(
@@ -448,27 +448,26 @@ plot_B_ECM <- ggplot(df_B_ECM,
                      aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
+  geom_line(linewidth = 0.8) +
   facet_wrap(~ seed_type, ncol=2,
              labeller = labeller(seed_type = c(
                AM="AM seedlings", ECM="ECM seedlings"))) +
   scale_color_manual(values = color_map_combo,
-                     name = "ECM BA Level") +
+                     name = "ECM BA Level", guide="none") +
   scale_fill_manual(values = color_map_combo, guide="none") +
-  labs(title = "Panel B2 — Interactive spillover (ECM BA × Conspecific BA)",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year seedling counts") +
   base_theme
 plot_B_ECM
 
 # =========================================================
 ## -------- PANEL C1 -------- Additive AM effect
 ## Predict
-pred_C_AM <- ggpredict(
-  all_sp_15mBCD,
+pred_C_AM <- ggpredict(all_sp_15mBCD,
   terms = c("hetAM_15m","Seedling_myc",
             paste0("consp_15m[", mid_consp, "]"),
-            paste0("hetECM_15m[", mid_hetECM, "]")))
+            paste0("hetECM_15m[", mid_hetECM, "]")),
+  bias_correction = TRUE)
 
 ## Build dataframe cleanly
 df_C_AM <- data.frame(
@@ -488,25 +487,24 @@ plot_C_AM <- ggplot(df_C_AM,
                     aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
+  geom_line(linewidth = 0.8) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM")) +
   scale_fill_manual(values = color_map_combo, guide="none") +
-  labs(title = "Panel C1 — Additive AM spillover",
-       x = "Heterospecific AM basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Heterospecific AM basal area (m²)",
+       y = "Predicted one-year seedling counts") +
   base_theme
 plot_C_AM
 
 # =========================================================
 ## -------- PANEL C2 --------- Additive ECM effect
 ## Predict
-pred_C_ECM <- ggpredict(
-  all_sp_15mBCD,
+pred_C_ECM <- ggpredict(all_sp_15mBCD,
   terms = c("hetECM_15m","Seedling_myc",
             paste0("consp_15m[", mid_consp, "]"),
-            paste0("hetAM_15m[", mid_hetAM, "]")))
+            paste0("hetAM_15m[", mid_hetAM, "]")),
+  bias_correction = TRUE)
 
 ## Build dataframe cleanly
 df_C_ECM <- data.frame(
@@ -526,117 +524,116 @@ plot_C_ECM <- ggplot(df_C_ECM,
                      aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
+  geom_line(linewidth = 0.8) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM")) +
   scale_fill_manual(values = color_map_combo, guide="none") +
-  labs(title = "Panel C2 — Additive ECM spillover",
-       x = "Heterospecific ECM basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Heterospecific ECM basal area (m²)",
+       y = "Predicted one-year seedling counts") +
   base_theme
 plot_C_ECM
 
-# =========================================================
-## -------- PANEL D1 ------ Consp × hetAM (Panel D logic)
-## Predict 
-pred_D_AM <- ggpredict(
-  all_sp_15mBCD,
-  terms = c("consp_15m",
-            paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
-            "Seedling_myc",
-            paste0("hetECM_15m[", mid_hetECM, "]"))
-)
-
-## Build dataframe cleanly
-df_D_AM <- data.frame(
-  x         = pred_D_AM$x,
-  predicted = pred_D_AM$predicted,
-  conf.low  = pred_D_AM$conf.low,
-  conf.high = pred_D_AM$conf.high,
-  seed_type = factor(pred_D_AM$facet, levels = c("AM","ECM")),
-  hetAM_raw = pred_D_AM$group
-)
-
-## Assign human-readable labels for spillover levels
-df_D_AM$hetAM <- factor(
-  df_D_AM$hetAM_raw,
-  levels = unique(pred_D_AM$group),
-  labels = c("Low","Medium","High")
-)
-
-## Build combo variable (AM_Low, ECM_Low, etc.)
-df_D_AM$combo <- interaction(df_D_AM$seed_type, df_D_AM$hetAM, sep="_")
-df_D_AM$combo <- factor(df_D_AM$combo, levels = desired_order)
-
-## Plot
-plot_D_AM <- ggplot(df_D_AM,
-                    aes(x = x, y = predicted, color = combo, fill = combo)) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
-              alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
-  facet_wrap(~ seed_type, ncol = 2,
-             labeller = labeller(seed_type = c(
-               AM  = "AM seedlings",
-               ECM = "ECM seedlings"))) +
-  scale_color_manual(values = color_map_combo,
-                     name = "AM BA Level") +
-  scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel D1 — Full model: AM spillover × Conspecific BA",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
-  base_theme
-
-plot_D_AM
-
-# =========================================================
-## -------- PANEL D2 -------- Consp × hetECM (Panel D logic)
-## Predict 
-pred_D_ECM <- ggpredict(
-  all_sp_15mBCD,
-  terms = c("consp_15m",
-            paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
-            "Seedling_myc",
-            paste0("hetAM_15m[", mid_hetAM, "]")))
-
-## Build dataframe cleanly
-df_D_ECM <- data.frame(
-  x         = pred_D_ECM$x,
-  predicted = pred_D_ECM$predicted,
-  conf.low  = pred_D_ECM$conf.low,
-  conf.high = pred_D_ECM$conf.high,
-  seed_type = factor(pred_D_ECM$facet, levels = c("AM","ECM")),
-  hetECM_raw = pred_D_ECM$group)
-
-## Assign human-readable labels
-df_D_ECM$hetECM <- factor(
-  df_D_ECM$hetECM_raw,
-  levels = unique(pred_D_ECM$group),
-  labels = c("Low","Medium","High"))
-
-## Color-group label: AM_Low, AM_Medium, …
-df_D_ECM$combo <- interaction(df_D_ECM$seed_type, df_D_ECM$hetECM, sep="_")
-df_D_ECM$combo <- factor(df_D_ECM$combo, levels = desired_order)
-
-## Plot
-plot_D_ECM <- ggplot(df_D_ECM,
-                     aes(x = x, y = predicted, color = combo, fill = combo)) +
-  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
-              alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
-  facet_wrap(~ seed_type, ncol = 2,
-             labeller = labeller(seed_type = c(
-               AM="AM seedlings",
-               ECM="ECM seedlings"))) +
-  scale_color_manual(values = color_map_combo,
-                     name = "ECM BA Level") +
-  scale_fill_manual(values = color_map_combo, guide="none") +
-  labs(title = "Panel D2 — Additive & Interactive Spillover (ECM × Consp BA)",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
-  base_theme
-
-plot_D_ECM
+# # =========================================================
+# ## -------- PANEL D1 ------ Consp × hetAM (Panel D logic)
+# ## Predict 
+# pred_D_AM <- ggpredict(
+#   all_sp_15mBCD,
+#   terms = c("consp_15m",
+#             paste0("hetAM_15m[", paste(hetAM_quart, collapse = ","), "]"),
+#             "Seedling_myc",
+#             paste0("hetECM_15m[", mid_hetECM, "]"))
+# )
+# 
+# ## Build dataframe cleanly
+# df_D_AM <- data.frame(
+#   x         = pred_D_AM$x,
+#   predicted = pred_D_AM$predicted,
+#   conf.low  = pred_D_AM$conf.low,
+#   conf.high = pred_D_AM$conf.high,
+#   seed_type = factor(pred_D_AM$facet, levels = c("AM","ECM")),
+#   hetAM_raw = pred_D_AM$group
+# )
+# 
+# ## Assign human-readable labels for spillover levels
+# df_D_AM$hetAM <- factor(
+#   df_D_AM$hetAM_raw,
+#   levels = unique(pred_D_AM$group),
+#   labels = c("Low","Medium","High")
+# )
+# 
+# ## Build combo variable (AM_Low, ECM_Low, etc.)
+# df_D_AM$combo <- interaction(df_D_AM$seed_type, df_D_AM$hetAM, sep="_")
+# df_D_AM$combo <- factor(df_D_AM$combo, levels = desired_order)
+# 
+# ## Plot
+# plot_D_AM <- ggplot(df_D_AM,
+#                     aes(x = x, y = predicted, color = combo, fill = combo)) +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+#               alpha = 0.18, color = NA) +
+#   geom_line(size = 0.8) +
+#   facet_wrap(~ seed_type, ncol = 2,
+#              labeller = labeller(seed_type = c(
+#                AM  = "AM seedlings",
+#                ECM = "ECM seedlings"))) +
+#   scale_color_manual(values = color_map_combo,
+#                      name = "AM BA Level") +
+#   scale_fill_manual(values = color_map_combo, guide = "none") +
+#   labs(title = "Panel D1 — Full model: AM spillover × Conspecific BA",
+#        x = "Conspecific basal area (m²)",
+#        y = "Predicted survival") +
+#   base_theme
+# 
+# plot_D_AM
+# 
+# # =========================================================
+# ## -------- PANEL D2 -------- Consp × hetECM (Panel D logic)
+# ## Predict 
+# pred_D_ECM <- ggpredict(
+#   all_sp_15mBCD,
+#   terms = c("consp_15m",
+#             paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
+#             "Seedling_myc",
+#             paste0("hetAM_15m[", mid_hetAM, "]")))
+# 
+# ## Build dataframe cleanly
+# df_D_ECM <- data.frame(
+#   x         = pred_D_ECM$x,
+#   predicted = pred_D_ECM$predicted,
+#   conf.low  = pred_D_ECM$conf.low,
+#   conf.high = pred_D_ECM$conf.high,
+#   seed_type = factor(pred_D_ECM$facet, levels = c("AM","ECM")),
+#   hetECM_raw = pred_D_ECM$group)
+# 
+# ## Assign human-readable labels
+# df_D_ECM$hetECM <- factor(
+#   df_D_ECM$hetECM_raw,
+#   levels = unique(pred_D_ECM$group),
+#   labels = c("Low","Medium","High"))
+# 
+# ## Color-group label: AM_Low, AM_Medium, …
+# df_D_ECM$combo <- interaction(df_D_ECM$seed_type, df_D_ECM$hetECM, sep="_")
+# df_D_ECM$combo <- factor(df_D_ECM$combo, levels = desired_order)
+# 
+# ## Plot
+# plot_D_ECM <- ggplot(df_D_ECM,
+#                      aes(x = x, y = predicted, color = combo, fill = combo)) +
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+#               alpha = 0.18, color = NA) +
+#   geom_line(size = 0.8) +
+#   facet_wrap(~ seed_type, ncol = 2,
+#              labeller = labeller(seed_type = c(
+#                AM="AM seedlings",
+#                ECM="ECM seedlings"))) +
+#   scale_color_manual(values = color_map_combo,
+#                      name = "ECM BA Level") +
+#   scale_fill_manual(values = color_map_combo, guide="none") +
+#   labs(title = "Panel D2 — Additive & Interactive Spillover (ECM × Consp BA)",
+#        x = "Conspecific basal area (m²)",
+#        y = "Predicted survival") +
+#   base_theme
+# 
+# plot_D_ECM
 
 
 #########################################################
@@ -840,10 +837,12 @@ ame_continuous <- function(model, var){
 }
 # Marginal effect of proportion of conspecific BA
 ameProp_consp <- ame_continuous(all_sp_propB, "propConsp")
-ameProp_consp
+ameProp_consp %>%
+  summary(infer = TRUE)
 # Marginal effect of proportion of heterospecific AM BA
 ameProp_hetAM <- ame_continuous(all_sp_propB, "propHetAM")
-ameProp_hetAM
+ameProp_hetAM %>%
+  summary(infer = TRUE)
 # Marginal effect of seedling mycorrhizal guild
 ameProp_myc <- emmeans(all_sp_propB, pairwise ~ Seedling_myc)
 ameProp_myc
@@ -925,14 +924,13 @@ plot_A <- ggplot(df_A,
                  aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
+  geom_line(linewidth = 0.8) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
-                     labels = c("AM","ECM")) +
+                     labels = c("AM","ECM"), guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel A — Classic feedback",
-       x = "Prop. conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Proportion of conspecific basal area",
+       y = "Predicted one-year seedling counts") +
   base_theme
 
 plot_A
@@ -940,8 +938,7 @@ plot_A
 # =========================================================
 ## ----------------PANEL B1 ------ propConsp × propHetAM 
 ## Predict 
-pred_B_AM <- ggpredict(
-  all_sp_propB,
+pred_B_AM <- ggpredict(all_sp_propB,
   terms = c("propConsp",
             paste0("propHetAM[", paste(propHetAM_quart, collapse = ","), "]"),
             "Seedling_myc"))
@@ -970,15 +967,15 @@ plot_B_AM <- ggplot(df_B_AM,
                         color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.8) +
-  facet_wrap(~ seed_type, ncol = 2,
+  geom_line(linewidth = 0.8) +
+  facet_wrap(~ seed_type, ncol = 2, 
              labeller = labeller(seed_type = c(
                AM  = "AM seedlings", ECM = "ECM seedlings"))) +
-  scale_color_manual(values = color_map_combo, name = "Prop. AM BA") +
+  scale_color_manual(values = color_map_combo, name = "Prop. AM BA",
+                     guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel B1 — Interactive spillover (Prop. AM BA × Consp. BA)",
-       x = "Prop. conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Proportion of conspecific basal area",
+       y = "Predicted one-year seedling counts") +
   base_theme
 plot_B_AM
 
@@ -1223,23 +1220,29 @@ ame_continuous <- function(model, var){
 ##### AM Seedlings
 # Marginal effect of conspecific BA
 ame_consp <- ame_continuous(AM_sp_15mB, "consp_15m")
-ame_consp
+ame_consp %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific AM BA
 ame_hetAM <- ame_continuous(AM_sp_15mB, "hetAM_15m")
-ame_hetAM
+ame_hetAM %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific ECM BA
 ame_hetECM <- ame_continuous(AM_sp_15mB, "hetECM_15m")
-ame_hetECM
+ame_hetECM %>%
+  summary(infer = TRUE)
 ##### ECM Seedlings
 # Marginal effect of conspecific BA
 ame_consp <- ame_continuous(ECM_sp_15mB, "consp_15m")
-ame_consp
+ame_consp %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific AM BA
 ame_hetAM <- ame_continuous(ECM_sp_15mB, "hetAM_15m")
-ame_hetAM
+ame_hetAM %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific ECM BA
 ame_hetECM <- ame_continuous(ECM_sp_15mB, "hetECM_15m")
-ame_hetECM
+ame_hetECM %>%
+  summary(infer = TRUE)
 
 
 ################################################## 
@@ -1323,9 +1326,8 @@ plot_A <- ggplot(df_A,
                      guide = "none") +
   scale_fill_manual(values = color_map_combo,
                     guide = "none") +
-  labs(title = "Panel A — Conspecific density dependence (AM seedlings)",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year AM seedling counts") +
   base_theme
 
 plot_A
@@ -1362,13 +1364,12 @@ plot_B1_AM <- ggplot(df_B1_AM,
                          color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_combo,
-                     name = "Heterospecific AM BA") +
+                     name = "Heterospecific AM BA", guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(title = "Panel B1 — AM seedlings: Conspecific × AM BA",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year AM seedling counts") +
   base_theme
 plot_B1_AM
 
@@ -1376,8 +1377,7 @@ plot_B1_AM
 ## -------- PANEL B2 ----------- Consp × hetECM
 ## Predict 
 pred_B2_AM <- ggpredict(AM_sp_15mB,
-  terms = c(
-    "consp_15m",
+  terms = c( "consp_15m",
     paste0("hetECM_15m[", paste(hetECM_quart, collapse=","), "]"),
     paste0("hetAM_15m[", mid_hetAM, "]")),bias_correction = TRUE)
 
@@ -1409,13 +1409,12 @@ plot_B2_AM <- ggplot(df_B2_AM,
                          color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_AM_ECMlevels,
-                     name = "Heterospecific ECM BA") +
+                     name = "Heterospecific ECM BA", guide = "none") +
   scale_fill_manual(values = color_map_AM_ECMlevels, guide = "none") +
-  labs(title = "Panel B2 — AM seedlings: Conspecific × ECM BA",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year AM seedling counts") +
   base_theme
 plot_B2_AM
 
@@ -1445,14 +1444,13 @@ plot_A <- ggplot(df_A,
                      color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_combo,
                      guide = "none") +
   scale_fill_manual(values = color_map_combo,
                     guide = "none") +
-  labs(title = "Panel A — Conspecific density dependence (ECM seedlings)",
-       x = "Conspecific basal area (m²)",
-       y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year ECM seedling counts") +
   base_theme
 
 plot_A
@@ -1493,13 +1491,12 @@ plot_B1_ECM <- ggplot(df_B1_ECM,
   aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_ECM_AMlevels,
-                     name = "Heterospecific AM BA") +
+                     name = "Heterospecific AM BA", guide = "none") +
   scale_fill_manual(values = color_map_ECM_AMlevels, guide = "none") +
-  labs(title = "Panel B1 — ECM seedlings: Conspecific × AM BA",
-    x = "Conspecific basal area (m²)",
-    y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+    y = "Predicted one-year ECM seedling counts") +
   base_theme
 
 plot_B1_ECM
@@ -1541,13 +1538,12 @@ plot_B2_ECM <- ggplot(df_B2_ECM,
   aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_ECM_ECMlevels,
-                     name = "Heterospecific ECM BA") +
+                     name = "Heterospecific ECM BA", guide = "none") +
   scale_fill_manual(values = color_map_ECM_ECMlevels, guide = "none") +
-  labs(title = "Panel B2 — ECM seedlings: Conspecific × ECM BA",
-    x = "Conspecific basal area (m²)",
-    y = "Predicted survival") +
+  labs(x = "Conspecific basal area (m²)",
+    y = "Predicted one-year ECM seedling counts") +
   base_theme
 
 plot_B2_ECM
@@ -1728,17 +1724,21 @@ ame_continuous <- function(model, var){
 ##### AM Seedlings
 # Marginal effect of proportional conspecific BA
 ame_consp <- ame_continuous(AM_sp_15mpropB, "propConsp")
-ame_consp
+ame_consp %>%
+  summary(infer = TRUE)
 # Marginal effect of proportional AM BA
 ame_hetAM <- ame_continuous(AM_sp_15mpropB, "propHetAM")
-ame_hetAM
+ame_hetAM %>%
+  summary(infer = TRUE)
 ##### ECM Seedlings
 # Marginal effect of conspecific BA
 ame_consp <- ame_continuous(ECM_sp_15mpropB, "propConsp")
-ame_consp
+ame_consp %>%
+  summary(infer = TRUE)
 # Marginal effect of heterospecific AM BA
 ame_hetAM <- ame_continuous(ECM_sp_15mpropB, "propHetAM")
-ame_hetAM
+ame_hetAM %>%
+  summary(infer = TRUE)
 
 
 ################################################## 
@@ -1755,7 +1755,7 @@ ame_hetAM
 mid_propConsp <- median(allSpDat_AM$propConsp,  na.rm = TRUE)
 mid_propHetAM <- median(allSpDat_AM$propHetAM,  na.rm = TRUE)
 
-propHetAM_quart <- quantile( allSpDat_AM$propHetAM,
+propHetAM_quart <- quantile(allSpDat_AM$propHetAM,
   probs = c(.1, .5, .9), na.rm = TRUE)
 
 ### Colors
@@ -1794,17 +1794,14 @@ base_theme <- theme_bw() +
 # =========================================================
 ## -------- PANEL A — Classic feedback (consp × seedling type)
 pred_A <- ggpredict(AM_sp_15mpropB,
-  terms = c(
-    "propConsp",
+  terms = c("propConsp",
     paste0("propHetAM[", mid_propHetAM, "]")),
   bias_correction = TRUE)
 
-df_A <- data.frame(
-  x         = pred_A$x,
+df_A <- data.frame(x         = pred_A$x,
   predicted = pred_A$predicted,
   conf.low  = pred_A$conf.low,
-  conf.high = pred_A$conf.high
-)
+  conf.high = pred_A$conf.high)
 
 df_A$combo <- factor("AM_Medium", levels = "AM_Medium")
 
@@ -1812,14 +1809,11 @@ plot_A <- ggplot(df_A,
                  aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_combo, guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(
-    title = "Panel A — Proportional conspecific effects (AM seedlings)",
-    x = "Proportional conspecific basal area",
-    y = "Predicted survival"
-  ) +
+  labs(x = "Proportion of conspecific basal area",
+       y = "Predicted one-year AM seedling counts") +
   base_theme
 plot_A
 
@@ -1850,14 +1844,12 @@ plot_B1_AM <- ggplot(df_B1_AM,
                      aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_combo,
                      name = "Prop. AM BA") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(
-    title = "Panel B1 — AM seedlings: Prop. conspecific × AM BA",
-    x = "Prop. conspecific basal area",
-    y = "Predicted survival") +
+  labs(x = "Proportion of conspecific basal area",
+       y = "Predicted one-year AM seedling counts") +
   base_theme
 
 plot_B1_AM
@@ -1884,13 +1876,11 @@ plot_A <- ggplot(df_A,
                  aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_combo, guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
-  labs(
-    title = "Panel A — Prop. conspecific effects (ECM seedlings)",
-    x = "Prop. conspecific basal area",
-    y = "Predicted survival") +
+  labs(x = "Proportion of conspecific basal area",
+       y = "Predicted one-year ECM seedling counts") +
   base_theme
 
 plot_A
@@ -1903,8 +1893,7 @@ pred_B1_ECM <- ggpredict(ECM_sp_15mpropB,
     paste0("propHetAM[", paste(propHetAM_quart, collapse = ","), "]")),
   bias_correction = FALSE)
 
-df_B1_ECM <- data.frame(
-  x          = pred_B1_ECM$x,
+df_B1_ECM <- data.frame(x          = pred_B1_ECM$x,
   predicted  = pred_B1_ECM$predicted,
   conf.low   = pred_B1_ECM$conf.low,
   conf.high  = pred_B1_ECM$conf.high,
@@ -1928,13 +1917,12 @@ plot_B1_ECM <- ggplot(df_B1_ECM,
                       aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
-  geom_line(size = 0.9) +
+  geom_line(linewidth = 0.9) +
   scale_color_manual(values = color_map_ECM_AMlevels,
                      name = "Prop. AM BA") +
   scale_fill_manual(values = color_map_ECM_AMlevels, guide = "none") +
-  labs(title = "Panel B1 — ECM seedlings: Prop. conspecific × AM BA",
-    x = "Prop. conspecific basal area",
-    y = "Predicted survival") +
+  labs(x = "Proportion of conspecific basal area",
+       y = "Predicted one-year ECM seedling counts") +
   base_theme
 
 plot_B1_ECM

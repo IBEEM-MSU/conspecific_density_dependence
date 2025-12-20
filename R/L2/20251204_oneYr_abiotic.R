@@ -34,6 +34,10 @@ clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
 clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"
 clim_env_allSites$survYear = as.factor(clim_env_allSites$survYear)
 
+# Add X column (quadrat by the 0.5)
+allSpDat$survYear = as.factor(allSpDat$survYear)
+allSpDat$X = allSpDat$quadrat - 0.5
+
 # Add true site number
 allSpDat$SiteNo = ifelse(allSpDat$SiteID == 1, "49.01",
                   ifelse(allSpDat$SiteID == 2, "59.12",
@@ -51,9 +55,8 @@ allSpDat$SiteNo = ifelse(allSpDat$SiteID == 1, "49.01",
 allSpDat$TransectID = paste0(allSpDat$SiteNo, allSpDat$X)
 
 ### Left join to add climate variables to data
-allSpDat$survYear = as.factor(allSpDat$survYear)
 allSpDat_surv_clim <- allSpDat %>%
-  left_join(clim_env_allSites, by = c("TransectID", "survYear"))
+  left_join(clim_env_allSites, by = c("TransectID", "survYear", "X"))
 
 ### Center min and max temps by the minimum of each
 allSpDat_surv_clim$mintemp = allSpDat_surv_clim$tmin_c - 
@@ -288,7 +291,152 @@ ggplot(fixef_df, aes(x = estimate, y = y_pos)) +
   guides(fill = guide_legend(
       override.aes = list(shape = 21, color = "black", size = 3.5)))
 
+#####################################################
+######## Alternative plotting
+
+### Colors
+col_AM  <- "#c0352b"   # AM red
+col_ECM <- "#2b4ac0"   # ECM blue
+
+### Theme
+base_theme <- theme_bw() +
+  theme(legend.position = "right",
+    axis.text  = element_text(size = 12, color="black"),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(size=15, face="bold"))
+
+### Functions to extract terms
+get_pred_df <- function(model, term, model_label, color) {
+  p <- ggpredict(model,
+    terms = term,
+    bias_correction = inherits(model, "glmmTMB"))
+
+### data frame to store variables
+  data.frame(
+    x         = p$x,
+    predicted = p$predicted,
+    conf.low  = p$conf.low,
+    conf.high = p$conf.high,
+    Model     = model_label,
+    Color     = color)
+}
+
+### Openness - extract variables and plot
+df_percOpen <- bind_rows(
+  get_pred_df(allSp_abio, "percOpen", "All seedlings", "black"),
+  get_pred_df(AM_abio,    "percOpen", "AM seedlings",  col_AM),
+  get_pred_df(ECM_env,   "percOpen", "ECM seedlings", col_ECM))
+# Plot
+plot_percOpen <- ggplot(df_percOpen,
+            aes(x = x, y = predicted, color = Model, fill = Model)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(values = c(
+    "All seedlings" = "black",
+    "AM seedlings"  = col_AM,
+    "ECM seedlings" = col_ECM)) +
+  scale_fill_manual(values = c(
+    "All seedlings" = "grey70",
+    "AM seedlings"  = col_AM,
+    "ECM seedlings" = col_ECM)) +
+  labs(x = "Percent Canopy Openness",
+    y = "Predicted one-year seedling counts") +
+  base_theme
+
+plot_percOpen
 
 
+### Base CEC - extract variables and plot
+df_Base_CEC <- bind_rows(
+  get_pred_df(allSp_abio, "Base_CEC", "All seedlings", "black"),
+  get_pred_df(AM_abio,    "Base_CEC", "AM seedlings",  col_AM),
+  get_pred_df(ECM_env,   "Base_CEC", "ECM seedlings", col_ECM))
+# Plot
+plot_Base_CEC <- ggplot(df_Base_CEC,
+                        aes(x = x, y = predicted, color = Model, fill = Model)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(values = c(
+    "All seedlings" = "black",
+    "AM seedlings"  = col_AM,
+    "ECM seedlings" = col_ECM)) +
+  scale_fill_manual(values = c(
+    "All seedlings" = "grey70",
+    "AM seedlings"  = col_AM,
+    "ECM seedlings" = col_ECM)) +
+  labs(x = "Base Cation Exchange Capacity",
+       y = "Predicted one-year seedling counts") +
+  base_theme
+
+plot_Base_CEC
 
 
+### mean_pdsi - extract variables and plot
+df_mean_pdsi <- bind_rows(
+  get_pred_df(allSp_abio, "mean_pdsi", "All seedlings", "black"),
+  get_pred_df(AM_abio,    "mean_pdsi", "AM seedlings",  col_AM))
+# Plot
+plot_mean_pdsi <- ggplot(df_mean_pdsi,
+                        aes(x = x, y = predicted, color = Model, fill = Model)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(values = c(
+    "All seedlings" = "black",
+    "AM seedlings"  = col_AM)) +
+  scale_fill_manual(values = c(
+    "All seedlings" = "grey70",
+    "AM seedlings"  = col_AM)) +
+  labs(x = "Mean Palmer Drought Severity Index",
+       y = "Predicted one-year seedling counts") +
+  base_theme
+
+plot_mean_pdsi
+
+
+### mintemp - extract variables and plot
+df_mintemp <- bind_rows(
+  get_pred_df(allSp_abio, "mintemp", "All seedlings", "black"),
+  get_pred_df(AM_abio,    "mintemp", "AM seedlings",  col_AM))
+# Plot
+plot_mintemp <- ggplot(df_mintemp,
+                         aes(x = x, y = predicted, color = Model, fill = Model)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(values = c(
+    "All seedlings" = "black",
+    "AM seedlings"  = col_AM)) +
+  scale_fill_manual(values = c(
+    "All seedlings" = "grey70",
+    "AM seedlings"  = col_AM)) +
+  labs(x = "Mininum Temperature (°C)",
+       y = "Predicted one-year seedling counts") +
+  base_theme
+
+plot_mintemp
+
+
+### maxtemp - extract variables and plot
+df_maxtemp <- bind_rows(
+  get_pred_df(allSp_abio, "maxtemp", "All seedlings", "black"),
+  get_pred_df(AM_abio,    "maxtemp", "AM seedlings",  col_AM))
+# Plot
+plot_maxtemp <- ggplot(df_maxtemp,
+                       aes(x = x, y = predicted, color = Model, fill = Model)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  scale_color_manual(values = c(
+    "All seedlings" = "black",
+    "AM seedlings"  = col_AM)) +
+  scale_fill_manual(values = c(
+    "All seedlings" = "grey70",
+    "AM seedlings"  = col_AM)) +
+  labs(x = "Maximum Temperature (°C)",
+       y = "Predicted one-year seedling counts") +
+  base_theme
+
+plot_maxtemp
