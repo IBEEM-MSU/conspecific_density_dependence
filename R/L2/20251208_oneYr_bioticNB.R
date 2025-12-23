@@ -175,7 +175,7 @@ r2_BCD # 52% of variation explained by fixed effects, additional 14% explained b
 ### All sites combined
 AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
     all_sp_15mC, all_sp_15mD, all_sp_15mBCD) # BCD is lowest
-anova(all_sp_15mB, all_sp_15mBCD) # And is significantly better than B
+anova(all_sp_15mD, all_sp_15mBCD) # And is significantly better than B
 
 #### Diagnostics and Post-hoc tests for super-interactive model (best supported)
 ### Diagnostics
