@@ -18,6 +18,7 @@ library(broom.mixed)
 library(tibble)
 library(glmmTMB)
 library(performance)
+library(car)
 
 ### Most complex model to fit (15-m radius)
 ###  Abiotic model of one-year survivorship 
@@ -65,6 +66,157 @@ allSpDat_surv_clim$maxtemp = allSpDat_surv_clim$tmax_c -
   min(allSpDat_surv_clim$tmax_c)
 ### Make Site a factor
 allSpDat_surv_clim$SiteID = as.factor(allSpDat_surv_clim$SiteID)
+
+### Make categorical weather year conditions
+allSpDat_surv_clim <- allSpDat_surv_clim %>%
+  mutate(pdsi_cat = if_else(mean_pdsi >= median(mean_pdsi, na.rm = TRUE),
+                       "wet", "dry"),
+    temp_cat = if_else(tmax_c >= median(tmax_c, na.rm = TRUE),
+                       "hot", "cold"),
+    year_climate = paste(pdsi_cat, temp_cat, sep = "_")) %>%
+  select(-pdsi_cat, -temp_cat)
+
+### Calculate broad survivorship trends
+allSpDat_surv_clim <- allSpDat_surv_clim %>%
+  mutate(propSurv = Year_1_counts / Year_0_counts)
+
+allSpDat_surv_clim$year_climate = factor(allSpDat_surv_clim$year_climate)
+
+### Fit a quick little unbalanced anova
+mod_aov <- lm(propSurv ~ year_climate, data = allSpDat_surv_clim)
+
+car::Anova(mod_aov, type = 2)
+
+# Dianostics
+par(mfrow = c(1, 2))
+plot(mod_aov, which = 1)  # Residuals vs fitted
+plot(mod_aov, which = 2)  # QQ plot
+par(mfrow = c(1, 1))
+
+leveneTest(propSurv ~ year_climate, data = allSpDat_surv_clim)
+
+emm <- emmeans(mod_aov, ~ year_climate)
+emm
+
+pairs(emm, adjust = "tukey")
+
+mod_aov_logit <- lm(
+  qlogis(propSurv) ~ year_climate,
+  data = allSpDat_surv_clim,
+  subset = propSurv > 0 & propSurv < 1
+)
+
+car::Anova(mod_aov_logit, type = 2)
+
+kruskal.test(propSurv ~ year_climate, data = allSpDat_surv_clim)
+
+### Stick them results in a df
+emm_df <- as.data.frame(emm) %>%
+  mutate(
+    year_climate = factor(
+      year_climate,
+      levels = c("wet_cold", "dry_cold", "dry_hot", "wet_hot")))
+
+### Plotting option!
+ggplot(emm_df, aes(x = year_climate, y = emmean)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+    width = 0.15,
+    linewidth = 0.8) +
+  scale_y_continuous(limits = c(0.4, 0.58),
+    labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Year-level climate category",
+    y = "Proportional first-year survivorship",
+    title = "Seedling survivorship differs among broad climate regimes"
+  ) +
+  theme_classic(base_size = 13)
+
+quart_df <- allSpDat_surv_clim %>%
+  dplyr::group_by(year_climate) %>%
+  dplyr::summarise(
+    q25 = quantile(propSurv, 0.25, na.rm = TRUE),
+    q50 = quantile(propSurv, 0.50, na.rm = TRUE),
+    q75 = quantile(propSurv, 0.75, na.rm = TRUE)
+  )
+
+ggplot() +
+  # Quartile points
+  geom_point(
+    data = quart_df,
+    aes(x = year_climate, y = q25),
+    size = 1.8,
+    alpha = 0.6
+  ) +
+  geom_point(
+    data = quart_df,
+    aes(x = year_climate, y = q50),
+    size = 2.4
+  ) +
+  geom_point(
+    data = quart_df,
+    aes(x = year_climate, y = q75),
+    size = 1.8,
+    alpha = 0.6
+  ) +
+  # EMM means
+  geom_point(
+    data = emm_df,
+    aes(x = year_climate, y = emmean),
+    size = 3
+  ) +
+  # EMM confidence intervals
+  geom_errorbar(
+    data = emm_df,
+    aes(x = year_climate, ymin = lower.CL, ymax = upper.CL),
+    width = 0.15,
+    linewidth = 0.8
+  ) +
+  scale_y_continuous(
+    limits = c(0.4, 0.58),
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  labs(
+    x = "Year-level climate category",
+    y = "Proportional first-year survivorship",
+    title = "Seedling survivorship differs among broad climate regimes"
+  ) +
+  theme_classic(base_size = 13)
+
+
+
+### Showing more of the patterns
+ggplot() +
+  # Raw data (background)
+  geom_jitter(data = allSpDat_surv_clim,
+    aes(x = year_climate, y = propSurv),
+    width = 0.15,
+    height = 0,
+    size = 0.7,
+    alpha = 0.5, color = "black") +
+  # EMM means
+  geom_point(data = emm_df,
+    aes(x = year_climate, y = emmean),
+    size = 3 ) +
+  # EMM confidence intervals
+  geom_errorbar(
+    data = emm_df,
+    aes(x = year_climate, ymin = lower.CL, ymax = upper.CL),
+    width = 0.15,
+    linewidth = 0.8
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(
+    x = "Year-level climate category",
+    y = "Proportional first-year survivorship",
+    title = "Seedling survivorship differs among broad climate regimes"
+  ) +
+  theme_classic(base_size = 13)
+
+
+
+
+
+
 
 #########################################################
 #########################################################
