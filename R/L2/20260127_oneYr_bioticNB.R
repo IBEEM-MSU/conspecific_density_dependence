@@ -2,8 +2,7 @@
 #################################################
 ####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
-####### *REVISED VERSIONS BASED ON CHRIS' FEEDBACK*
-####### Date: 8 December 2025
+####### Date: 27 January 2026
 #################################################
 
 ## Read in packages
@@ -47,7 +46,6 @@ compute_vif <- function(formula, data) {
   car::vif(lm_obj)
 }
 
-
 ######### ######### ######### ######### ######### 
 ######### Null model
 all_sp_15m_null <- glmmTMB(Year_1_counts ~ 1 +
@@ -70,8 +68,19 @@ summary(all_sp_15mA)
 vif_A <- compute_vif(~ consp_15m * Seedling_myc +
                         logPrior + log0yr, allSpDat)
 vif_A # All <4
-r2_A <- performance::r2(all_sp_15mA)
-r2_A
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_15mA, type = "response", re.form = NA)
+obs <- allSpDat$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_15mA, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
 
 ######### ######### ######### ######### ######### 
 ######### PANEL B — Interactive Spillover
@@ -91,8 +100,17 @@ vif_B <- compute_vif(~ consp_15m * Seedling_myc +
     consp_15m:hetAM_15m + consp_15m:hetECM_15m +
     logPrior + log0yr,  allSpDat)
 vif_B # All <8
-r2_B <- performance::r2(all_sp_15mB)
-r2_B
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_15mB, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_15mB, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ######### ######### ######### ######### ######### 
 ######### PANEL C — Additive Spillover
@@ -112,8 +130,18 @@ vif_C <- compute_vif( ~ consp_15m * Seedling_myc +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
     logPrior + log0yr, allSpDat)
 vif_C # One >16
-r2_C <- performance::r2(all_sp_15mC)
-r2_C
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_15mC, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_15mC, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
 
 ######### ######### ######### ######### ######### 
 ######### PANEL D — Interactive + Additive (B + C combined)
@@ -137,8 +165,17 @@ vif_D <- compute_vif( ~ consp_15m * Seedling_myc +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
     logPrior + log0yr, allSpDat)
 vif_D # one >18
-r2_D <- performance::r2(all_sp_15mD)
-r2_D
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_15mD, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_15mD, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ######### ######### ######### ######### ######### 
 ######### PANEL B+C+D — SUPERINTERACTIVE MODEL
@@ -168,8 +205,17 @@ vif_BCD <- compute_vif(~ consp_15m * Seedling_myc +
     consp_15m:Seedling_myc:hetECM_15m +
     logPrior + log0yr, allSpDat)
 vif_BCD # 3 VIFs >10; but high VIFs on interactions do not threaten the validity of the model; they simply reflect interaction-induced multicollinearity.
-r2_BCD <- performance::r2(all_sp_15mBCD)
-r2_BCD # 52% of variation explained by fixed effects, additional 14% explained by REs
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_15mBCD, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_15mBCD, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ### Compare AICs
 ### All sites combined
@@ -248,38 +294,6 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
     axis.text.y = element_text(size = 12, color = "black"),
     axis.text.x = element_text(size = 12, color = "black"))
 
-############ Estimated marginal means at specific predictor combinations
-# Gives predicted survival for AM vs ECM seedlings at low/medium/high levels of all three BA predictors (i.e., predictions under specific values of confounders)
-emm_BCD <- emmeans(all_sp_15mBCD,
-  ~ Seedling_myc | consp_15m * hetAM_15m * hetECM_15m,
-  type = "response",
-  at = list(consp_15m   = quantile(allSpDat$consp_15m, c(.1, .5, .9)),
-            hetAM_15m   = quantile(allSpDat$hetAM_15m, c(.1, .5, .9)),
-            hetECM_15m  = quantile(allSpDat$hetECM_15m, c(.1, .5, .9))))
-pairs(emm_BCD, by = c("consp_15m", "hetAM_15m", "hetECM_15m"))
-
-############ marginal effects / average partial effects
-# Computes average marginal effect (AME) of each continuous predictor
-# Gives the closest analog to “the effect of X on survival,” even in the presence of interactions
-ame_continuous <- function(model, var){
-  emtrends(model, specs = ~1, var = var)
-}
-# Marginal effect of conspecific BA
-ame_consp <- ame_continuous(all_sp_15mBCD, "consp_15m")
-ame_consp %>%
-  summary(infer = TRUE)
-# Marginal effect of heterospecific AM BA
-ame_hetAM <- ame_continuous(all_sp_15mBCD, "hetAM_15m")
-ame_hetAM %>%
-  summary(infer = TRUE)
-# Marginal effect of heterospecific ECM BA
-ame_hetECM <- ame_continuous(all_sp_15mBCD, "hetECM_15m")
-ame_hetECM %>%
-  summary(infer = TRUE)
-# Marginal effect of seedling mycorrhizal guild
-ame_myc <- emmeans(all_sp_15mBCD, pairwise ~ Seedling_myc)
-ame_myc 
-
 ################################################## 
 ##### Plot predictions for superinteractive model
 
@@ -329,7 +343,9 @@ base_theme <- theme_bw() +
   theme(legend.position = "right",
     axis.text  = element_text(size = 12, color="black"),
     axis.title = element_text(size = 14),
-    plot.title = element_text(size=15, face="bold"))
+    plot.title = element_text(size=15, face="bold"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())
 
 # =========================================================
 ## -------- PANEL A — Classic feedback (consp × seedling type)
@@ -360,9 +376,10 @@ plot_A <- ggplot(df_A,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
+  scale_y_continuous(limits = c(0.5, 3.5), breaks = c(1,2,3)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
-                     labels = c("AM","ECM")) +
+                     labels = c("AM","ECM"), guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
   labs(x = "Conspecific basal area (m²)",
        y = "Predicted one-year seedling counts") +
@@ -407,7 +424,8 @@ plot_B_AM <- ggplot(df_B_AM,
   facet_wrap(~ seed_type, ncol = 2,
              labeller = labeller(seed_type = c(
               AM  = "AM seedlings", ECM = "ECM seedlings"))) +
-  scale_color_manual(values = color_map_combo, name = "AM BA Level") +
+  scale_y_continuous(limits = c(0.2, 4.9), breaks = c(1,2,3,4)) +
+  scale_color_manual(values = color_map_combo, name = "AM BA Level", guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
   labs(x = "Conspecific basal area (m²)",
     y = "Predicted one-year seedling counts") +
@@ -452,6 +470,7 @@ plot_B_ECM <- ggplot(df_B_ECM,
   facet_wrap(~ seed_type, ncol=2,
              labeller = labeller(seed_type = c(
                AM="AM seedlings", ECM="ECM seedlings"))) +
+  scale_y_continuous(limits = c(0.2, 4.9), breaks = c(1,2,3,4)) +
   scale_color_manual(values = color_map_combo,
                      name = "ECM BA Level", guide="none") +
   scale_fill_manual(values = color_map_combo, guide="none") +
@@ -459,6 +478,36 @@ plot_B_ECM <- ggplot(df_B_ECM,
        y = "Predicted one-year seedling counts") +
   base_theme
 plot_B_ECM
+
+#############################
+##### Combined plot
+df_all <- bind_rows(
+  df_B_AM  %>% mutate(neighbor_type = "AM neighbors"),
+  df_B_ECM %>% mutate(neighbor_type = "ECM neighbors")
+)
+
+df_all$seed_type <- factor(df_all$seed_type, levels = c("AM", "ECM"))
+df_all$neighbor_type <- factor(df_all$neighbor_type,
+                               levels = c("AM neighbors", "ECM neighbors"))
+
+
+ggplot(df_all,
+       aes(x = x, y = predicted,
+           color = combo, fill = combo)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
+              alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.8) +
+  facet_grid(seed_type ~ neighbor_type,
+             labeller = labeller(
+               seed_type = c(AM = "AM seedlings", ECM = "ECM seedlings")
+             )) +
+  scale_y_continuous(limits = c(0.2, 4.9), breaks = c(1,2,3,4)) +
+  scale_color_manual(values = color_map_combo, guide = "none") +
+  scale_fill_manual(values = color_map_combo, guide = "none") +
+  labs(x = "Conspecific basal area (m²)",
+       y = "Predicted one-year seedling counts") +
+  base_theme
+
 
 # =========================================================
 ## -------- PANEL C1 -------- Additive AM effect
@@ -488,9 +537,10 @@ plot_C_AM <- ggplot(df_C_AM,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
+  scale_y_continuous(limits = c(0.8, 2.5), breaks = c(1,2)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
-                     labels = c("AM","ECM")) +
+                     labels = c("AM","ECM"), guide = "none") +
   scale_fill_manual(values = color_map_combo, guide="none") +
   labs(x = "Heterospecific AM basal area (m²)",
        y = "Predicted one-year seedling counts") +
@@ -525,14 +575,23 @@ plot_C_ECM <- ggplot(df_C_ECM,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
+  scale_y_continuous(limits = c(0.8, 2.5), breaks = c(1,2)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
-                     labels = c("AM","ECM")) +
+                     labels = c("AM","ECM"), guide = "none") +
   scale_fill_manual(values = color_map_combo, guide="none") +
   labs(x = "Heterospecific ECM basal area (m²)",
        y = "Predicted one-year seedling counts") +
   base_theme
 plot_C_ECM
+
+######### Combined plot
+
+(plot_C_AM | plot_C_ECM) +
+  plot_layout(guides = "collect", axes = "collect") &
+  theme(axis.title.y = element_text(),
+    axis.text.y  = element_text(),
+    axis.ticks.y = element_line())
 
 
 #########################################################
@@ -717,36 +776,6 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
         axis.text.y = element_text(size = 12, color = "black"),
         axis.text.x = element_text(size = 12, color = "black"))
 
-############ Estimated marginal means at specific predictor combinations
-# Gives predicted survival for AM vs ECM seedlings at low/medium/high levels of the proportion of conspecific and AM BA (i.e., predictions under specific values of confounders)
-emm_Bprop <- emmeans(all_sp_propB,
-  ~ Seedling_myc | propConsp * propHetAM,
-  type = "response",
-  at = list(propConsp  = quantile(allSpDat$propConsp, c(.1, .5, .9)),
-            propAM  = quantile(allSpDat$propHetAM, c(.1, .5, .9))))
-emm_Bprop
-pairs(emm_Bprop, by = c("propConsp", "propHetAM"))
-
-############ marginal effects / average partial effects
-# Computes average marginal effect (AME) of each continuous predictor
-# Gives the closest analog to “the effect of X on survival,” even in the presence of interactions
-
-ame_continuous <- function(model, var){
-  emtrends(model, specs = ~1, var = var)
-}
-# Marginal effect of proportion of conspecific BA
-ameProp_consp <- ame_continuous(all_sp_propB, "propConsp")
-ameProp_consp %>%
-  summary(infer = TRUE)
-# Marginal effect of proportion of heterospecific AM BA
-ameProp_hetAM <- ame_continuous(all_sp_propB, "propHetAM")
-ameProp_hetAM %>%
-  summary(infer = TRUE)
-# Marginal effect of seedling mycorrhizal guild
-ameProp_myc <- emmeans(all_sp_propB, pairwise ~ Seedling_myc)
-ameProp_myc
-
-
 ################################################## 
 ##### Plot predictions for Panel B
 
@@ -789,13 +818,6 @@ color_map_combo <- c(
 desired_order <- c("AM_Low","AM_Medium","AM_High",
                    "ECM_Low","ECM_Medium","ECM_High")
 
-### Theme
-base_theme <- theme_bw() +
-  theme(legend.position = "right",
-        axis.text  = element_text(size = 12, color="black"),
-        axis.title = element_text(size = 14),
-        plot.title = element_text(size=15, face="bold"))
-
 # =========================================================
 ## -------- PANEL A — Classic feedback (propConsp × seedling type)
 ## Predict 
@@ -824,6 +846,7 @@ plot_A <- ggplot(df_A,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
+  scale_y_continuous(limits = c(0.6, 2.1), breaks = c(1,2)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM"), guide = "none") +
@@ -870,6 +893,7 @@ plot_B_AM <- ggplot(df_B_AM,
   facet_wrap(~ seed_type, ncol = 2, 
              labeller = labeller(seed_type = c(
                AM  = "AM seedlings", ECM = "ECM seedlings"))) +
+  scale_y_continuous(limits = c(0.6, 2.1), breaks = c(1,2)) +
   scale_color_manual(values = color_map_combo, name = "Prop. AM BA",
                      guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
