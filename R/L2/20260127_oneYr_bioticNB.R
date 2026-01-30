@@ -53,8 +53,18 @@ all_sp_15m_null <- glmmTMB(Year_1_counts ~ 1 +
                            family = nbinom2, data = allSpDat)
 summary(all_sp_15m_null)
 # R2
-r2_null <- performance::r2(all_sp_15m_null)
-r2_null
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_15m_null, type = "response", re.form = NA)
+obs <- allSpDat$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_15m_null, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
 
 ######### ######### ######### ######### ######### 
 ######### PANEL A — Classic Feedback
@@ -605,8 +615,17 @@ all_sp_prop_null <- glmmTMB(Year_1_counts ~ 1 +
                          family = nbinom2, data = allSpDat) 
 summary(all_sp_prop_null)
 # R2
-r2_null_prop <- performance::r2(all_sp_prop_null)
-r2_null_prop
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_prop_null, type = "response", re.form = NA)
+obs <- allSpDat$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_prop_null, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ################# ################# ################# 
 ## Panel A (proportional BA)
@@ -621,8 +640,18 @@ summary(all_sp_propA)
 vif_propA <- compute_vif( ~ propConsp*Seedling_myc +
                         logPrior + log0yr, allSpDat)
 vif_propA # all <4
-r2_propA <- performance::r2(all_sp_propA)
-r2_propA
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_propA, type = "response", re.form = NA)
+obs <- allSpDat$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_propA, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ################# ################# ################# 
 ## Panel B (proportional BA)
@@ -640,8 +669,17 @@ vif_propB <- compute_vif( ~ propConsp*Seedling_myc +
                             propHetAM + propConsp:propHetAM + 
                             logPrior + log0yr, allSpDat)
 vif_propB # All <10
-r2_propB <- performance::r2(all_sp_propB)
-r2_propB
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_propB, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_propB, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ################# ################# ################# 
 ## Panel C (proportional BA)
@@ -659,8 +697,17 @@ vif_propC <- compute_vif( ~ propConsp*Seedling_myc +
                             propHetAM + Seedling_myc:propHetAM + 
                             logPrior + log0yr, allSpDat)
 vif_propC # All <5
-r2_propC <- performance::r2(all_sp_propC)
-r2_propC
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_propC, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_propC, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ################# ################# ################# 
 ## Panel D (B+C) (proportional BA)
@@ -680,8 +727,17 @@ vif_propD <- compute_vif( ~ propConsp*Seedling_myc +
                             Seedling_myc:propHetAM + 
                             logPrior + log0yr, allSpDat)
 vif_propD # All <7
-r2_propD <- performance::r2(all_sp_propD)
-r2_propD
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_propD, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_propD, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ################# ################# ################# 
 ## Super interactive model (proportional BA)
@@ -705,8 +761,17 @@ vif_propBCD <- compute_vif( ~ propConsp*Seedling_myc +
                               propConsp:Seedling_myc:propHetAM + 
                               logPrior + log0yr, allSpDat)
 vif_propBCD # four values >10 due to interactions
-r2_propBCD <- performance::r2(all_sp_propBCD)
-r2_propBCD
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(all_sp_propBCD, type = "response", re.form = NA)
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(all_sp_propBCD, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 ## Model comparison
 ### Compare AICs 

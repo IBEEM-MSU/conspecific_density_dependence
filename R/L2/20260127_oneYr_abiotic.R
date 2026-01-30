@@ -79,6 +79,7 @@ compute_vif <- function(formula, data) {
   car::vif(lm_obj)
 }
 
+################# 
 ## Subset for AM
 AM_Dat_surv_clim = filter(allSpDat_surv_clim, Seedling_myc == "AM")
 ## Subset for ECM
@@ -103,7 +104,9 @@ AM_abio <- glmmTMB(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
                    (1|SiteID) + (1|survYear) + (1|Sp),
                  family = nbinom2, data = AM_Dat_surv_clim)
 summary(AM_abio)
-compute_vif(AM_abio)
+# VIF and R2
+compute_vif(~ mean_pdsi + mintemp + maxtemp +
+           percOpen + Base_CEC + log0yr, AM_Dat_surv_clim)
 performance::r2(AM_abio)
 ##### Effects of environment and climate - ECM
 ECM_abio <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
@@ -114,13 +117,28 @@ summary(ECM_abio)
 car::vif(ECM_abio)
 performance::r2(ECM_abio)
 
+### r2
+# Including random effects
+pred_cond <- predict(ECM_abio, type = "response")
+obs <- ECM_Dat_surv_clim$Year_1_counts
+r <- cor(obs, pred_cond, use = "complete.obs")
+R2_pred_cond <- r^2
+R2_pred_cond
+# Excluding random effects
+pred_marg <- predict(ECM_abio, type = "response", re.form = NA)
+r <- cor(obs, pred_marg, use = "complete.obs")
+R2_pred_marg <- r^2
+R2_pred_marg
+
+
 ##### Effects of climate alone - AM
 AM_clim <- glmmTMB(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
                       log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
               family = poisson(link = "log"), data = AM_Dat_surv_clim)
 summary(AM_clim)
-compute_vif(AM_clim)
+compute_vif(~ mean_pdsi + mintemp + maxtemp +
+              log0yr, AM_Dat_surv_clim)
 performance::r2(AM_clim)
 ##### Effects of climate alone - ECM
 ECM_clim <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
@@ -136,7 +154,7 @@ AM_env <- glmmTMB(Year_1_counts ~ percOpen + Base_CEC + log0yr +
                      (1|SiteID) + (1|survYear) + (1|Sp),
             family = nbinom2, data = AM_Dat_surv_clim)
 summary(AM_env)
-compute_vif(AM_env)
+compute_vif(~ percOpen + Base_CEC + log0yr, AM_Dat_surv_clim)
 performance::r2(AM_env)
 ##### Effects of environment alone (site characteristics) - ECM
 ECM_env <- glmer(Year_1_counts ~ percOpen + Base_CEC + log0yr +
