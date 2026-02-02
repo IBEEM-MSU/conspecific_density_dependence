@@ -4,21 +4,41 @@ library(MuMIn) # For AIC and R-squared values. Barton, K. and Barton, M.K., 2015
 library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christensen, R.H., 2017. lmerTest package: tests in linear mixed effects models. Journal of statistical software, 82, pp.1-26.
 library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
 
-Demography_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/Combined_demography_modeling_data.csv")
+Demography_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/final_seedling_demogr_modeling_data.csv")
 
 nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutations; it can take about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM at 999 for certain species.
 # Analyses are divided first by species, then by analysis type. Test A, Test B, Test C, and Test D correspond to the four panels of Fig. 3 in Eagar et al. 2024. Test A tests for conspecific density dependence based on seedling mycorrhizal type. Test B tests for density dependent effects related to conspecific density in interaction with the surrounding tree community's mycorrhizal dominance. Test C tests for density dependent effects related to conmycorrhizal density in interaciton with the surrounding tree community's mycorrhizal dominance. Test D tests a new hypothesis concerning density dependent effects structred by seedling mycorrhizal types in con- and heteromycorrhizal dominant communities.
 
 # Permutation test for all species together
-{
-Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 8 terms!!! to test in this model, so we'll need 8 dataframes to store the randomized F-value test results.
-	Rand_results_seedling_myc <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_con_den_seedling_myc_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_con_den_seedling_myc_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+
+consp_15m * Seedling_myc +    hetAM_15m + hetECM_15m +    consp_15m:hetAM_15m +    consp_15m:hetECM_15m +    Seedling_myc:hetAM_15m +    Seedling_myc:hetECM_15m +    consp_15m:Seedling_myc:hetAM_15m +    consp_15m:Seedling_myc:hetECM_15m +    logPrior + log0yr +    (1|SiteID) + (1|survYear) + (1|Sp),  family = nbinom2,data = allSpDat)
+{ # We have 8 terms!!! to test in this model, so we'll need 8 dataframes to store the randomized F-value test results.
+
+Rand_results_consp_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_Seedling_myc <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_consp_15m_Seedling_myc <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_consp_15m_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_consp_15m_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_Seedling_myc_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_Seedling_myc_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_consp_15m_Seedling_myc_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_consp_15m_Seedling_myc_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
 
 for(i in 1:nperm) # For loop for randomized F-values
 {
@@ -33,130 +53,130 @@ for(i in 1:nperm) # For loop for randomized F-values
 			
 			# as.data.frame(Test_data)
 	
-	All_sp_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m + Seedling_myc + 
-                       AM_15m + ECM_15m + 
-                       consp_15m:Seedling_myc:AM_15m + # Panel D
-                       consp_15m:Seedling_myc:ECM_15m + # Panel D
-                       log0yr + logPrior +
-                       (1|SiteID) + (1|Cohort.Year) + (1|Sp), 
-					   data = All_sp_slope_modeling_data)
+	All_sp_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m * Seedling_myc + hetAM_15m + hetECM_15m + 
+							consp_15m:hetAM_15m + consp_15m:hetECM_15m + 
+							Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m + 
+							consp_15m:Seedling_myc:hetAM_15m + consp_15m:Seedling_myc:hetECM_15m + 
+							logPrior + log0yr + 
+							(1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+							data = All_sp_slope_modeling_data)
 					
 	Rand_aov <- anova(All_sp_mod_BA_rand) # Save results to store F-values below
 					
-		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
-		Rand_results_seedling_myc[i] <-  Rand_aov$"F value"[2]
-		Rand_results_AM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_ECM_den[i] <- Rand_aov$"F value"[4]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[5]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[6]
-		Rand_results_con_den_seedling_myc_AM_den[i] <- Rand_aov$"F value"[7]
-		Rand_results_con_den_seedling_myc_ECM_den[i] <- Rand_aov$"F value"[8]
+		Rand_results_consp_15m[i] <- Rand_aov$"F value"[1]
+		Rand_results_Seedling_myc[i] <-  Rand_aov$"F value"[2]
+		Rand_results_hetAM_15m[i] <- Rand_aov$"F value"[3]
+		Rand_results_hetECM_15m[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[6]
+		Rand_results_consp_15m_Seedling_myc[i] <- Rand_aov$"F value"[7]
+		Rand_results_consp_15m_hetAM_15m[i] <- Rand_aov$"F value"[8]
+		Rand_results_consp_15m_hetECM_15m[i] <- Rand_aov$"F value"[9]
+		Rand_results_Seedling_myc_hetAM_15m[i] <- Rand_aov$"F value"[10]
+		Rand_results_Seedling_myc_hetECM_15m[i] <- Rand_aov$"F value"[11]
+		Rand_results_consp_15m_Seedling_myc_hetAM_15m[i] <- Rand_aov$"F value"[12]
+		Rand_results_consp_15m_Seedling_myc_hetECM_15m[i] <- Rand_aov$"F value"[13]
 					
 }
 
 	# LM test with real data. We will compare these F-values to those from the peAll_sputations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
 			
-	All_sp_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m + Seedling_myc + 
-                       AM_15m + ECM_15m + 
-                       consp_15m:Seedling_myc:AM_15m + # Panel D
-                       consp_15m:Seedling_myc:ECM_15m + # Panel D
-                       log0yr + logPrior +
-                       (1|SiteID) + (1|Cohort.Year) + (1|Sp), 
-					   data = All_sp_slope_modeling_data)
+	All_sp_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m * Seedling_myc + hetAM_15m + hetECM_15m + 
+							consp_15m:hetAM_15m + consp_15m:hetECM_15m + 
+							Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m + 
+							consp_15m:Seedling_myc:hetAM_15m + consp_15m:Seedling_myc:hetECM_15m + 
+							logPrior + log0yr + 
+							(1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+							data = All_sp_slope_modeling_data)
 					
 	Obs_aov <- anova(All_sp_mod_BA_true)
 
-		Obs_results_con_den <- as.vector(Obs_aov[1,5])
-			All_results_con_den <- rbind(Rand_results_con_den, Obs_results_con_den)
-			Ranks_con_den <- rank(All_results_con_den)
-			P_values_con_den <- 1-Ranks_con_den[nperm+1]/(nperm+1)
+		Obs_results_consp_15m <- as.vector(Obs_aov[1,5])
+			All_results_consp_15m <- rbind(Rand_results_consp_15m, Obs_results_consp_15m)
+			Ranks_consp_15m <- rank(All_results_consp_15m)
+			P_values_consp_15m <- 1-Ranks_consp_15m[nperm+1]/(nperm+1)
 
-		Obs_results_seedling_myc <- as.vector(Obs_aov[2,5])
-			All_results_seedling_myc <- rbind(Rand_results_seedling_myc, Obs_results_seedling_myc)
-			Ranks_seedling_myc <- rank(All_results_seedling_myc)
-			P_values_seedling_myc <- 1-Ranks_seedling_myc[nperm+1]/(nperm+1)
+		Obs_results_Seedling_myc <- as.vector(Obs_aov[2,5])
+			All_results_Seedling_myc <- rbind(Rand_results_Seedling_myc, Obs_results_Seedling_myc)
+			Ranks_Seedling_myc <- rank(All_results_Seedling_myc)
+			P_values_Seedling_myc <- 1-Ranks_Seedling_myc[nperm+1]/(nperm+1)
 			
-		Obs_results_AM_den <- as.vector(Obs_aov[3,5])
-			All_results_AM_den <- rbind(Rand_results_AM_den, Obs_results_AM_den)
-			Ranks_AM_den <- rank(All_results_AM_den)
-			P_values_AM_den <- 1-Ranks_AM_den[nperm+1]/(nperm+1)
+		Obs_results_hetAM_15m <- as.vector(Obs_aov[3,5])
+			All_results_hetAM_15m <- rbind(Rand_results_hetAM_15m, Obs_results_hetAM_15m)
+			Ranks_hetAM_15m <- rank(All_results_hetAM_15m)
+			P_values_hetAM_15m <- 1-Ranks_hetAM_15m[nperm+1]/(nperm+1)
 			
-		Obs_results_ECM_den <- as.vector(Obs_aov[4,5])
-			All_results_ECM_den <- rbind(Rand_results_ECM_den, Obs_results_ECM_den)
-			Ranks_ECM_den <- rank(All_results_ECM_den)
-			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
+		Obs_results_hetECM_15m <- as.vector(Obs_aov[4,5])
+			All_results_hetECM_15m <- rbind(Rand_results_hetECM_15m, Obs_results_hetECM_15m)
+			Ranks_hetECM_15m <- rank(All_results_hetECM_15m)
+			P_values_hetECM_15m <- 1-Ranks_hetECM_15m[nperm+1]/(nperm+1)
 		
-		Obs_results_con_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
-			Ranks_con_seedlings <- rank(All_results_con_seedlings)
-			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
+		Obs_results_logPrior <- as.vector(Obs_aov[5,5])
+			All_results_logPrior <- rbind(Rand_results_logPrior, Obs_results_logPrior)
+			Ranks_logPrior <- rank(All_results_logPrior)
+			P_values_logPrior <- 1-Ranks_logPrior[nperm+1]/(nperm+1)
 			
-		Obs_results_other_seedlings <- as.vector(Obs_aov[6,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
-			Ranks_other_seedlings <- rank(All_results_other_seedlings)
-			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
+		Obs_results_log0yr <- as.vector(Obs_aov[6,5])
+			All_results_log0yr <- rbind(Rand_results_log0yr, Obs_results_log0yr)
+			Ranks_log0yr <- rank(All_results_log0yr)
+			P_values_log0yr <- 1-Ranks_log0yr[nperm+1]/(nperm+1)
 			
-		Obs_results_con_den_seedling_myc_AM_den <- as.vector(Obs_aov[7,5])
-			All_results_con_den_seedling_myc_AM_den <- rbind(Rand_results_con_den_seedling_myc_AM_den, Obs_results_con_den_seedling_myc_AM_den)
-			Ranks_con_den_seedling_myc_AM_den <- rank(All_results_con_den_seedling_myc_AM_den)
-			P_values_con_den_seedling_myc_AM_den <- 1-Ranks_con_den_seedling_myc_AM_den[nperm+1]/(nperm+1)	
+		Obs_results_consp_15m_Seedling_myc <- as.vector(Obs_aov[7,5])
+			All_results_consp_15m_Seedling_myc <- rbind(Rand_results_consp_15m_Seedling_myc, Obs_results_consp_15m_Seedling_myc)
+			Ranks_consp_15m_Seedling_myc <- rank(All_results_consp_15m_Seedling_myc)
+			P_values_consp_15m_Seedling_myc <- 1-Ranks_consp_15m_Seedling_myc[nperm+1]/(nperm+1)	
 			
-		Obs_results_con_den_seedling_myc_ECM_den <- as.vector(Obs_aov[8,5])
-			All_results_con_den_seedling_myc_ECM_den <- rbind(Rand_results_con_den_seedling_myc_ECM_den, Obs_results_con_den_seedling_myc_ECM_den)
-			Ranks_con_den_seedling_myc_ECM_den <- rank(All_results_con_den_seedling_myc_ECM_den)
-			P_values_con_den_seedling_myc_ECM_den <- 1-Ranks_con_den_seedling_myc_ECM_den[nperm+1]/(nperm+1)
-			
-	P_values_con_den
-		hist(All_results_con_den) # vs
-		Obs_results_con_den
+		Obs_results_consp_15m_hetAM_15m <- as.vector(Obs_aov[8,5])
+			All_results_consp_15m_hetAM_15m <- rbind(Rand_results_consp_15m_hetAM_15m, Obs_results_consp_15m_hetAM_15m)
+			Ranks_consp_15m_hetAM_15m <- rank(All_results_consp_15m_hetAM_15m)
+			P_values_consp_15m_hetAM_15m <- 1-Ranks_consp_15m_hetAM_15m[nperm+1]/(nperm+1)
 	
-	P_values_seedling_myc
-		hist(All_results_seedling_myc) # vs
-		Obs_results_seedling_myc
-		
-	P_values_AM_den
-		hist(All_results_AM_den) # vs
-		Obs_results_AM_den
-		
-	P_values_ECM_den
-		hist(All_results_ECM_den) # vs
-		Obs_results_ECM_den
+		Obs_results_consp_15m_hetECM_15m <- as.vector(Obs_aov[9,5])
+					All_results_consp_15m_hetECM_15m <- rbind(Rand_results_consp_15m_hetECM_15m, Obs_results_consp_15m_hetECM_15m)
+					Ranks_consp_15m_hetECM_15m <- rank(All_results_consp_15m_hetECM_15m)
+					P_values_consp_15m_hetECM_15m <- 1-Ranks_consp_15m_hetECM_15m[nperm+1]/(nperm+1)
 
-	P_values_con_seedlings
-		hist(All_results_con_seedlings)
-		Obs_results_con_seedlings
-		
-	P_values_other_seedlings
-		hist(All_results_other_seedlings)
-		Obs_results_other_seedlings
-		
-	P_values_con_den_seedling_myc_AM_den
-		hist(All_results_con_den_seedling_myc_AM_den)
-		Obs_results_con_den_seedling_myc_AM_den
+		Obs_results_Seedling_myc_hetAM_15m <- as.vector(Obs_aov[10,5])
+					All_results_Seedling_myc_hetAM_15m <- rbind(Rand_results_Seedling_myc_hetAM_15m, Obs_results_Seedling_myc_hetAM_15m)
+					Ranks_Seedling_myc_hetAM_15m <- rank(All_results_Seedling_myc_hetAM_15m)
+					P_values_Seedling_myc_hetAM_15m <- 1-Ranks_Seedling_myc_hetAM_15m[nperm+1]/(nperm+1)
 
-	P_values_con_den_seedling_myc_ECM_den
-		hist(All_results_con_den_seedling_myc_ECM_den)
-		Obs_results_con_den_seedling_myc_ECM_den
-	
+		Obs_results_Seedling_myc_hetECM_15m <- as.vector(Obs_aov[11,5])
+					All_results_Seedling_myc_hetECM_15m <- rbind(Rand_results_Seedling_myc_hetECM_15m, Obs_results_Seedling_myc_hetECM_15m)
+					Ranks_Seedling_myc_hetECM_15m <- rank(All_results_Seedling_myc_hetECM_15m)
+					P_values_Seedling_myc_hetECM_15m <- 1-Ranks_Seedling_myc_hetECM_15m[nperm+1]/(nperm+1)
+
+		Obs_results_consp_15m_Seedling_myc_hetAM_15m <- as.vector(Obs_aov[12,5])
+					All_results_consp_15m_Seedling_myc_hetAM_15m <- rbind(Rand_results_consp_15m_Seedling_myc_hetAM_15m, Obs_results_consp_15m_Seedling_myc_hetAM_15m)
+					Ranks_consp_15m_Seedling_myc_hetAM_15m <- rank(All_results_consp_15m_Seedling_myc_hetAM_15m)
+					P_values_consp_15m_Seedling_myc_hetAM_15m <- 1-Ranks_consp_15m_Seedling_myc_hetAM_15m[nperm+1]/(nperm+1)
+
+		Obs_results_consp_15m_Seedling_myc_hetECM_15m <- as.vector(Obs_aov[13,5])
+					All_results_consp_15m_Seedling_myc_hetECM_15m <- rbind(Rand_results_consp_15m_Seedling_myc_hetECM_15m, Obs_results_consp_15m_Seedling_myc_hetECM_15m)
+					Ranks_consp_15m_Seedling_myc_hetECM_15m <- rank(All_results_consp_15m_Seedling_myc_hetECM_15m)
+					P_values_consp_15m_Seedling_myc_hetECM_15m <- 1-Ranks_consp_15m_Seedling_myc_hetECM_15m[nperm+1]/(nperm+1)	
+
 	r.squaredGLMM(All_sp_mod_BA_true)
 	
 	# Store modeling results & export for plotting.
 
 	summary(All_sp_mod_BA_true)
 	
-	All_sp_GLM_slope_coefficient_modeling_results <- data.frame(species = c("All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp"), 
-															term = c("Conspecific_BA", "Seedling_myc", "AM_BA", "ECM_BA", "Log_Recruit_Density", "Log_Prior_Density", "Conspecific_BA_seedling_AM_AM_den", "Conspecific_BA_seedling_ECM_AM_den","Conspecific_BA_seedling_AM_ECM_den", "Conspecific_BA_seedling_ECM_ECM_den"), 
-															estimate = c("-1.5767", "0.4882", "-1.0172", "0.7403", "19.3914", "1.9193", "-0.3364", "-0.3274", "0.4740", "-0.3171"), 
-															std.error = c("1.1145", "3.2490", "0.5025", "0.3042", "0.2688", "0.3452", "0.6170", "0.7484", "0.3971", "0.3827"), 
-															t_value = c("-1.415", "0.150", "-2.025", "2.433", "72.152", "5.560", "-0.545", "-0.438", "1.194", "-0.829"), 
-															p.value = c(P_values_con_den, P_values_seedling_myc, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_seedling_myc_AM_den, P_values_con_den_seedling_myc_AM_den, P_values_con_den_seedling_myc_ECM_den, P_values_con_den_seedling_myc_ECM_den),
-															r.squared = c("0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524", "0.1390524"))
+	All_sp_GLM_slope_coefficient_modeling_results <- data.frame(species = c("All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp"), 
+															term = c("", "", "", "", "", "", "", "","", "", "", "", ""), 
+															estimate = c("", "", "", "", "", "", "", "", "", "", "", "", ""), 
+															std.error = c("", "", "", "", "", "", "", "", "", "", "", "", ""), 
+															t_value = c("", "", "", "", "", "", "", "", "", "", "", "", ""), 
+															p.value = c(P_values_con_den, P_values_seedling_myc, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_seedling_myc_AM_den, P_values_con_den_seedling_myc_AM_den, P_values_con_den_seedling_myc_ECM_den, P_values_con_den_seedling_myc_ECM_den, , , ),
+															r.squared = c("", "", "", "", "", "", "", "", "", "", "", "", ""))
 
 	# write.csv(All_sp_GLM_slope_coefficient_modeling_results, "C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/All_sp_GLM_slope_coefficient_modeling_results.csv", row.names = FALSE)
 }	
 
 All_sp_GLM_slope_coefficient_modeling_results
 
+# Old & unused code, not updated with latest modeling
+{
 # AM species permutation test
 {
 AM_slope_modeling_data <- Demography_data %>%
@@ -165,8 +185,8 @@ AM_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -196,8 +216,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -231,12 +251,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -306,8 +326,8 @@ ECM_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -337,8 +357,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -372,12 +392,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -449,8 +469,8 @@ AB_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -480,8 +500,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -515,12 +535,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -590,8 +610,8 @@ BC_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -621,8 +641,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -656,12 +676,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -731,8 +751,8 @@ BONRO_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -762,8 +782,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -797,12 +817,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -872,8 +892,8 @@ BS_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -903,8 +923,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -938,12 +958,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1013,8 +1033,8 @@ IW_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1044,8 +1064,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1079,12 +1099,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1154,8 +1174,8 @@ NRO_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1185,8 +1205,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1220,12 +1240,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1295,8 +1315,8 @@ RM_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1326,8 +1346,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1361,12 +1381,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1436,8 +1456,8 @@ SM_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1467,8 +1487,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1502,12 +1522,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1577,8 +1597,8 @@ WA_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1608,8 +1628,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1643,12 +1663,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1718,8 +1738,8 @@ WO_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1749,8 +1769,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1784,12 +1804,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
@@ -1864,8 +1884,8 @@ BONRO_slope_modeling_data <- Demography_data %>%
 Rand_results_con_den <- matrix(nrow = nperm, ncol = 1, 0) # We have 7 terms!!! to test in this model, so we'll need 7 dataframes to store the randomized F-value test results.
 	Rand_results_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)	
-	Rand_results_con_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
-	Rand_results_other_seedlings <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+	Rand_results_logPrior <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_AM_den <- matrix(nrow = nperm, ncol = 1, 0)
 	Rand_results_con_den_ECM_den <- matrix(nrow = nperm, ncol = 1, 0)
 
@@ -1895,8 +1915,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_con_den[i] <- Rand_aov$"F value"[1]
 		Rand_results_AM_den[i] <- Rand_aov$"F value"[2]
 		Rand_results_ECM_den[i] <- Rand_aov$"F value"[3]
-		Rand_results_con_seedlings[i] <- Rand_aov$"F value"[4]
-		Rand_results_other_seedlings[i] <- Rand_aov$"F value"[5]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[4]
+		Rand_results_logPrior[i] <- Rand_aov$"F value"[5]
 		Rand_results_con_den_AM_den[i] <- Rand_aov$"F value"[6]
 		Rand_results_con_den_ECM_den[i] <- Rand_aov$"F value"[7]
 					
@@ -1930,12 +1950,12 @@ for(i in 1:nperm) # For loop for randomized F-values
 			P_values_ECM_den <- 1-Ranks_ECM_den[nperm+1]/(nperm+1)
 		
 		Obs_results_con_seedlings <- as.vector(Obs_aov[4,5])
-			All_results_con_seedlings <- rbind(Rand_results_con_seedlings, Obs_results_con_seedlings)
+			All_results_con_seedlings <- rbind(Rand_results_log0yr, Obs_results_con_seedlings)
 			Ranks_con_seedlings <- rank(All_results_con_seedlings)
 			P_values_con_seedlings <- 1-Ranks_con_seedlings[nperm+1]/(nperm+1)
 			
 		Obs_results_other_seedlings <- as.vector(Obs_aov[5,5])
-			All_results_other_seedlings <- rbind(Rand_results_other_seedlings, Obs_results_other_seedlings)
+			All_results_other_seedlings <- rbind(Rand_results_logPrior, Obs_results_other_seedlings)
 			Ranks_other_seedlings <- rank(All_results_other_seedlings)
 			P_values_other_seedlings <- 1-Ranks_other_seedlings[nperm+1]/(nperm+1)
 			
