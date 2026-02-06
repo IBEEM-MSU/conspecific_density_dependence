@@ -20,6 +20,7 @@ library(glmmTMB)
 library(performance)
 library(car)
 
+
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
@@ -79,26 +80,53 @@ compute_vif <- function(formula, data) {
   car::vif(lm_obj)
 }
 
-################# 
+###################################################
+################################################### 
 ## Subset for AM
 AM_Dat_surv_clim = filter(allSpDat_surv_clim, Seedling_myc == "AM")
 ## Subset for ECM
 ECM_Dat_surv_clim = filter(allSpDat_surv_clim, Seedling_myc == "ECM")
 
+##### ##### ##### ##### ##### #####
 #### Null model - AM
 AM_abio_null <- glmmTMB(Year_1_counts ~ 1 +
                            (1|SiteID) + (1|survYear) + (1|Sp),
               family = nbinom2, data = AM_Dat_surv_clim)
 summary(AM_abio_null)
-performance::r2(AM_abio_null)
+
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(AM_abio_null, type = "response", re.form = NA)
+obs <- AM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(AM_abio_null, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
+##### ##### ##### ##### ##### #####
 #### Null model - ECM
 ECM_abio_null <- glmer(Year_1_counts ~ 1 +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = poisson(link = "log"), data = ECM_Dat_surv_clim)
 summary(ECM_abio_null)
-performance::r2(ECM_abio_null)
 
-##### Effects of environment and climate - AM
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(ECM_abio_null, type = "response", re.form = NA)
+obs <- ECM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(ECM_abio_null, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
+##### ##### ##### ##### ##### #####
+########## Effects of environment and climate - AM
 AM_abio <- glmmTMB(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
                    percOpen + Base_CEC + log0yr +
                    (1|SiteID) + (1|survYear) + (1|Sp),
@@ -107,39 +135,60 @@ summary(AM_abio)
 # VIF and R2
 compute_vif(~ mean_pdsi + mintemp + maxtemp +
            percOpen + Base_CEC + log0yr, AM_Dat_surv_clim)
-performance::r2(AM_abio)
-##### Effects of environment and climate - ECM
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(AM_abio, type = "response", re.form = NA)
+obs <- AM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(AM_abio, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
+##### ##### ##### ##### ##### #####
+########### Effects of environment and climate - ECM
 ECM_abio <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
                    percOpen + Base_CEC + log0yr +
                    (1|SiteID) + (1|survYear) + (1|Sp),
                  family = poisson(link = "log"), data = ECM_Dat_surv_clim)
 summary(ECM_abio)
 car::vif(ECM_abio)
-performance::r2(ECM_abio)
-
-### r2
-# Including random effects
-pred_cond <- predict(ECM_abio, type = "response")
-obs <- ECM_Dat_surv_clim$Year_1_counts
-r <- cor(obs, pred_cond, use = "complete.obs")
-R2_pred_cond <- r^2
-R2_pred_cond
-# Excluding random effects
+# Marginal prediction R² (log-scale)
 pred_marg <- predict(ECM_abio, type = "response", re.form = NA)
-r <- cor(obs, pred_marg, use = "complete.obs")
-R2_pred_marg <- r^2
+obs <- ECM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
 R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(ECM_abio, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
-
+##### ##### ##### ##### ##### ##### 
 ##### Effects of climate alone - AM
 AM_clim <- glmmTMB(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
-                      log0yr +
-                      (1|SiteID) + (1|survYear) + (1|Sp),
-              family = poisson(link = "log"), data = AM_Dat_surv_clim)
+                     log0yr +
+                     (1|SiteID) + (1|survYear) + (1|Sp),
+                   family = nbinom2, data = AM_Dat_surv_clim)
 summary(AM_clim)
 compute_vif(~ mean_pdsi + mintemp + maxtemp +
               log0yr, AM_Dat_surv_clim)
-performance::r2(AM_clim)
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(AM_clim, type = "response", re.form = NA)
+obs <- AM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(AM_clim, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
+##### ##### ##### ##### ##### #####
 ##### Effects of climate alone - ECM
 ECM_clim <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
                    log0yr +
@@ -147,22 +196,55 @@ ECM_clim <- glmer(Year_1_counts ~ mean_pdsi + mintemp + maxtemp +
                  family = poisson(link = "log"), data = ECM_Dat_surv_clim)
 summary(ECM_clim)
 car::vif(ECM_clim)
-performance::r2(ECM_clim)
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(ECM_clim, type = "response", re.form = NA)
+obs <- ECM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(ECM_clim, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
+##### ##### ##### ##### ##### #####
 ##### Effects of environment alone (site characteristics) - AM
 AM_env <- glmmTMB(Year_1_counts ~ percOpen + Base_CEC + log0yr +
                      (1|SiteID) + (1|survYear) + (1|Sp),
             family = nbinom2, data = AM_Dat_surv_clim)
 summary(AM_env)
 compute_vif(~ percOpen + Base_CEC + log0yr, AM_Dat_surv_clim)
-performance::r2(AM_env)
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(AM_env, type = "response", re.form = NA)
+obs <- AM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(AM_env, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
+
+##### ##### ##### ##### ##### #####
 ##### Effects of environment alone (site characteristics) - ECM
 ECM_env <- glmer(Year_1_counts ~ percOpen + Base_CEC + log0yr +
                   (1|SiteID) + (1|survYear) + (1|Sp),
                 family = poisson(link = "log"), data = ECM_Dat_surv_clim)
 summary(ECM_env)
 car::vif(ECM_env)
-performance::r2(ECM_env)
+# Marginal prediction R² (log-scale)
+pred_marg <- predict(ECM_env, type = "response", re.form = NA)
+obs <- ECM_Dat_surv_clim$Year_1_counts
+r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
+R2_pred_marg <- r_marg^2
+R2_pred_marg
+# Conditional prediction r² (log-scale)
+pred_cond <- predict(ECM_env, type = "response")
+r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
+R2_pred_cond <- r_cond^2
+R2_pred_cond
 
 #### Model comparison
 ### Compare AICs - AM
