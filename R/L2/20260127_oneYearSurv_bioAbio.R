@@ -77,6 +77,18 @@ AM_dat = filter(dat, Seedling_myc == "AM")
 ## Subset for ECM
 ECM_dat = filter(dat, Seedling_myc == "ECM")
 
+#####  Helper function: VIF for glmmTMB fixed effects
+compute_vif <- function(formula, data) {
+  mm <- model.matrix(formula, data)
+  # Remove intercept
+  mm <- mm[, colnames(mm) != "(Intercept)", drop = FALSE]
+  if (ncol(mm) < 2)
+    stop("Need at least 2 predictors to compute VIF.")
+  dummy <- rnorm(nrow(mm))
+  lm_obj <- lm(dummy ~ ., data = as.data.frame(mm))
+  car::vif(lm_obj)
+}
+
 ############################################
 ############ AM Biotic/Abiotic Model
 
@@ -96,6 +108,14 @@ m_AM_seedlings <- glmmTMB(Year_1_counts ~
   family = nbinom2, data = AM_dat)
 summary(m_AM_seedlings)
 
+# VIF 
+vif_AM <- compute_vif(~ ConspBA + AM_BA + ECM_BA +
+                        ConspBA:AM_BA + ConspBA:ECM_BA +
+                        Mean_PDSI + Min_Temp + Max_Temp +
+                        perc_Openness + Base_CEC +
+                        Log_Prior + Log_Recruits, AM_dat)
+vif_AM # All <6
+
 # R2
 # Marginal prediction R² (log-scale)
 pred_marg <- predict(m_AM_seedlings, type = "response", re.form = NA)
@@ -108,6 +128,16 @@ pred_cond <- predict(m_AM_seedlings, type = "response")
 r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
+
+### Diagnostics
+sim_AM <- DHARMa::simulateResiduals(m_AM_seedlings, n = 1000)
+DHARMa::testDispersion(sim_AM) # No overdispersion
+DHARMa::testZeroInflation(sim_AM) # No zero-inflation
+DHARMa::testUniformity(sim_AM) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(sim_AM)
+
+
+
 
 ############################################
 ############ ECM Biotic/Abiotic Model
@@ -141,6 +171,12 @@ R2_pred_cond <- r_cond^2
 R2_pred_cond
   
 
+### Diagnostics
+sim_ECM <- DHARMa::simulateResiduals(m_ECM_seedlings, n = 1000)
+DHARMa::testDispersion(sim_ECM) # No overdispersion
+DHARMa::testZeroInflation(sim_ECM) # No zero-inflation
+DHARMa::testUniformity(sim_ECM) # Non-uniform, but normal with large datasets - not an indicator of poor fit
+DHARMa::testOutliers(sim_ECM)
 
 
 

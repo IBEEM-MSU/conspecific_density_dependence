@@ -968,6 +968,25 @@ plot_B_AM <- ggplot(df_B_AM,
 plot_B_AM
 
 
+############### Summary of survivorship by species across sites/years
 
+# Calculate site-level survival per species
+sp_site_surv <- allSpDat %>%
+  group_by(Sp, SiteID) %>%
+  summarise(total_Y0 = sum(Year_0_counts, na.rm = TRUE),
+    total_Y1 = sum(Year_1_counts, na.rm = TRUE),
+    survival = total_Y1 / total_Y0,
+    .groups = "drop") %>%
+  filter(total_Y0 > 0)   # safeguard
 
+# Summarize across sites per species
+sp_seedling_summary <- sp_site_surv %>%
+  group_by(Sp) %>%
+  summarise(mean_surv = mean(survival),
+    sd_surv   = sd(survival),
+    min_surv  = min(survival),
+    max_surv  = max(survival),
+    .groups = "drop")
+
+View(sp_seedling_summary)
 
