@@ -70,4 +70,59 @@ View(species_summary)
 
 sp_summary_percBA = species_summary[,c(1,13)]
 
+#### Separate summary for paper
 
+## Group BO with BONRO
+adults$Sp[adults$Sp == "bo"] <- "bonro"
+
+# List of basal area columns
+ba_columns <- c("ba_fall99", "ba_aug05", "ba_aug07", "ba_oct09", 
+                "ba_aug11", "ba_sep13", "ba_fall16", "ba_fall19", "ba_22")
+
+# Sum BA per Site × Species × Census year
+species_site_year <- adults %>%
+  pivot_longer(
+    cols = all_of(ba_columns),
+    names_to = "Census",
+    values_to = "BA"
+  ) %>%
+  mutate(BA = as.numeric(BA)) %>%
+  group_by(Site, Sp, Census) %>%
+  summarise(total_BA = sum(BA, na.rm = TRUE), .groups = "drop")
+
+# Calculate mean, SD, min, and max BA per species across sites/years
+
+species_site_summary <- species_site_year %>%
+  group_by(Site, Sp) %>%
+  summarise(
+    mean_BA_site = mean(total_BA, na.rm = TRUE),
+    sd_BA_site   = sd(total_BA, na.rm = TRUE),
+    min_BA_site  = min(total_BA, na.rm = TRUE),
+    max_BA_site  = max(total_BA, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+species_summary <- species_site_summary %>%
+  group_by(Sp) %>%
+  summarise(
+    mean_BA = mean(mean_BA_site, na.rm = TRUE),
+    sd_BA   = sd(mean_BA_site, na.rm = TRUE),
+    
+    # minimum non-zero BA across sites
+    min_nonzero_BA = min(mean_BA_site[mean_BA_site > 0], na.rm = TRUE),
+    
+    max_BA = max(mean_BA_site, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#View(species_summary)
+
+# Determine species rank abundance
+species_abundance <- adults %>%
+  group_by(Sp) %>%
+  summarise(n_stems = n(),
+    .groups = "drop") %>%
+  arrange(desc(n_stems)) %>%
+  mutate(rank = row_number())
+
+species_abundance
