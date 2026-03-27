@@ -81,7 +81,8 @@ vif_A # All <4
 
 # Marginal prediction R² (log-scale)
 pred_marg <- predict(all_sp_15mA, type = "response", re.form = NA)
-obs <- allSpDat$Year_1_counts
+#obs <- allSpDat$Year_1_counts
+obs <- model.frame(all_sp_15mA)$Year_1_counts
 r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
 R2_pred_marg <- r_marg^2
 R2_pred_marg
