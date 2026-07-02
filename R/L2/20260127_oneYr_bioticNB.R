@@ -23,6 +23,7 @@ library(glmmTMB)
 library(performance)
 library(car)
 library(marginaleffects)
+library(patchwork)
 
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
@@ -232,6 +233,12 @@ R2_pred_cond
 ### All sites combined
 AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
     all_sp_15mC, all_sp_15mD, all_sp_15mBCD) # BCD is lowest
+### Delta AICs
+aic_table <- AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
+                 all_sp_15mC, all_sp_15mD, all_sp_15mBCD)
+
+aic_table$deltaAIC <- aic_table$AIC - min(aic_table$AIC)
+aic_table[order(aic_table$deltaAIC), ]
 anova(all_sp_15mD, all_sp_15mBCD) # And is significantly better than B
 
 #### Diagnostics and Post-hoc tests for super-interactive model (best supported)
@@ -397,6 +404,11 @@ plot_A <- ggplot(df_A,
   base_theme
 
 plot_A
+
+#### Determine the values for propagule pressure:
+
+10^median(allSpDat$log0yr, na.rm = TRUE) - 1
+10^median(allSpDat$logPrior, na.rm = TRUE)
 
 # =========================================================
 ## ---------------------PANEL B1 ------ Consp × hetAM 
@@ -778,6 +790,13 @@ R2_pred_cond
 ### Compare AICs 
 AIC(all_sp_prop_null, all_sp_propA, all_sp_propB, all_sp_propC,
     all_sp_propD, all_sp_propBCD) # lowest is all_sp_propB 
+### Delta AICs - raw BA AND proportional BA
+aic_table <- AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
+                 all_sp_15mC, all_sp_15mD, all_sp_15mBCD,
+                 all_sp_prop_null, all_sp_propA, all_sp_propB,
+                 all_sp_propC,all_sp_propD, all_sp_propBCD)
+aic_table$deltaAIC <- aic_table$AIC - min(aic_table$AIC)
+aic_table[order(aic_table$deltaAIC), ]
 anova(all_sp_propB, all_sp_propD) # Panel D is NOT significantly better!
 
 #### #### #### #### #### #### #### #### #### #### #### #### #### 
@@ -922,6 +941,11 @@ plot_A <- ggplot(df_A,
   base_theme
 
 plot_A
+
+### Back tranform values
+median(allSpDat$propHetAM, na.rm = TRUE)
+10^median(allSpDat$log0yr, na.rm = TRUE) - 1
+10^median(allSpDat$logPrior, na.rm = TRUE) - 1
 
 # =========================================================
 ## ----------------PANEL B1 ------ propConsp × propHetAM 

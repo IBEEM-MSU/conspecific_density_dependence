@@ -249,8 +249,14 @@ R2_pred_cond
 #### Model comparison
 ### Compare AICs - AM
 AIC(AM_abio_null, AM_abio, AM_clim, AM_env) # Model with climate and env best
+aic_table <- AIC(AM_abio_null, AM_abio, AM_clim, AM_env)
+aic_table$deltaAIC <- aic_table$AIC - min(aic_table$AIC)
+aic_table[order(aic_table$deltaAIC), ]
 ### Compare AICs - ECM
 AIC(ECM_abio_null, ECM_abio, ECM_clim, ECM_env)
+aic_table <- AIC(ECM_abio_null, ECM_abio, ECM_clim, ECM_env)
+aic_table$deltaAIC <- aic_table$AIC - min(aic_table$AIC)
+aic_table[order(aic_table$deltaAIC), ]
 anova(ECM_abio, ECM_env) # Model with environment only is best
 
 
