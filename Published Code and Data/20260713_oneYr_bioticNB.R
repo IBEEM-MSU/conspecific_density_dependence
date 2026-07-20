@@ -1,8 +1,8 @@
 
 #################################################
-####### Analyses of one-year survivorship WRT mature tree neighborhood (BA)
+####### One-year seedling survival WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
-####### Date: 27 January 2026
+####### Date: 13 July 2026
 #################################################
 
 ## Read in packages
@@ -26,7 +26,7 @@ library(marginaleffects)
 library(patchwork)
 
 #### Read in csv with all survivorship data for all species
-allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
+allSpDat <- read.csv("./final_seedling_demogr_modeling_data.csv")
 
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
 
@@ -48,7 +48,7 @@ compute_vif <- function(formula, data) {
 }
 
 ######### ######### ######### ######### ######### 
-######### Null model
+######### Null model (Intercept only)
 all_sp_15m_null <- glmmTMB(Year_1_counts ~ 1 +
                              (1|SiteID) + (1|survYear) + (1|Sp),
                            family = nbinom2, data = allSpDat)
@@ -68,7 +68,7 @@ R2_pred_cond
 
 
 ######### ######### ######### ######### ######### 
-######### PANEL A — Classic Feedback
+######### Model A — Conspecific Density Dependence (CDD)
 all_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     logPrior + log0yr +
     (1|SiteID) + (1|survYear) + (1|Sp),
@@ -95,7 +95,7 @@ R2_pred_cond
 
 
 ######### ######### ######### ######### ######### 
-######### PANEL B — Interactive Spillover
+######### Model B — Mycorrhizal-Dependent Pathogen Spillover 
 all_sp_15mB <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m +
@@ -125,7 +125,7 @@ R2_pred_cond <- r_cond^2
 R2_pred_cond
 
 ######### ######### ######### ######### ######### 
-######### PANEL C — Additive Spillover
+######### Model C — Conmycorrhizal Density Dependence
 all_sp_15mC <- glmmTMB(
   Year_1_counts ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
@@ -154,9 +154,8 @@ r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
 
-
 ######### ######### ######### ######### ######### 
-######### PANEL D — Interactive + Additive (B + C combined)
+######### Model D — Conmycorrhizal plus pathogen spillover
 all_sp_15mD <- glmmTMB(
   Year_1_counts ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
@@ -190,7 +189,7 @@ R2_pred_cond <- r_cond^2
 R2_pred_cond
 
 ######### ######### ######### ######### ######### 
-######### PANEL B+C+D — SUPERINTERACTIVE MODEL
+######### Model E - Interactive conmycorrhizal and pathogen spillover
 all_sp_15mBCD <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m +
@@ -250,70 +249,14 @@ DHARMa::testUniformity(simBCD) # Non-uniform, but normal with large datasets - n
 DHARMa::testOutliers(simBCD) # ~0.28% of observations are outliers - not concerning
 # Model diagnostics indicated no issues with dispersion or zero-inflation, with tests showing residual variation and the frequency of zeros were fully consistent with model expectations. The DHARMa uniformity test was significant, but this is common in large datasets and not indicative of poor fit. Outlier rates were extremely low (~0.28%) and within acceptable bounds, confirming that the model adequately captured the distribution of the data
 
-########## ########## ########## ########## ########## 
-########## Plotting effect sizes - for Panel BCD
-
-### Extract fixed effects 
-fixef_df <- broom.mixed::tidy(
-  all_sp_15mBCD,
-  effects = "fixed",
-  component = "cond") %>%
-  filter(term != "(Intercept)") %>%
-  select(term, estimate, std.error, p.value)
-
-### Relabel terms
-fixef_df <- fixef_df %>%
-  mutate(component = case_when(
-    term == "consp_15m" ~ "Conspecific BA",
-    term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "hetAM_15m" ~ "AM BA",
-    term == "hetECM_15m" ~ "ECM BA",
-    term == "consp_15m:Seedling_mycECM" ~ "Consp. BA:Mycorrhizal type",
-    term == "consp_15m:hetAM_15m" ~ "Consp. BA:AM BA",
-    term == "consp_15m:hetECM_15m" ~ "Consp. BA:ECM BA",
-    term == "Seedling_mycECM:hetAM_15m" ~ "Mycorrhizal type:AM BA",
-    term == "Seedling_mycECM:hetECM_15m" ~ "Mycorrhizal type:ECM BA",
-    term == "consp_15m:Seedling_mycECM:hetAM_15m" ~ "Consp. BA:Mycorrhizal type:AM BA",
-    term == "consp_15m:Seedling_mycECM:hetECM_15m" ~ "Consp. BA:Mycorrhizal type:ECM BA",
-    term == "logPrior" ~ "Log(Prior Density)",
-    term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ term))
-
-### Reorder
-desired_order <- c(
-  "Conspecific BA","AM BA","ECM BA","Mycorrhizal type",
-  "Consp. BA:AM BA","Consp. BA:ECM BA","Consp. BA:Mycorrhizal type",
-  "Mycorrhizal type:AM BA","Mycorrhizal type:ECM BA",
-  "Consp. BA:Mycorrhizal type:AM BA","Consp. BA:Mycorrhizal type:ECM BA",
-  "Log(Recruit Density)","Log(Prior Density)")
-fixef_df <- fixef_df %>%
-  mutate(component = factor(component, levels = desired_order))
-
-### Add in significance
-fixef_df <- fixef_df %>%
-  mutate(Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"))
-
-### Reorder for plotting
-fixef_df$component <- factor(fixef_df$component, levels = rev(desired_order))
-
-### Plot
-ggplot(fixef_df, aes(x = estimate, y = component)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-    xmax = estimate + 1.96 * std.error), width = 0.1,
-    orientation = "y", color = "black")+
-  geom_point(aes(shape = Significant, fill = Significant),
-             size = 3.2, color = "black", stroke = 0.9) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "none",
-    axis.text.y = element_text(size = 12, color = "black"),
-    axis.text.x = element_text(size = 12, color = "black"))
-
 ################################################## 
-##### Plot predictions for superinteractive model
+################################################## 
+##### Plot predictions for Model E
+
+#### Determine the values for propagule pressure:
+
+10^median(allSpDat$log0yr, na.rm = TRUE) - 1
+10^median(allSpDat$logPrior, na.rm = TRUE)
 
 # These plots are not showing the marginal effects, but rather are conditional predictions, not derivatives. They are the appropriate method for: 
 # showing how effects vary across the interaction space
@@ -327,10 +270,11 @@ mid_consp  <- median(allSpDat$consp_15m,  na.rm = TRUE)
 mid_hetAM  <- median(allSpDat$hetAM_15m,  na.rm = TRUE)
 mid_hetECM <- median(allSpDat$hetECM_15m, na.rm = TRUE)
 
-hetAM_quart  <- quantile(allSpDat$hetAM_15m,  probs = c(.1,.5,.9), na.rm = TRUE)
-hetECM_quart <- quantile(allSpDat$hetECM_15m, probs = c(.1,.5,.9), na.rm = TRUE)
+hetAM_quart  <- quantile(allSpDat$hetAM_15m,  
+                         probs = c(.1,.5,.9), na.rm = TRUE)
+hetECM_quart <- quantile(allSpDat$hetECM_15m, 
+                         probs = c(.1,.5,.9), na.rm = TRUE)
 
-### Colors
 ### Colors
 col_AM  <- "#c0352b"   # AM red
 col_ECM <- "#2b4ac0"   # ECM blue
@@ -366,10 +310,9 @@ base_theme <- theme_bw() +
     panel.grid.minor = element_blank())
 
 # =========================================================
-## -------- PANEL A — Classic feedback (consp × seedling type)
-## Predict 
-pred_A <- ggpredict(
-  all_sp_15mBCD,
+## -------- PANEL A — Conspecific Density Dependence
+
+pred_A <- ggpredict(all_sp_15mBCD,
   terms = c("consp_15m", "Seedling_myc",
             paste0("hetAM_15m[",  mid_hetAM,  "]"),
             paste0("hetECM_15m[", mid_hetECM, "]")),
@@ -385,9 +328,8 @@ df_A <- data.frame(
 
 ### Create combo variable (even though no Low/Med/High here)
 df_A$combo <- df_A$seed_type
-df_A$combo <- factor(df_A$combo,
-                     levels = c("AM", "ECM"),
-                     labels = c("AM_Medium","ECM_Medium"))  # middle level color
+df_A$combo <- factor(df_A$combo,levels = c("AM", "ECM"),
+            labels = c("AM_Medium","ECM_Medium"))  # middle level color
 
 plot_A <- ggplot(df_A,
                  aes(x = x, y = predicted, color = combo, fill = combo)) +
@@ -405,13 +347,9 @@ plot_A <- ggplot(df_A,
 
 plot_A
 
-#### Determine the values for propagule pressure:
-
-10^median(allSpDat$log0yr, na.rm = TRUE) - 1
-10^median(allSpDat$logPrior, na.rm = TRUE)
-
 # =========================================================
-## ---------------------PANEL B1 ------ Consp × hetAM 
+## ----PANEL B1 ------ Mycorrhizal-Dependent Pathogen Spillover 
+### Consp × hetAM 
 ## Predict 
 pred_B_AM <- ggpredict(all_sp_15mBCD,
   terms = c("consp_15m",
@@ -421,14 +359,14 @@ pred_B_AM <- ggpredict(all_sp_15mBCD,
   bias_correction = TRUE)
 
 ## Build dataframe cleanly
-df_B_AM <- data.frame(x         = pred_B_AM$x,
+df_B_AM <- data.frame(x = pred_B_AM$x,
   predicted = pred_B_AM$predicted,
   conf.low  = pred_B_AM$conf.low,
   conf.high = pred_B_AM$conf.high,
   seed_type = factor(pred_B_AM$facet, levels = c("AM","ECM")),
   hetAM_raw = pred_B_AM$group)
 
-## Assign human-readable labels
+## Assign intuitive labels
 df_B_AM$hetAM <- factor(df_B_AM$hetAM_raw,
   levels = unique(pred_B_AM$group),
   labels = c("Low","Medium","High"))
@@ -448,7 +386,8 @@ plot_B_AM <- ggplot(df_B_AM,
              labeller = labeller(seed_type = c(
               AM  = "AM seedlings", ECM = "ECM seedlings"))) +
   scale_y_continuous(limits = c(0.2, 4.9), breaks = c(1,2,3,4)) +
-  scale_color_manual(values = color_map_combo, name = "AM BA Level", guide = "none") +
+  scale_color_manual(values = color_map_combo, 
+                     name = "AM BA Level", guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
   labs(x = "Conspecific basal area (m²)",
     y = "Predicted one-year seedling counts") +
@@ -456,27 +395,27 @@ plot_B_AM <- ggplot(df_B_AM,
 plot_B_AM
 
 # =========================================================
-## -------- PANEL B2 ----------- Consp × hetECM
+## ----PANEL B2 ------ Mycorrhizal-Dependent Pathogen Spillover 
+### Consp × hetECM 
 ## Predict 
 pred_B_ECM <- ggpredict(all_sp_15mBCD,
   terms = c("consp_15m",
-            paste0("hetECM_15m[", paste(hetECM_quart, collapse = ","), "]"),
+            paste0("hetECM_15m[", 
+            paste(hetECM_quart, collapse = ","), "]"),
             "Seedling_myc",
             paste0("hetAM_15m[", mid_hetAM, "]")),
   bias_correction = TRUE)
 
 ## Build dataframe cleanly
-df_B_ECM <- data.frame(
-  x         = pred_B_ECM$x,
+df_B_ECM <- data.frame(x = pred_B_ECM$x,
   predicted = pred_B_ECM$predicted,
   conf.low  = pred_B_ECM$conf.low,
   conf.high = pred_B_ECM$conf.high,
   seed_type = factor(pred_B_ECM$facet, levels = c("AM","ECM")),
   hetECM_raw = pred_B_ECM$group)
 
-## Assign human-readable labels
-df_B_ECM$hetECM <- factor(
-  df_B_ECM$hetECM_raw,
+## Assign intuitive labels
+df_B_ECM$hetECM <- factor(df_B_ECM$hetECM_raw,
   levels = unique(pred_B_ECM$group),
   labels = c("Low","Medium","High"))
 
@@ -486,7 +425,7 @@ df_B_ECM$combo <- factor(df_B_ECM$combo, levels = desired_order)
 
 ## Plot
 plot_B_ECM <- ggplot(df_B_ECM,
-                     aes(x = x, y = predicted, color = combo, fill = combo)) +
+          aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
@@ -502,28 +441,24 @@ plot_B_ECM <- ggplot(df_B_ECM,
   base_theme
 plot_B_ECM
 
-#############################
-##### Combined plot
-df_all <- bind_rows(
-  df_B_AM  %>% mutate(neighbor_type = "AM neighbors"),
-  df_B_ECM %>% mutate(neighbor_type = "ECM neighbors")
-)
+######### Combined plot
+df_all <- bind_rows(df_B_AM  %>% 
+                  mutate(neighbor_type = "AM neighbors"),
+  df_B_ECM %>% mutate(neighbor_type = "ECM neighbors"))
 
 df_all$seed_type <- factor(df_all$seed_type, levels = c("AM", "ECM"))
 df_all$neighbor_type <- factor(df_all$neighbor_type,
-                               levels = c("AM neighbors", "ECM neighbors"))
+                      levels = c("AM neighbors", "ECM neighbors"))
 
-
-ggplot(df_all,
-       aes(x = x, y = predicted,
+### Plot
+ggplot(df_all, aes(x = x, y = predicted,
            color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
   facet_grid(seed_type ~ neighbor_type,
-             labeller = labeller(
-               seed_type = c(AM = "AM seedlings", ECM = "ECM seedlings")
-             )) +
+             labeller = labeller(seed_type = c(AM = "AM seedlings", 
+             ECM = "ECM seedlings"))) +
   scale_y_continuous(limits = c(0.2, 4.9), breaks = c(1,2,3,4)) +
   scale_color_manual(values = color_map_combo, guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
@@ -531,10 +466,9 @@ ggplot(df_all,
        y = "Predicted one-year seedling counts") +
   base_theme
 
-
 # =========================================================
-## -------- PANEL C1 -------- Additive AM effect
-## Predict
+## ---- PANEL C1 ------ Conmycorrhizal Density Dependence
+## Predict - AM effect
 pred_C_AM <- ggpredict(all_sp_15mBCD,
   terms = c("hetAM_15m","Seedling_myc",
             paste0("consp_15m[", mid_consp, "]"),
@@ -542,8 +476,7 @@ pred_C_AM <- ggpredict(all_sp_15mBCD,
   bias_correction = TRUE)
 
 ## Build dataframe cleanly
-df_C_AM <- data.frame(
-  x         = pred_C_AM$x,
+df_C_AM <- data.frame(x = pred_C_AM$x,
   predicted = pred_C_AM$predicted,
   conf.low  = pred_C_AM$conf.low,
   conf.high = pred_C_AM$conf.high,
@@ -556,7 +489,7 @@ df_C_AM$combo <- factor(df_C_AM$seed_type,
 
 ## Plot
 plot_C_AM <- ggplot(df_C_AM,
-                    aes(x = x, y = predicted, color = combo, fill = combo)) +
+        aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
@@ -571,8 +504,8 @@ plot_C_AM <- ggplot(df_C_AM,
 plot_C_AM
 
 # =========================================================
-## -------- PANEL C2 --------- Additive ECM effect
-## Predict
+## ---- PANEL C2 ------ Conmycorrhizal Density Dependence
+## Predict - ECM effect
 pred_C_ECM <- ggpredict(all_sp_15mBCD,
   terms = c("hetECM_15m","Seedling_myc",
             paste0("consp_15m[", mid_consp, "]"),
@@ -580,8 +513,7 @@ pred_C_ECM <- ggpredict(all_sp_15mBCD,
   bias_correction = TRUE)
 
 ## Build dataframe cleanly
-df_C_ECM <- data.frame(
-  x         = pred_C_ECM$x,
+df_C_ECM <- data.frame(x = pred_C_ECM$x,
   predicted = pred_C_ECM$predicted,
   conf.low  = pred_C_ECM$conf.low,
   conf.high = pred_C_ECM$conf.high,
@@ -594,7 +526,7 @@ df_C_ECM$combo <- factor(df_C_ECM$seed_type,
 
 ## Plot
 plot_C_ECM <- ggplot(df_C_ECM,
-                     aes(x = x, y = predicted, color = combo, fill = combo)) +
+         aes(x = x, y = predicted, color = combo, fill = combo)) +
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
@@ -609,20 +541,49 @@ plot_C_ECM <- ggplot(df_C_ECM,
 plot_C_ECM
 
 ######### Combined plot
-
 (plot_C_AM | plot_C_ECM) +
   plot_layout(guides = "collect", axes = "collect") &
   theme(axis.title.y = element_text(),
     axis.text.y  = element_text(),
     axis.ticks.y = element_line())
 
+################ Combining Panel A and C Plots
+
+# Standardized y-axis limits across all panels
+y_limits <- c(0.5, 2.8)
+y_breaks <- c(1, 2)
+
+# Update plot_A
+plot_A <- plot_A +
+  scale_y_continuous(limits = y_limits, breaks = y_breaks)
+
+# Update plot_C_AM
+plot_C_AM <- plot_C_AM +
+  scale_y_continuous(limits = y_limits, breaks = y_breaks)
+
+# Update plot_C_ECM
+plot_C_ECM <- plot_C_ECM +
+  scale_y_continuous(limits = y_limits, breaks = y_breaks)
+
+# Combined figure — A on top, C_AM and C_ECM side by side below
+combined_plot <- plot_A / (plot_C_AM | plot_C_ECM) +
+  plot_layout(guides = "collect") &
+  theme(axis.title.y = element_text(),
+        axis.text.y  = element_text(),
+        axis.ticks.y = element_line())
+
+combined_plot
+
+#### Print
+plot_A | plot_C_AM | plot_C_ECM
+
 
 #########################################################
 #########################################################
 ################# All Species Models - Proportional Basal Area
 
-################# ################# ################# 
-## Null model
+######### ######### ######### ######### ######### 
+######### Null model (Intercept only)
 all_sp_prop_null <- glmmTMB(Year_1_counts ~ 1 +
                            (1|SiteID) + (1|survYear) + (1|Sp),
                          family = nbinom2, data = allSpDat) 
@@ -640,15 +601,15 @@ r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
 
-################# ################# ################# 
-## Panel A (proportional BA)
+######### ######### ######### ######### ######### 
+######### Model A — Conspecific Density Dependence (CDD)
 all_sp_propA <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                       logPrior + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
                     family = nbinom2, data = allSpDat) 
 summary(all_sp_propA)
 ## Significant negative effect of propConsp
-## propConsp:Seedling_myc interaction is negative and marginally significant
+## propConsp:Seedling_myc negative and marginally significant
 # VIF and R2
 vif_propA <- compute_vif( ~ propConsp*Seedling_myc +
                         logPrior + log0yr, allSpDat)
@@ -666,11 +627,11 @@ r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
 
-################# ################# ################# 
-## Panel B (proportional BA)
+######### ######### ######### ######### ######### 
+######### Model B — Mycorrhizal-Dependent Pathogen Spillover 
 all_sp_propB <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                        propHetAM + 
-                       propConsp:propHetAM + # Panel B
+                       propConsp:propHetAM + 
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
@@ -694,11 +655,11 @@ r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
 
-################# ################# ################# 
-## Panel C (proportional BA)
+######### ######### ######### ######### ######### 
+######### Model C — Conmycorrhizal Density Dependence
 all_sp_propC <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                         propHetAM + 
-                        Seedling_myc:propHetAM + # Panel C
+                        Seedling_myc:propHetAM + 
                         logPrior + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
@@ -722,12 +683,12 @@ r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
 
-################# ################# ################# 
-## Panel D (B+C) (proportional BA)
+######### ######### ######### ######### ######### 
+######### Model D — Conmycorrhizal plus pathogen spillover
 all_sp_propD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                         propHetAM + 
-                        propConsp:propHetAM + # Panel B
-                        Seedling_myc:propHetAM + # Panel C
+                        propConsp:propHetAM + 
+                        Seedling_myc:propHetAM +
                         logPrior + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
@@ -752,13 +713,13 @@ r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
 R2_pred_cond <- r_cond^2
 R2_pred_cond
 
-################# ################# ################# 
-## Super interactive model (proportional BA)
+######### ######### ######### ######### ######### 
+######### Model E - Interactive conmycorrhizal and pathogen spillover
 all_sp_propBCD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                        propHetAM + 
-                       propConsp:propHetAM + # Panel B
-                       Seedling_myc:propHetAM + # Panel C
-                       propConsp:Seedling_myc:propHetAM + # 3-way interaction
+                       propConsp:propHetAM + 
+                       Seedling_myc:propHetAM + 
+                       propConsp:Seedling_myc:propHetAM + 
                        logPrior + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
@@ -809,60 +770,8 @@ DHARMa::testOutliers(simBprop) # ~0.32% of observations are outliers
 # Model diagnostics indicated excellent fit, with no evidence of overdispersion or zero inflation. Although DHARMa’s uniformity and outlier tests showed significant deviations, the magnitude was trivial (<0.4% outliers) and expected for large-sample GLMMs, and residual plots showed no structured patterns.
 # Post-hoc comparisons revealed no reliable differences in seedling abundance between AM and ECM species across proportional conspecific or heterospecific basal area gradients. All nine AM–ECM contrasts yielded ratios near 1.0 with non-significant p-values except for a single marginal comparison at high conspecific and high AM basal area, which we interpret cautiously given the lack of a consistent pattern.
 
-########## ########## ########## ########## ########## 
-########## Plotting effect sizes - Panel B
-### Extract fixed effects 
-fixef_df <- broom.mixed::tidy(
-  all_sp_propB, effects = "fixed",
-  component = "cond") %>%
-  filter(term != "(Intercept)") %>%
-  select(term, estimate, std.error, p.value)
-
-### Map raw term names to clean labels you want shown on the plot
-fixef_df <- fixef_df %>%
-  mutate(component = case_when(
-    term == "propConsp" ~ "Prop. Conspecific BA",
-    term == "Seedling_mycECM" ~ "Mycorrhizal type",
-    term == "propHetAM" ~ "Prop. AM BA",
-    term == "propConsp:Seedling_mycECM" ~ "Prop. Consp. BA:Myc. type ECM",
-    term == "propConsp:propHetAM" ~ "Prop. Consp. BA:Prop. AM BA",
-    term == "logPrior" ~ "Log(Prior Density)",
-    term == "log0yr" ~ "Log(Recruit Density)",
-    TRUE ~ term))
-
-# 3. Order components on the y-axis in the order you prefer
-desired_order <- c("Prop. Conspecific BA","Prop. AM BA",
-                   "Mycorrhizal type",  "Prop. Consp. BA:Myc. type ECM",
-                   "Prop. Consp. BA:Prop. AM BA", 
-                   "Log(Recruit Density)","Log(Prior Density)")
-fixef_df <- fixef_df %>%
-  mutate(component = factor(component, levels = desired_order))
-
-# 4. Significance flag (alpha = 0.05)
-fixef_df <- fixef_df %>%
-  mutate(Significant = ifelse(!is.na(p.value) & p.value <= 0.05, "yes", "no"))
-
-# Make your factor for y-axis
-fixef_df$component <- factor(fixef_df$component, levels = rev(desired_order))
-
-### Plot
-ggplot(fixef_df, aes(x = estimate, y = component)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey40") +
-  geom_errorbar(aes(xmin = estimate - 1.96 * std.error,
-                    xmax = estimate + 1.96 * std.error), 
-                orientation = "y",width = 0.1, color = "black")+
-  geom_point(aes(shape = Significant, fill = Significant), 
-             size = 3.5, color = "black", stroke = 1) +
-  scale_shape_manual(values = c("yes" = 16, "no" = 21)) +
-  scale_fill_manual(values = c("yes" = "black", "no" = "white")) +
-  labs(x = "Effect size ± 95% CI (log count scale)", y = NULL) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "none",
-        axis.text.y = element_text(size = 12, color = "black"),
-        axis.text.x = element_text(size = 12, color = "black"))
-
 ################################################## 
-##### Plot predictions for Panel B
+##### Plot predictions for Model B (best-supported proportional model)
 
 # These plots are not showing the marginal effects, but rather are conditional predictions, not derivatives. They are the appropriate method for: 
 # showing how effects vary across the interaction space
@@ -875,9 +784,9 @@ ggplot(fixef_df, aes(x = estimate, y = component)) +
 mid_propConsp  <- median(allSpDat$propConsp,  na.rm = TRUE)
 mid_propHetAM  <- median(allSpDat$propHetAM,  na.rm = TRUE)
 
-propHetAM_quart  <- quantile(allSpDat$propHetAM,  probs = c(.1,.5,.9), na.rm = TRUE)
+propHetAM_quart  <- quantile(allSpDat$propHetAM,  
+                             probs = c(.1,.5,.9), na.rm = TRUE)
 
-### Colors
 ### Colors
 col_AM  <- "#c0352b"   # AM red
 col_ECM <- "#2b4ac0"   # ECM blue
@@ -904,7 +813,7 @@ desired_order <- c("AM_Low","AM_Medium","AM_High",
                    "ECM_Low","ECM_Medium","ECM_High")
 
 # =========================================================
-## -------- PANEL A — Classic feedback (propConsp × seedling type)
+## -------- PANEL A — Conspecific Density Dependence
 ## Predict 
 pred_A <- ggpredict(
   all_sp_propB,
@@ -948,24 +857,25 @@ median(allSpDat$propHetAM, na.rm = TRUE)
 10^median(allSpDat$logPrior, na.rm = TRUE) - 1
 
 # =========================================================
-## ----------------PANEL B1 ------ propConsp × propHetAM 
+## ---- PANEL B ------ Mycorrhizal-Dependent Pathogen Spillover 
 ## Predict 
 pred_B_AM <- ggpredict(all_sp_propB,
   terms = c("propConsp",
-            paste0("propHetAM[", paste(propHetAM_quart, collapse = ","), "]"),
+            paste0("propHetAM[", paste(propHetAM_quart, 
+            collapse = ","), "]"),
             "Seedling_myc"))
 
 ## Build dataframe cleanly
-df_B_AM <- data.frame(x         = pred_B_AM$x,
+df_B_AM <- data.frame(x = pred_B_AM$x,
                       predicted = pred_B_AM$predicted,
                       conf.low  = pred_B_AM$conf.low,
                       conf.high = pred_B_AM$conf.high,
-                      seed_type = factor(pred_B_AM$facet, levels = c("AM","ECM")),
+                      seed_type = factor(pred_B_AM$facet, 
+                                         levels = c("AM","ECM")),
                       hetAM_raw = pred_B_AM$group)
 
-## Assign human-readable labels
-df_B_AM$hetAM <- factor(
-  df_B_AM$hetAM_raw,
+## Assign intuitive labels
+df_B_AM$hetAM <- factor(df_B_AM$hetAM_raw,
   levels = unique(pred_B_AM$group),
   labels = c("Low","Medium","High"))
 
@@ -993,6 +903,7 @@ plot_B_AM <- ggplot(df_B_AM,
 plot_B_AM
 
 
+############### ############### ############### ############### 
 ############### Summary of survivorship by species across sites/years
 
 # Calculate site-level survival per species

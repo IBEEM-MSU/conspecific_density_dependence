@@ -2,15 +2,15 @@
 #################################################
 ####### Integrating biotic and abiotic covariates - mixed models
 ####### Author: Bailey McNichol and Andrew Eagar
-####### Date: 27 January 2026
+####### Date: 13 July 2026
 #################################################
 
 ## Read in packages
-library(tidyverse) # For data manipulation & graphing
-library(lme4) # Linear modeling package. Bates, D., Mächler, M., Bolker, B. and Walker, S., 2014. Fitting lme models using lme4. arXiv preprint arXiv:1406.5823.
-library(MuMIn) # For AIC and R-squared values. Barton, K. and Barton, M.K., 2015. Package ‘mumin’. Version, 1(18), p.439.
-library(lmerTest) # For p-values. Kuznetsova, A., Brockhoff, P.B. and Christensen, R.H., 2017. lmerTest package: tests in linear mixed effects models. Journal of statistical software, 82, pp.1-26.
-library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Package ‘lsmeans’. The American Statistician, 34(4), pp.216-221.
+library(tidyverse) 
+library(lme4) 
+library(MuMIn)
+library(lmerTest)
+library(emmeans)
 library(dplyr)
 library(ggplot2)
 library(DHARMa)
@@ -22,11 +22,12 @@ library(forcats)
 library(scales)
 
 #### Read in csv with all survivorship data for all species
-allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
-allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
+allSpDat <- read.csv("./final_seedling_demogr_modeling_data.csv")
+allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, 
+                                levels = c("AM", "ECM"))
 
 ## Environmental/climate data
-clim_env_allSites <- read.csv("./data/L1/clim_envVars_allSites.csv")
+clim_env_allSites <- read.csv("./clim_envVars_allSites.csv")
 clim_env_allSites$Site = as.character(clim_env_allSites$Site)
 clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
 clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"
@@ -96,9 +97,8 @@ m_AM_seedlings <- glmmTMB(Year_1_counts ~
     # Biotic main effects
       ConspBA + AM_BA + ECM_BA +
     # Biotic interactions (from best model)
-      ConspBA:AM_BA +
-      ConspBA:ECM_BA +
-    # Abiotic direct effects
+      ConspBA:AM_BA + ConspBA:ECM_BA +
+      # Abiotic direct effects (climate + environment)
       Mean_PDSI + Min_Temp + Max_Temp +
       perc_Openness + Base_CEC +
     # Controls
@@ -137,8 +137,6 @@ DHARMa::testUniformity(sim_AM) # Non-uniform, but normal with large datasets - n
 DHARMa::testOutliers(sim_AM)
 
 
-
-
 ############################################
 ############ ECM Biotic/Abiotic Model
 
@@ -146,9 +144,8 @@ m_ECM_seedlings <- glmer(Year_1_counts ~
     # Biotic main effects
       ConspBA + AM_BA + ECM_BA +
     # Biotic interactions (supported)
-      ConspBA:AM_BA +
-      ConspBA:ECM_BA +
-    # Abiotic direct effects (best model)
+      ConspBA:AM_BA + ConspBA:ECM_BA +
+    # Abiotic direct effects (environment only)
       perc_Openness + Base_CEC +
       # Controls
       Log_Prior + Log_Recruits +
@@ -177,6 +174,5 @@ DHARMa::testDispersion(sim_ECM) # No overdispersion
 DHARMa::testZeroInflation(sim_ECM) # No zero-inflation
 DHARMa::testUniformity(sim_ECM) # Non-uniform, but normal with large datasets - not an indicator of poor fit
 DHARMa::testOutliers(sim_ECM)
-
 
 
