@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2023 National Ecological Observatory Network (NEON) Biodiversity Research
+Copyright (c) 2026 IBEEM: The Institute for Biodiversity, Ecology, Evolution, and Macrosystems at Michigan State University.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
