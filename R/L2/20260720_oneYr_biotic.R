@@ -2,7 +2,7 @@
 #################################################
 ####### One-year seedling survival WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
-####### Date: 13 July 2026
+####### Date: 23 July 2026
 #################################################
 
 ## Read in packages
@@ -30,15 +30,14 @@ allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
 
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
 
-### Back-transform log prior counts
+### Back-transform log prior seedling densities 
 allSpDat$Prior_counts <- 10^allSpDat$logPrior
 
 #########################################################
 #########################################################
-#########################################################
-################# All Species Models - Raw Basal Area
+##### All Species Models - Absolute Basal Area
 
-#####  Helper function: VIF for glmmTMB fixed effects
+###  Helper function: VIF for glmmTMB fixed effects
 compute_vif <- function(formula, data) {
   mm <- model.matrix(formula, data)
   # Remove intercept
@@ -56,48 +55,20 @@ all_sp_15m_null <- glmmTMB(Year_1_counts ~ 1 +
                              (1|SiteID) + (1|survYear) + (1|Sp),
                            family = nbinom2, data = allSpDat)
 summary(all_sp_15m_null)
-# R2
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_15m_null, type = "response", re.form = NA)
-obs <- allSpDat$Year_1_counts
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_15m_null, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
-
 
 ######### ######### ######### ######### ######### 
 ######### Model A — Conspecific Density Dependence (CDD)
 all_sp_15mA <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
-    #logPrior + log0yr +
      Prior_counts + log0yr +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2, data = allSpDat)
 summary(all_sp_15mA)
 ## Significant negative effect of conspBA
-# VIF and R2
+# VIF 
 vif_A <- compute_vif(~ consp_15m * Seedling_myc +
                      Prior_counts   #logPrior 
                      + log0yr, allSpDat)
 vif_A # All <4
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_15mA, type = "response", re.form = NA)
-#obs <- allSpDat$Year_1_counts
-obs <- model.frame(all_sp_15mA)$Year_1_counts
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_15mA, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
-
 
 ######### ######### ######### ######### ######### 
 ######### Model B — Mycorrhizal-Dependent Pathogen Spillover 
@@ -105,30 +76,18 @@ all_sp_15mB <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m +
     consp_15m:hetECM_15m +
-    Prior_counts + #logPrior + 
-      log0yr +
+    Prior_counts + log0yr +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2, data = allSpDat)
 summary(all_sp_15mB)
-## Significant positive effects of conspBA, hetAM_15m, and hetECM_15m
+## Significant positive effects of conspBA and hetECM_15m
 ## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions 
-# VIF and R2
+# VIF 
 vif_B <- compute_vif(~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m + consp_15m:hetECM_15m +
       Prior_counts + log0yr,  allSpDat)
 vif_B # All <8
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_15mB, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_15mB, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
 
 ######### ######### ######### ######### ######### 
 ######### Model C — Conmycorrhizal Density Dependence
@@ -137,29 +96,17 @@ all_sp_15mC <- glmmTMB(
     hetAM_15m + hetECM_15m +
     Seedling_myc:hetAM_15m +
     Seedling_myc:hetECM_15m +
-     Prior_counts + # logPrior + 
-    log0yr +
+    Prior_counts + log0yr +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2,data = allSpDat)
 summary(all_sp_15mC)
 ## Significant negative effects of conspBA and hetAM_15m
-# VIF and R2
+# VIF 
 vif_C <- compute_vif( ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
       Prior_counts + log0yr, allSpDat)
-vif_C # One >16
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_15mC, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_15mC, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
+vif_C # One term with value >10
 
 ######### ######### ######### ######### ######### 
 ######### Model D — Conmycorrhizal plus pathogen spillover
@@ -170,31 +117,19 @@ all_sp_15mD <- glmmTMB(
     consp_15m:hetECM_15m +
     Seedling_myc:hetAM_15m +
     Seedling_myc:hetECM_15m +
-    Prior_counts + # logPrior + 
-    log0yr +
+    Prior_counts + log0yr +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2,data = allSpDat)
 summary(all_sp_15mD)
-## Significant positive effects of conspBA, hetAM_15m, and hetECM_15m
+## Significant positive effects of conspBA and hetECM_15m
 ## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions 
-# VIF and R2
+# VIF 
 vif_D <- compute_vif( ~ consp_15m * Seedling_myc +
     hetAM_15m + hetECM_15m +
     consp_15m:hetAM_15m + consp_15m:hetECM_15m +
     Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
     Prior_counts + log0yr, allSpDat)
-vif_D # one >18
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_15mD, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_15mD, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
+vif_D # one >16
 
 ######### ######### ######### ######### ######### 
 ######### Model E - Interactive conmycorrhizal and pathogen spillover
@@ -206,12 +141,11 @@ all_sp_15mBCD <- glmmTMB(Year_1_counts ~ consp_15m * Seedling_myc +
     Seedling_myc:hetECM_15m +
     consp_15m:Seedling_myc:hetAM_15m +
     consp_15m:Seedling_myc:hetECM_15m +
-    Prior_counts + # logPrior + 
-      log0yr +
+    Prior_counts + log0yr +
     (1|SiteID) + (1|survYear) + (1|Sp),
   family = nbinom2,data = allSpDat)
 summary(all_sp_15mBCD)
-## Significant positive main effects of consp, hetAM, and hetECM BA
+## Significant positive main effects of consp and hetECM BA
 ## Significant negative consp:Seedling_mycECM interaction
 ## Significant negative interactions between consp:hetAM and consp:hetECM 
 ## Non-significant Seedling_mycECM:hetAM_15m and Seedling_mycECM:hetECM_15m
@@ -224,9 +158,10 @@ vif_BCD <- compute_vif(~ consp_15m * Seedling_myc +
     consp_15m:Seedling_myc:hetAM_15m +
     consp_15m:Seedling_myc:hetECM_15m +
     Prior_counts + log0yr, allSpDat)
-vif_BCD # 3 VIFs >10; but high VIFs on interactions do not threaten the validity of the model; they simply reflect interaction-induced multicollinearity.
+vif_BCD # 4 VIFs >10; but high VIFs on interactions do not threaten the validity of the model; they simply reflect interaction-induced multicollinearity.
 
 # Marginal prediction R² (log-scale)
+obs <- allSpDat$Year_1_counts
 pred_marg <- predict(all_sp_15mBCD, type = "response", re.form = NA)
 r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
 R2_pred_marg <- r_marg^2
@@ -238,10 +173,7 @@ R2_pred_cond <- r_cond^2
 R2_pred_cond
 
 ### Compare AICs
-### All sites combined
-AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
-    all_sp_15mC, all_sp_15mD, all_sp_15mBCD) # BCD is lowest
-### Delta AICs
+### Compute Delta AICs
 aic_table <- AIC(all_sp_15m_null, all_sp_15mA, all_sp_15mB, 
                  all_sp_15mC, all_sp_15mD, all_sp_15mBCD)
 
@@ -266,10 +198,6 @@ DHARMa::testOutliers(simBCD) # ~0.28% of observations are outliers - not concern
 
 10^median(allSpDat$log0yr, na.rm = TRUE) - 1
 10^median(allSpDat$logPrior, na.rm = TRUE)
-
-### Held at means
-10^0.3663058 - 1  # log0yr back-transformed
-10^0.2365436   # logPrior back-transformed
 
 # These plots are not showing the marginal effects, but rather are conditional predictions, not derivatives. They are the appropriate method for: 
 # showing how effects vary across the interaction space
@@ -333,7 +261,6 @@ pred_A <- ggpredict(all_sp_15mBCD,
             paste0("hetECM_15m[", median_hetECM, "]")),
   condition = c(Prior_counts = median_Prior,
                 log0yr   = median_log0yr),
-  #bias_correction = TRUE)
   bias_correction = FALSE)
 
 ## Build dataframe cleanly
@@ -354,7 +281,6 @@ plot_A <- ggplot(df_A,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
-  #scale_y_continuous(limits = c(0, 4), breaks = c(1,2,3)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM"), guide = "none") +
@@ -518,7 +444,6 @@ plot_C_AM <- ggplot(df_C_AM,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
-  scale_y_continuous(limits = c(0, 4), breaks = c(1,2,3)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM"), guide = "none") +
@@ -557,7 +482,6 @@ plot_C_ECM <- ggplot(df_C_ECM,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
-  scale_y_continuous(limits = c(0, 4), breaks = c(1,2,3)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM"), guide = "none") +
@@ -567,15 +491,8 @@ plot_C_ECM <- ggplot(df_C_ECM,
   base_theme
 plot_C_ECM
 
-######### Combined plot
-(plot_C_AM | plot_C_ECM) +
-  plot_layout(guides = "collect", axes = "collect") &
-  theme(axis.title.y = element_text(),
-    axis.text.y  = element_text(),
-    axis.ticks.y = element_line())
 
 ################ Combining Panel A and C Plots
-
 # Standardized y-axis limits across all panels
 y_limits <- c(0.3, 2.5)
 y_breaks <- c(1, 2)
@@ -599,8 +516,6 @@ combined_plot <- plot_A / (plot_C_AM | plot_C_ECM) +
         axis.text.y  = element_text(),
         axis.ticks.y = element_line())
 
-combined_plot
-
 #### Print
 plot_A | plot_C_AM | plot_C_ECM
 
@@ -608,7 +523,6 @@ plot_A | plot_C_AM | plot_C_ECM
 #########################################################
 #########################################################
 ################# All Species Models - Proportional Basal Area
-##  REFIT WITH PRIOR DENSITY NOT LOG TRANS
 
 ######### ######### ######### ######### ######### 
 ######### Null model (Intercept only)
@@ -616,100 +530,53 @@ all_sp_prop_null <- glmmTMB(Year_1_counts ~ 1 +
                            (1|SiteID) + (1|survYear) + (1|Sp),
                          family = nbinom2, data = allSpDat) 
 summary(all_sp_prop_null)
-# R2
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_prop_null, type = "response", re.form = NA)
-obs <- allSpDat$Year_1_counts
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_prop_null, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
 
 ######### ######### ######### ######### ######### 
 ######### Model A — Conspecific Density Dependence (CDD)
 all_sp_propA <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
-                      logPrior + log0yr +
+                      Prior_counts + log0yr +
                       (1|SiteID) + (1|survYear) + (1|Sp),
                     family = nbinom2, data = allSpDat) 
 summary(all_sp_propA)
 ## Significant negative effect of propConsp
 ## propConsp:Seedling_myc negative and marginally significant
-# VIF and R2
+# VIF
 vif_propA <- compute_vif( ~ propConsp*Seedling_myc +
-                        logPrior + log0yr, allSpDat)
+                            Prior_counts + log0yr, allSpDat)
 vif_propA # all <4
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_propA, type = "response", re.form = NA)
-obs <- allSpDat$Year_1_counts
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_propA, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
 
 ######### ######### ######### ######### ######### 
 ######### Model B — Mycorrhizal-Dependent Pathogen Spillover 
 all_sp_propB <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
-                       propHetAM + 
-                       propConsp:propHetAM + 
-                       logPrior + log0yr +
+                       propHetAM + propConsp:propHetAM + 
+                         Prior_counts + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
 summary(all_sp_propB)
 ## Significant negative effects of propConsp and propAM
 ## propConsp:propAM is significant and positive
-# VIF and R2
+# VIF 
 vif_propB <- compute_vif( ~ propConsp*Seedling_myc + 
                             propHetAM + propConsp:propHetAM + 
-                            logPrior + log0yr, allSpDat)
-vif_propB # All <10
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_propB, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_propB, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
+                            Prior_counts + log0yr, allSpDat)
+vif_propB # All <4
 
 ######### ######### ######### ######### ######### 
 ######### Model C — Conmycorrhizal Density Dependence
 all_sp_propC <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc + 
                         propHetAM + 
                         Seedling_myc:propHetAM + 
-                        logPrior + log0yr +
+                        Prior_counts + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
 summary(all_sp_propC)
-## Significant positive and negative effects of propConsp and propAM, respectively
+## Significant negative effects of propConsp and propAM
 ## propConsp:Seedling_myc and Seedling_myc:AM_15m interactions not significant 
-# VIF and R2
+# VIF
 vif_propC <- compute_vif( ~ propConsp*Seedling_myc + 
                             propHetAM + Seedling_myc:propHetAM + 
-                            logPrior + log0yr, allSpDat)
+                            Prior_counts + log0yr, allSpDat)
 vif_propC # All <5
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_propC, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_propC, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
 
 ######### ######### ######### ######### ######### 
 ######### Model D — Conmycorrhizal plus pathogen spillover
@@ -717,7 +584,7 @@ all_sp_propD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                         propHetAM + 
                         propConsp:propHetAM + 
                         Seedling_myc:propHetAM +
-                        logPrior + log0yr +
+                        Prior_counts + log0yr +
                         (1|SiteID) + (1|survYear) + (1|Sp),
                       family = nbinom2, data = allSpDat)
 summary(all_sp_propD)
@@ -727,19 +594,8 @@ summary(all_sp_propD)
 vif_propD <- compute_vif( ~ propConsp*Seedling_myc + 
                             propHetAM + propConsp:propHetAM + 
                             Seedling_myc:propHetAM + 
-                            logPrior + log0yr, allSpDat)
-vif_propD # All <7
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_propD, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_propD, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
+                            Prior_counts + log0yr, allSpDat)
+vif_propD # All <6
 
 ######### ######### ######### ######### ######### 
 ######### Model E - Interactive conmycorrhizal and pathogen spillover
@@ -748,32 +604,20 @@ all_sp_propBCD <- glmmTMB(Year_1_counts ~ propConsp*Seedling_myc +
                        propConsp:propHetAM + 
                        Seedling_myc:propHetAM + 
                        propConsp:Seedling_myc:propHetAM + 
-                       logPrior + log0yr +
+                         Prior_counts + log0yr +
                        (1|SiteID) + (1|survYear) + (1|Sp),
                      family = nbinom2, data = allSpDat)
 summary(all_sp_propBCD)
 ## Significant negative effects of propConsp and propAM 
-## propConsp:Seedling_myc and propConsp:propAMm interactions are significant and positive!
-## Seedling_myc:propAM interaction not significant
-## propConsp:Seedling_myc:propAM interaction is significant and negative
+## propConsp:propAMm interaction significant and positive
+## All other interactions not significant
 # VIF and R2
 vif_propBCD <- compute_vif( ~ propConsp*Seedling_myc + 
                               propHetAM + propConsp:propHetAM + 
                               Seedling_myc:propHetAM + 
                               propConsp:Seedling_myc:propHetAM + 
-                              logPrior + log0yr, allSpDat)
+                              Prior_counts + log0yr, allSpDat)
 vif_propBCD # four values >10 due to interactions
-
-# Marginal prediction R² (log-scale)
-pred_marg <- predict(all_sp_propBCD, type = "response", re.form = NA)
-r_marg <- cor(log1p(obs), log1p(pred_marg), use = "complete.obs")
-R2_pred_marg <- r_marg^2
-R2_pred_marg
-# Conditional prediction r² (log-scale)
-pred_cond <- predict(all_sp_propBCD, type = "response")
-r_cond <- cor(log1p(obs), log1p(pred_cond), use = "complete.obs")
-R2_pred_cond <- r_cond^2
-R2_pred_cond
 
 ## Model comparison
 ### Compare AICs 
@@ -812,7 +656,7 @@ DHARMa::testOutliers(simBprop) # ~0.32% of observations are outliers
 median_propConsp  <- median(allSpDat$propConsp,  na.rm = TRUE)
 median_propHetAM  <- median(allSpDat$propHetAM,  na.rm = TRUE)
 median_log0yr   <- median(allSpDat$log0yr,   na.rm = TRUE)
-median_logPrior <- median(allSpDat$logPrior, na.rm = TRUE)
+median_Prior <- median(allSpDat$Prior_counts, na.rm = TRUE)
 
 propHetAM_quart  <- quantile(allSpDat$propHetAM,  
                              probs = c(.1,.5,.9), na.rm = TRUE)
@@ -845,13 +689,12 @@ desired_order <- c("AM_Low","AM_Medium","AM_High",
 # =========================================================
 ## -------- PANEL A — Conspecific Density Dependence
 ## Predict 
-pred_A <- ggpredict(
-  all_sp_propB,
+pred_A <- ggpredict(all_sp_propB,
   terms = c("propConsp", "Seedling_myc",
             paste0("propHetAM[",  median_propHetAM,  "]")),
-  condition = c(logPrior = median_logPrior,
+  condition = c(Prior_counts = median_Prior,
                 log0yr   = median_log0yr),
-  bias_correction = TRUE)
+  bias_correction = FALSE)
 
 ## Build dataframe cleanly
 df_A <- data.frame(
@@ -872,7 +715,7 @@ plot_A <- ggplot(df_A,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
-  scale_y_continuous(limits = c(0.6, 2.1), breaks = c(1,2)) +
+  scale_y_continuous(limits = c(0.4, 1.5), breaks = c(0.5,1,1.5)) +
   scale_color_manual(values = color_map_combo,
                      name = "Seedling type",
                      labels = c("AM","ECM"), guide = "none") +
@@ -883,11 +726,6 @@ plot_A <- ggplot(df_A,
 
 plot_A
 
-### Back tranform values
-median(allSpDat$propHetAM, na.rm = TRUE)
-10^median(allSpDat$log0yr, na.rm = TRUE) - 1
-10^median(allSpDat$logPrior, na.rm = TRUE)
-
 # =========================================================
 ## ---- PANEL B ------ Mycorrhizal-Dependent Pathogen Spillover 
 ## Predict 
@@ -895,12 +733,10 @@ pred_B_AM <- ggpredict(all_sp_propB,
   terms = c("propConsp",
             paste0("propHetAM[", paste(propHetAM_quart, 
             collapse = ","), "]"),
-            condition = c(logPrior = median_logPrior,
-                          log0yr   = median_log0yr),
             "Seedling_myc"),
-  condition = c(logPrior = median_logPrior,
+  condition = c(Prior_counts = median_Prior,
                 log0yr   = median_log0yr),
-  bias_correction = TRUE)
+  bias_correction = FALSE)
 
 ## Build dataframe cleanly
 df_B_AM <- data.frame(x = pred_B_AM$x,
@@ -927,10 +763,11 @@ plot_B_AM <- ggplot(df_B_AM,
   geom_ribbon(aes(ymin = conf.low, ymax = conf.high),
               alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.8) +
+  scale_y_continuous(limits = c(0.4, 2), breaks = c(1,2)) +
   facet_wrap(~ seed_type, ncol = 2, 
              labeller = labeller(seed_type = c(
                AM  = "AM seedlings", ECM = "ECM seedlings"))) +
-  scale_y_continuous(limits = c(0.6, 2.1), breaks = c(1,2)) +
+  scale_y_continuous(limits = c(0.4, 1.5), breaks = c(0.5,1,1.5)) +
   scale_color_manual(values = color_map_combo, name = "Prop. AM BA",
                      guide = "none") +
   scale_fill_manual(values = color_map_combo, guide = "none") +
