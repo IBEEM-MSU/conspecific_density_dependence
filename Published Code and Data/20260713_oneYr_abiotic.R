@@ -22,11 +22,11 @@ library(car)
 
 
 #### Read in csv with all survivorship data for all species
-allSpDat <- read.csv("./final_seedling_demogr_modeling_data.csv")
+allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
 
 ## Environmental/climate data
-clim_env_allSites <- read.csv("./clim_envVars_allSites.csv")
+clim_env_allSites <- read.csv("./data/L1/clim_envVars_allSites.csv")
 clim_env_allSites$Site = as.character(clim_env_allSites$Site)
 clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
 clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"

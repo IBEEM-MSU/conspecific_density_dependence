@@ -2,7 +2,7 @@
 #################################################
 ####### Integrating biotic and abiotic covariates - mixed models
 ####### Author: Bailey McNichol and Andrew Eagar
-####### Date: 13 July 2026
+####### Date: 20 July 2026
 #################################################
 
 ## Read in packages
@@ -22,12 +22,15 @@ library(forcats)
 library(scales)
 
 #### Read in csv with all survivorship data for all species
-allSpDat <- read.csv("./final_seedling_demogr_modeling_data.csv")
+allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, 
                                 levels = c("AM", "ECM"))
 
+### Back-transform log prior seedling densities 
+allSpDat$Prior_counts <- 10^allSpDat$logPrior
+
 ## Environmental/climate data
-clim_env_allSites <- read.csv("./clim_envVars_allSites.csv")
+clim_env_allSites <- read.csv("./data/L1/clim_envVars_allSites.csv")
 clim_env_allSites$Site = as.character(clim_env_allSites$Site)
 clim_env_allSites$Site[clim_env_allSites$Site=="7.4"] <- "7.40"
 clim_env_allSites$Site[clim_env_allSites$Site=="40.4"] <- "40.40"
@@ -66,10 +69,10 @@ allSpDat_surv_clim$maxtemp = allSpDat_surv_clim$tmax_c -
 allSpDat_surv_clim$SiteID = as.factor(allSpDat_surv_clim$SiteID)
 
 ##### Subset out only the relevant columns
-dat <- allSpDat_surv_clim[,c(2,6,8,35:38,41:43,49,52,54,55,56)]
+dat <- allSpDat_surv_clim[,c(2,6,8,35:37,45,41:43,50,53,55:57)]
 # Rename columns
 colnames(dat) <- c("SiteID","Sp","Year_1_counts","Seedling_myc", 
-                   "ConspBA","Log_Recruits","Log_Prior","survYear",
+                   "ConspBA","Log_Recruits","Prior_Count","survYear",
                    "AM_BA","ECM_BA", "Mean_PDSI","perc_Openness",
                    "Base_CEC", "Min_Temp", "Max_Temp") 
 
@@ -102,7 +105,7 @@ m_AM_seedlings <- glmmTMB(Year_1_counts ~
       Mean_PDSI + Min_Temp + Max_Temp +
       perc_Openness + Base_CEC +
     # Controls
-      Log_Prior + Log_Recruits +
+      Prior_Count + Log_Recruits +
     # Random effects
     (1|Sp) + (1|survYear) + (1|SiteID),
   family = nbinom2, data = AM_dat)
@@ -113,7 +116,7 @@ vif_AM <- compute_vif(~ ConspBA + AM_BA + ECM_BA +
                         ConspBA:AM_BA + ConspBA:ECM_BA +
                         Mean_PDSI + Min_Temp + Max_Temp +
                         perc_Openness + Base_CEC +
-                        Log_Prior + Log_Recruits, AM_dat)
+                        Prior_Count + Log_Recruits, AM_dat)
 vif_AM # All <6
 
 # R2
@@ -148,7 +151,7 @@ m_ECM_seedlings <- glmer(Year_1_counts ~
     # Abiotic direct effects (environment only)
       perc_Openness + Base_CEC +
       # Controls
-      Log_Prior + Log_Recruits +
+      Prior_Count + Log_Recruits +
       # Random effects
       (1|Sp) + (1|survYear) + (1|SiteID),
   family = poisson(link = "log"), data = ECM_dat)
