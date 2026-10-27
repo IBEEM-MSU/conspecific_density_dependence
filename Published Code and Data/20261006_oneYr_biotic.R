@@ -1,4 +1,4 @@
-
+ 
 #################################################
 ####### One-year seedling survival WRT mature tree neighborhood (BA)
 ####### Author: Bailey McNichol and Andrew Eagar
@@ -26,8 +26,8 @@ library(marginaleffects)
 library(patchwork)
 
 #### Read in csv with all survivorship data for all species
-#allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
-allSpDat <- read.csv("final_seedling_demogr_modeling_data.csv")
+allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
+#allSpDat <- read.csv("final_seedling_demogr_modeling_data.csv")
 
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
 
@@ -65,7 +65,8 @@ vif_propA # all <4
 all_sp_propB <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
                        propConsp*Seedling_myc + 
                        propHetAM + propConsp:propHetAM + 
-                         Prior_counts + log0yr +
+                         #Prior_counts + log0yr +
+                         year_0_3_consp_counts +
                        (1|SiteID) + (1|survYear) + (1 + propConsp|Sp),
                      family = betabinomial, data = allSpDat)
 summary(all_sp_propB)
