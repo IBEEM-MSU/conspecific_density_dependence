@@ -27,12 +27,109 @@ library(patchwork)
 
 #### Read in csv with all survivorship data for all species
 allSpDat <- read.csv("./data/L3/final_seedling_demogr_modeling_data.csv")
-#allSpDat <- read.csv("final_seedling_demogr_modeling_data.csv")
 
 allSpDat$Seedling_myc <- factor(allSpDat$Seedling_myc, levels = c("AM", "ECM"))
 
-### Create combined variable that is conspecific 0-yr and prior 3 yr counts
-allSpDat$Year_0_3_consp_counts <- allSpDat$Year_0_counts + allSpDat$Prior_3_year_cohorts_counts
+
+dat <- allSpDat
+
+## ---- 1. bo vs. bonro: duplicated or complementary? ----------------
+with(dat, c(rows_bo           = sum(bo_15m > 0),
+            rows_bonro        = sum(bonro_15m > 0),
+            rows_both         = sum(bo_15m > 0 & bonro_15m > 0),
+            rows_identical    = sum(bo_15m > 0 & abs(bo_15m - bonro_15m) < 1e-8)))
+
+dat$bonro_15m <- dat$bonro_15m + dat$bo_15m   # skip this line if duplicated
+dat$bo_15m    <- NULL
+
+## ---- 2. Species sets and totals -----------------------------------
+ECM_sp <- c("ab","bonro","bs","bta","hem","iw","jp","nro","qa","wo","wp")
+AM_sp  <- c("ae","bc","rm","sm","svb","wa")
+
+ba_cols <- paste0(c(ECM_sp, AM_sp), "_15m")
+stopifnot(all(ba_cols %in% names(dat)))          # every listed column exists
+
+AM_tot    <- rowSums(dat[, paste0(AM_sp,  "_15m")])
+ECM_tot   <- rowSums(dat[, paste0(ECM_sp, "_15m")])
+total_new <- AM_tot + ECM_tot
+
+summary(AM_tot  - dat$AM_15m)    # ~0 if old AM total used the same assignment
+summary(ECM_tot - dat$ECM_15m)
+sum(total_new == 0)              # rows with no neighborhood BA at all
+
+## ---- 3. Conspecific BA from each seedling's own species column ------
+table(dat$Sp, dat$Seedling_myc)  # confirm seedling myc types match your list
+
+ba_mat <- as.matrix(dat[, ba_cols])
+col_ix <- match(paste0(dat$Sp, "_15m"), colnames(ba_mat))
+stopifnot(!anyNA(col_ix))        # every seedling species has a BA column
+consp_new <- ba_mat[cbind(seq_len(nrow(dat)), col_ix)]
+
+summary(consp_new - dat$consp_15m)
+table(dat$Sp[abs(consp_new - dat$consp_15m) > 1e-8])   # expect only bonro, if any
+
+## ---- 4. Heterospecific BA and proportions ----------------------------
+is_AM <- dat$Seedling_myc == "AM"
+hetAM_new  <- AM_tot  - ifelse(is_AM,  consp_new, 0)
+hetECM_new <- ECM_tot - ifelse(!is_AM, consp_new, 0)
+
+stopifnot(all(hetAM_new > -1e-8), all(hetECM_new > -1e-8))   # no negatives
+
+propConsp_new <- ifelse(total_new > 0, consp_new / total_new, NA)
+propHetAM_new <- ifelse(hetAM_new + hetECM_new > 0,
+                        hetAM_new / (hetAM_new + hetECM_new), NA)
+
+## How much did things change?
+summary(propConsp_new - dat$propConsp)
+summary(propHetAM_new - dat$propHetAM)
+sum(is.na(propHetAM_new))        # rows with no heterospecific BA
+
+## ---- 5. Overwrite with rebuilt variables -----------------------------
+dat$AM_15m     <- AM_tot
+dat$ECM_15m    <- ECM_tot
+dat$total_15m  <- total_new
+dat$consp_15m  <- consp_new
+dat$hetAM_15m  <- hetAM_new
+dat$hetECM_15m <- hetECM_new
+dat$propConsp  <- propConsp_new
+dat$propHetAM  <- propHetAM_new
+allSpDat <- dat
+
+allSpDat_old <- allSpDat          # untouched original, for comparison
+
+## ---- Step 5: write rebuilt variables into dat ------------------------
+dat$AM_15m     <- AM_tot
+dat$ECM_15m    <- ECM_tot
+dat$total_15m  <- total_new
+dat$consp_15m  <- consp_new
+dat$hetAM_15m  <- hetAM_new
+dat$hetECM_15m <- hetECM_new
+dat$propConsp  <- propConsp_new
+dat$propHetAM  <- propHetAM_new
+
+## propConmyc: check it's still consistent (totals didn't change, so it should be)
+summary(ifelse(is_AM, AM_tot, ECM_tot) / total_new - dat$propConmyc)
+
+## ---- Final checks -----------------------------------------------------
+nrow(dat) == nrow(allSpDat_old)                  # TRUE
+setdiff(names(allSpDat_old), names(dat))         # should be only "bo_15m"
+setdiff(names(dat), names(allSpDat_old))         # should be only "total_15m"
+
+rebuilt   <- c("bonro_15m", "AM_15m", "ECM_15m", "consp_15m",
+               "hetAM_15m", "hetECM_15m", "propConsp", "propHetAM")
+untouched <- setdiff(intersect(names(dat), names(allSpDat_old)), rebuilt)
+same <- sapply(untouched, function(v) isTRUE(all.equal(dat[[v]], allSpDat_old[[v]])))
+all(same)                                        # TRUE
+names(same)[!same]                               # should be empty
+
+sum(is.na(dat$propHetAM))                        # 602
+
+## ---- Save -------------------------------------------------------------
+write.csv(dat, "./data/L3/final_seedling_demogr_modeling_data.csv", 
+          row.names = FALSE)
+
+
+
 
 ###  Helper function: VIF for glmmTMB fixed effects
 compute_vif <- function(formula, data) {
@@ -218,6 +315,8 @@ R2_pred_cond
 aic_table <- AIC(all_sp_prop_null, all_sp_propA, 
                  all_sp_propB, all_sp_propC,
                  all_sp_propD, all_sp_propBCD)
+
+AIC(all_sp_propB, all_sp_propBCD)
 
 aic_table$deltaAIC <- aic_table$AIC - min(aic_table$AIC)
 aic_table[order(aic_table$deltaAIC), ]
@@ -492,7 +591,6 @@ df_A <- data.frame(x = pred_A$x,
   seed_type = factor(pred_A$group, levels = c("AM","ECM")))
 
 ### Create combo variable (even though no Low/Med/High here)
-df_A <- subset(df_A, x <= 1 - median_propHetAM)
 df_A$combo <- factor(df_A$seed_type,
                      levels = c("AM", "ECM"),
                      labels = c("AM_Medium","ECM_Medium"))
@@ -509,7 +607,9 @@ plot_A <- ggplot(df_A,
   scale_y_continuous(limits = c(0.1,0.8)) +
   labs(x = "Proportion of conspecific basal area",
        y = "Predicted one-year survival probability") +
-  base_theme
+  base_theme +
+  theme(axis.title.y = element_text(size = 13), 
+        axis.title.x = element_text(size = 13)) 
 
 plot_A
 
@@ -557,7 +657,9 @@ plot_B_AM <- ggplot(df_B_AM,
   scale_fill_manual(values = color_map_combo, guide = "none") +
   labs(x = "Proportion of conspecific basal area",
        y = "Predicted one-year survival probability") +
-  base_theme
+  base_theme +
+  theme(axis.title.y = element_text(size = 13), 
+          axis.title.x = element_text(size = 13)) 
 plot_B_AM
 
 # =========================================================
@@ -574,8 +676,6 @@ df_C_AM <- data.frame(x         = pred_C_AM$x,
                       conf.high = pred_C_AM$conf.high,
                       seed_type = factor(pred_C_AM$group, levels = c("AM","ECM")))
 
-## Drop impossible combinations
-df_C_AM <- subset(df_C_AM, x <= 1 - median_propConsp)
 df_C_AM$combo <- factor(df_C_AM$seed_type,
                         levels = c("AM","ECM"),
                         labels = c("AM_Medium","ECM_Medium"))
@@ -590,7 +690,9 @@ plot_C_AM <- ggplot(df_C_AM,
   scale_y_continuous(limits = c(0.1,0.8)) +
   labs(x = "Proportion of heterospecific AM basal area",
        y = "Predicted one-year survival probability") +
-  base_theme
+  base_theme +
+  theme(axis.title.y = element_text(size = 13), 
+        axis.title.x = element_text(size = 13)) 
 plot_C_AM
 
 #####################################
