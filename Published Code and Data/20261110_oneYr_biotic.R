@@ -68,10 +68,7 @@ all_sp_propA <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
 summary(all_sp_propA)
 ## Significant negative effect of propConsp
 # VIF
-vif_propA <- compute_vif( ~ propConsp*Seedling_myc +
-                            log0yr + 
-                            log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_propA # all <4
+performance::check_collinearity(all_sp_propA)
 
 ######### ######### ######### ######### ######### 
 ######### Model B — Mycorrhizal-Dependent Pathogen Spillover 
@@ -84,11 +81,7 @@ all_sp_propB <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
 summary(all_sp_propB)
 ##### Significant negative effects of propConsp and propAM
 # VIF
-vif_propB <- compute_vif( ~ propConsp*Seedling_myc + 
-                            propHetAM + propConsp:propHetAM + 
-                            log0yr + 
-                            log(Prior_3_year_cohorts_counts + 1) , allSpDat)
-vif_propB # All <=4
+performance::check_collinearity(all_sp_propB)
 
 ######### ######### ######### ######### ######### 
 ######### Model C — Conmycorrhizal Density Dependence
@@ -102,11 +95,7 @@ all_sp_propC <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
 summary(all_sp_propC)
 ## Significant negative effects of propConsp and propAM
 # VIF
-vif_propC <- compute_vif( ~ propConsp*Seedling_myc + 
-                            propHetAM + Seedling_myc:propHetAM + 
-                            log0yr + 
-                            log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_propC # All <5
+performance::check_collinearity(all_sp_propC)
 
 ######### ######### ######### ######### ######### 
 ######### Model D — Conmycorrhizal plus pathogen spillover
@@ -121,12 +110,7 @@ all_sp_propD <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
 summary(all_sp_propD)
 ## Significant negative effects of propConsp and propAM
 # VIF
-vif_propD <- compute_vif( ~ propConsp*Seedling_myc + 
-                            propHetAM + propConsp:propHetAM + 
-                            Seedling_myc:propHetAM + 
-                            log0yr + 
-                            log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_propD # All <=6
+performance::check_collinearity(all_sp_propD)
 
 ######### ######### ######### ######### ######### 
 ######### Model E - Interactive conmycorrhizal and pathogen spillover
@@ -144,13 +128,7 @@ summary(all_sp_propBCD)
 ## propConsp:Seedling_mycECM interaction sign. and positive
 ## All other interactions not significant
 ##### VIF 
-vif_propBCD <- compute_vif( ~ propConsp*Seedling_myc + 
-                              propHetAM + propConsp:propHetAM + 
-                              Seedling_myc:propHetAM + 
-                              propConsp:Seedling_myc:propHetAM + 
-                              log0yr + 
-                              log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_propBCD # four values >10 due to interactions
+performance::check_collinearity(all_sp_propBCD)
 
 ## Model comparison
 ### Compute Delta AICs
@@ -160,7 +138,6 @@ aic_table <- AIC(all_sp_prop_null, all_sp_propA,
 aic_table$deltaAIC <- aic_table$AIC - min(aic_table$AIC)
 aic_table[order(aic_table$deltaAIC), ]
 anova(all_sp_propC, all_sp_propB) # But, NOT significantly better than B
-
 
 #########################################################
 #########################################################
@@ -185,9 +162,7 @@ all_sp_15mA <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
 summary(all_sp_15mA)
 ## Significant negative effect of conspBA
 # VIF 
-vif_A <- compute_vif(~ consp_15m * Seedling_myc +
-                       log0yr + log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_A # All <4
+performance::check_collinearity(all_sp_15mA)
 
 ######### ######### ######### ######### ######### 
 ######### Model B — Mycorrhizal-Dependent Pathogen Spillover 
@@ -200,6 +175,10 @@ all_sp_15mB <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~
                          (1|SiteID) + (1|survYear) + (1 + consp_15m|Sp),
                        family = betabinomial, data = allSpDat)
 summary(all_sp_15mB)
+## Significant positive effect of hetECM_15m
+## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions 
+# VIF 
+performance::check_collinearity(all_sp_15mB)
 
 ### Sensitivity test for best supported model
 all_sp_15mB2 <- glmmTMB(cbind(Year_1_counts, Year_0_counts - Year_1_counts) ~ 
@@ -214,11 +193,7 @@ summary(all_sp_15mB2)
 ## Significant positive effect of hetECM_15m
 ## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions 
 # VIF 
-vif_B <- compute_vif(~ consp_15m * Seedling_myc +
-                       hetAM_15m + hetECM_15m +
-                       consp_15m:hetAM_15m + consp_15m:hetECM_15m +
-                       log0yr + log(Prior_3_year_cohorts_counts + 1),  allSpDat)
-vif_B # All < 8 (or < 10 in reduced)
+performance::check_collinearity(all_sp_15mB2)
 
 ### Species-specific CDD slopes (logit scale) — Model B
 fe      <- fixef(all_sp_15mB)$cond
@@ -278,11 +253,7 @@ summary(all_sp_15mC)
 ## Significant negative effects of conspBA
 ## Significant positive effect of hetECM_15m
 # VIF 
-vif_C <- compute_vif( ~ consp_15m * Seedling_myc +
-                        hetAM_15m + hetECM_15m +
-                        Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
-                        log0yr + log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_C # One term with value >10
+performance::check_collinearity(all_sp_15mC)
 
 ######### ######### ######### ######### ######### 
 ######### Model D — Conmycorrhizal plus pathogen spillover
@@ -300,12 +271,7 @@ summary(all_sp_15mD)
 ## Significant positive effect of hetECM_15m
 ## Significant negative consp_15m:hetAM_15m and consp_15m:hetECM_15m interactions
 # VIF 
-vif_D <- compute_vif( ~ consp_15m * Seedling_myc +
-                        hetAM_15m + hetECM_15m +
-                        consp_15m:hetAM_15m + consp_15m:hetECM_15m +
-                        Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
-                        log0yr + log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_D # one >10
+performance::check_collinearity(all_sp_15mD)
 
 ######### ######### ######### ######### ######### 
 ######### Model E - Interactive conmycorrhizal and pathogen spillover
@@ -323,16 +289,8 @@ all_sp_15mBCD <- glmmTMB(
 summary(all_sp_15mBCD)
 ## Significant positive main effect of hetECM BA
 ## Significant negative interaction between consp:hetECM
-
-# VIF and R2
-vif_BCD <- compute_vif(~ consp_15m * Seedling_myc +
-                         hetAM_15m + hetECM_15m +
-                         consp_15m:hetAM_15m + consp_15m:hetECM_15m +
-                         Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m +
-                         consp_15m:Seedling_myc:hetAM_15m +
-                         consp_15m:Seedling_myc:hetECM_15m +
-                         log0yr + log(Prior_3_year_cohorts_counts + 1), allSpDat)
-vif_BCD # 4 VIFs >10; interaction-induced multicollinearity.
+# VIF 
+performance::check_collinearity(all_sp_15mBCD)
 
 ##############################
 ### Compute Delta AICs
@@ -575,3 +533,39 @@ plot_sp <- ggplot(sp_curves, aes(x, predicted, group = Sp, color = myc)) +
   base_theme +
   theme(legend.position = "none") 
 plot_sp
+
+
+## Survival 0 -> 1 
+plot_dat <- subset(allSpDat, Year_0_counts > 0)
+plot_dat$surv <- plot_dat$Year_1_counts / plot_dat$Year_0_counts
+
+sp_labels <- c(rm = "Acru", sm = "Acsa", wa = "Fram", bc = "Prse",
+               ab = "Fagr", iw = "Osvi", wo = "Qual", nro = "Quru",
+               bonro = "Quve", bs = "Tiam")
+plot_dat$Sp_lab <- sp_labels[plot_dat$Sp]
+
+## Per-species Spearman correlation
+cor_tab <- do.call(rbind, 
+            lapply(split(plot_dat, plot_dat$Sp_lab), function(d) {
+  ct <- cor.test(d$Year_0_counts, d$surv, 
+                 method = "spearman", exact = FALSE)
+  data.frame(Sp_lab = d$Sp_lab[1],
+             rho    = unname(ct$estimate) #,
+             #p      = ct$p.value,
+             #n      = nrow(d)
+             )
+}))
+
+cor_tab
+
+ggplot(plot_dat, aes(x = Year_0_counts, y = surv)) +
+  geom_jitter(alpha = 0.15, width = 0.1, 
+              height = 0.02, size = 0.8) +
+  geom_text(data = cor_tab, aes(x = Inf, y = Inf, label = label),
+            hjust = 1.05, vjust = 1.2, 
+            size = 3, inherit.aes = FALSE) +
+  scale_x_log10() +
+  facet_wrap(~ Sp_lab, ncol = 5, scales = "free_x") +
+  labs(x = "Conspecific 0-year-old seedlings in quadrat (log scale)",
+       y = "Proportion surviving to age 1") +
+  base_theme
