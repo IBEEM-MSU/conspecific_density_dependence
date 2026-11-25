@@ -2,7 +2,7 @@
 #################################################
 ####### Permutation testing of seedling mortality rate slope coefficinets
 ####### Author: Andrew Eagar and Bailey McNichol 
-####### Date: 27 January 2026
+####### Date: 23 November 2026
 #################################################
 
 # Load libraries
@@ -14,14 +14,16 @@ library(emmeans) # For variable comparisons. Lenth, R. and Lenth, M.R., 2018. Pa
 
 # Import data
 Demography_data <- read.csv("C:/Users/eagar/Dropbox/IBEEM/conspecific_density_dependence/data/L3/final_seedling_demogr_modeling_data.csv") %>%
-					mutate(logPrior = 10^Prior)
+			mutate(propHetAM = hetAM_15m/(hetAM_15m + hetECM_15m))
+			
+			Demography_data <- subset(Demography_data, !is.na(propHetAM))
 
 # Set permutation number
 nperm <- 999 # To test this code, drop this number to 9 or 99 - at 999 permutations; it can take about 20-30 minutes to compile on a PC with an i7 core and 64 gb RAM at 999 for certain species.
 
 # Permutation test for all species together testing for differences in seedling mortality rates over three years. Model parameters selected from results of previous analyses on 1 year survival.
 
-	# Full list of modeled terms for reference: consp_15m * Seedling_myc +    hetAM_15m + hetECM_15m +    consp_15m:hetAM_15m +    consp_15m:hetECM_15m +    Seedling_myc:hetAM_15m +    Seedling_myc:hetECM_15m +    consp_15m:Seedling_myc:hetAM_15m +    consp_15m:Seedling_myc:hetECM_15m +    Prior + log0yr +    (1|SiteID) + (1|survYear) + (1|Sp),  family = nbinom2,data = allSpDat)
+	# Full list of modeled terms for reference: consp_15m * Seedling_myc +    hetAM_15m + hetECM_15m +    consp_15m:hetAM_15m +    consp_15m:hetECM_15m  + log(Prior_3_year_cohorts_counts + 1) + log0yr +    (1|SiteID) + (1|survYear)  + (1 + consp_15m|Sp)
 
 { # We have 8 terms(!!!) to test in this model, so we'll need 8 dataframes to store the randomized F-value test results.
 
@@ -33,23 +35,15 @@ Rand_results_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
 
 Rand_results_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
 
-Rand_results_Prior <- matrix(nrow = nperm, ncol = 1, 0)
-
 Rand_results_log0yr <- matrix(nrow = nperm, ncol = 1, 0)
+
+Rand_results_Prior <- matrix(nrow = nperm, ncol = 1, 0)
 
 Rand_results_consp_15m_Seedling_myc <- matrix(nrow = nperm, ncol = 1, 0)
 
 Rand_results_consp_15m_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
 
 Rand_results_consp_15m_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
-
-Rand_results_Seedling_myc_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
-
-Rand_results_Seedling_myc_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
-
-Rand_results_consp_15m_Seedling_myc_hetAM_15m <- matrix(nrow = nperm, ncol = 1, 0)
-
-Rand_results_consp_15m_Seedling_myc_hetECM_15m <- matrix(nrow = nperm, ncol = 1, 0)
 
 for(i in 1:nperm) # For loop for randomized F-values
 {
@@ -60,10 +54,8 @@ for(i in 1:nperm) # For loop for randomized F-values
 	
 	All_sp_mod_BA_rand <- lmer(Rand.GLM.Slope.Estimate ~ consp_15m * Seedling_myc + hetAM_15m + hetECM_15m + 
 							consp_15m:hetAM_15m + consp_15m:hetECM_15m + 
-							Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m + 
-							consp_15m:Seedling_myc:hetAM_15m + consp_15m:Seedling_myc:hetECM_15m + 
-							Prior + log0yr + 
-							(1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+							log0yr + log(Prior_3_year_cohorts_counts + 1) +  
+							(1|SiteID) + (1|Cohort.Year) + (1 + consp_15m|Sp), 
 							data = All_sp_slope_modeling_data)
 					
 	Rand_aov <- anova(All_sp_mod_BA_rand) # Save results to store F-values below
@@ -72,25 +64,18 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Rand_results_Seedling_myc[i] <-  Rand_aov$"F value"[2]
 		Rand_results_hetAM_15m[i] <- Rand_aov$"F value"[3]
 		Rand_results_hetECM_15m[i] <- Rand_aov$"F value"[4]
-		Rand_results_Prior[i] <- Rand_aov$"F value"[5]
-		Rand_results_log0yr[i] <- Rand_aov$"F value"[6]
+		Rand_results_log0yr[i] <- Rand_aov$"F value"[5]
+		Rand_results_Prior[i] <- Rand_aov$"F value"[6]
 		Rand_results_consp_15m_Seedling_myc[i] <- Rand_aov$"F value"[7]
 		Rand_results_consp_15m_hetAM_15m[i] <- Rand_aov$"F value"[8]
 		Rand_results_consp_15m_hetECM_15m[i] <- Rand_aov$"F value"[9]
-		Rand_results_Seedling_myc_hetAM_15m[i] <- Rand_aov$"F value"[10]
-		Rand_results_Seedling_myc_hetECM_15m[i] <- Rand_aov$"F value"[11]
-		Rand_results_consp_15m_Seedling_myc_hetAM_15m[i] <- Rand_aov$"F value"[12]
-		Rand_results_consp_15m_Seedling_myc_hetECM_15m[i] <- Rand_aov$"F value"[13]
-					
 }
 	# LM test with real data. We will compare these F-values to those from the peermutations above by ranking their magnitude. If our observations are not statistically significant, the true F-values will rank somewhere within the "normal" simulated distribution of F-values. If our observations are significant, our F-values will fall towards one of the tails of the distribution and a critical threshold (p-value at 0.05) can be estimated.
 			
 	All_sp_mod_BA_true <- lmer(GLM.Slope.Estimate ~ consp_15m * Seedling_myc + hetAM_15m + hetECM_15m + 
-							consp_15m:hetAM_15m + consp_15m:hetECM_15m + 
-							Seedling_myc:hetAM_15m + Seedling_myc:hetECM_15m + 
-							consp_15m:Seedling_myc:hetAM_15m + consp_15m:Seedling_myc:hetECM_15m + 
-							Prior + log0yr + 
-							(1|SiteID) + (1|Cohort.Year) + (1|Sp), 
+							consp_15m:hetAM_15m + consp_15m:hetECM_15m +  
+							log0yr + log(Prior_3_year_cohorts_counts + 1)
+							(1|SiteID) + (1|Cohort.Year) + (1 + consp_15m|Sp), 
 							data = All_sp_slope_modeling_data)
 					
 	Obs_aov <- anova(All_sp_mod_BA_true)
@@ -114,16 +99,17 @@ for(i in 1:nperm) # For loop for randomized F-values
 			All_results_hetECM_15m <- rbind(Rand_results_hetECM_15m, Obs_results_hetECM_15m)
 			Ranks_hetECM_15m <- rank(All_results_hetECM_15m)
 			P_values_hetECM_15m <- 1-Ranks_hetECM_15m[nperm+1]/(nperm+1)
-		
-		Obs_results_Prior <- as.vector(Obs_aov[5,5])
-			All_results_Prior <- rbind(Rand_results_Prior, Obs_results_Prior)
-			Ranks_Prior <- rank(All_results_Prior)
-			P_values_Prior <- 1-Ranks_Prior[nperm+1]/(nperm+1)
+
 			
-		Obs_results_log0yr <- as.vector(Obs_aov[6,5])
+		Obs_results_log0yr <- as.vector(Obs_aov[5,5])
 			All_results_log0yr <- rbind(Rand_results_log0yr, Obs_results_log0yr)
 			Ranks_log0yr <- rank(All_results_log0yr)
 			P_values_log0yr <- 1-Ranks_log0yr[nperm+1]/(nperm+1)
+			
+		Obs_results_Prior <- as.vector(Obs_aov[6,5])
+			All_results_Prior <- rbind(Rand_results_Prior, Obs_results_Prior)
+			Ranks_Prior <- rank(All_results_Prior)
+			P_values_Prior <- 1-Ranks_Prior[nperm+1]/(nperm+1)
 			
 		Obs_results_consp_15m_Seedling_myc <- as.vector(Obs_aov[7,5])
 			All_results_consp_15m_Seedling_myc <- rbind(Rand_results_consp_15m_Seedling_myc, Obs_results_consp_15m_Seedling_myc)
@@ -138,53 +124,30 @@ for(i in 1:nperm) # For loop for randomized F-values
 		Obs_results_consp_15m_hetECM_15m <- as.vector(Obs_aov[9,5])
 					All_results_consp_15m_hetECM_15m <- rbind(Rand_results_consp_15m_hetECM_15m, Obs_results_consp_15m_hetECM_15m)
 					Ranks_consp_15m_hetECM_15m <- rank(All_results_consp_15m_hetECM_15m)
-					P_values_consp_15m_hetECM_15m <- 1-Ranks_consp_15m_hetECM_15m[nperm+1]/(nperm+1)
-
-		Obs_results_Seedling_myc_hetAM_15m <- as.vector(Obs_aov[10,5])
-					All_results_Seedling_myc_hetAM_15m <- rbind(Rand_results_Seedling_myc_hetAM_15m, Obs_results_Seedling_myc_hetAM_15m)
-					Ranks_Seedling_myc_hetAM_15m <- rank(All_results_Seedling_myc_hetAM_15m)
-					P_values_Seedling_myc_hetAM_15m <- 1-Ranks_Seedling_myc_hetAM_15m[nperm+1]/(nperm+1)
-
-		Obs_results_Seedling_myc_hetECM_15m <- as.vector(Obs_aov[11,5])
-					All_results_Seedling_myc_hetECM_15m <- rbind(Rand_results_Seedling_myc_hetECM_15m, Obs_results_Seedling_myc_hetECM_15m)
-					Ranks_Seedling_myc_hetECM_15m <- rank(All_results_Seedling_myc_hetECM_15m)
-					P_values_Seedling_myc_hetECM_15m <- 1-Ranks_Seedling_myc_hetECM_15m[nperm+1]/(nperm+1)
-
-		Obs_results_consp_15m_Seedling_myc_hetAM_15m <- as.vector(Obs_aov[12,5])
-					All_results_consp_15m_Seedling_myc_hetAM_15m <- rbind(Rand_results_consp_15m_Seedling_myc_hetAM_15m, Obs_results_consp_15m_Seedling_myc_hetAM_15m)
-					Ranks_consp_15m_Seedling_myc_hetAM_15m <- rank(All_results_consp_15m_Seedling_myc_hetAM_15m)
-					P_values_consp_15m_Seedling_myc_hetAM_15m <- 1-Ranks_consp_15m_Seedling_myc_hetAM_15m[nperm+1]/(nperm+1)
-
-		Obs_results_consp_15m_Seedling_myc_hetECM_15m <- as.vector(Obs_aov[13,5])
-					All_results_consp_15m_Seedling_myc_hetECM_15m <- rbind(Rand_results_consp_15m_Seedling_myc_hetECM_15m, Obs_results_consp_15m_Seedling_myc_hetECM_15m)
-					Ranks_consp_15m_Seedling_myc_hetECM_15m <- rank(All_results_consp_15m_Seedling_myc_hetECM_15m)
-					P_values_consp_15m_Seedling_myc_hetECM_15m <- 1-Ranks_consp_15m_Seedling_myc_hetECM_15m[nperm+1]/(nperm+1)	
+					P_values_consp_15m_hetECM_15m <- 1-Ranks_consp_15m_hetECM_15m[nperm+1]/(nperm+1)	
 
 P_values_consp_15m
 P_values_Seedling_myc
 P_values_hetAM_15m
 P_values_hetECM_15m
-P_values_Prior
 P_values_log0yr
+P_values_Prior
 P_values_consp_15m_Seedling_myc
 P_values_consp_15m_hetAM_15m
 P_values_consp_15m_hetECM_15m
-P_values_Seedling_myc_hetAM_15m
-P_values_Seedling_myc_hetECM_15m
-P_values_consp_15m_Seedling_myc_hetAM_15m
-P_values_consp_15m_Seedling_myc_hetECM_15m
 
 	r.squaredGLMM(All_sp_mod_BA_true)
 	
 	# Store modeling results & export for plotting.
 
+	# REMOVE LAST 4 COLUMNS 
 	summary(All_sp_mod_BA_true)
 	
-	All_sp_GLM_slope_coefficient_modeling_results <- data.frame(species = c("All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp"), 
-															term = c("", "", "", "", "", "", "", "","", "", "", "", ""), 
-															estimate = c("", "", "", "", "", "", "", "", "", "", "", "", ""), 
-															std.error = c("", "", "", "", "", "", "", "", "", "", "", "", ""), 
-															t_value = c("", "", "", "", "", "", "", "", "", "", "", "", ""), 
+	All_sp_GLM_slope_coefficient_modeling_results <- data.frame(species = c("All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp", "All_sp"), 
+															term = c("", "", "", "", "", "", "", "", ""), 
+															estimate = c("", "", "", "", "", "", "", "", ""), 
+															std.error = c("", "", "", "", "", "", "", "", ""), 
+															t_value = c("", "", "", "", "", "", "", "", ""), 
 															p.value = c(P_values_con_den, P_values_seedling_myc, P_values_AM_den, P_values_ECM_den, P_values_con_seedlings, P_values_other_seedlings, P_values_con_den_seedling_myc_AM_den, P_values_con_den_seedling_myc_AM_den, P_values_con_den_seedling_myc_ECM_den, P_values_con_den_seedling_myc_ECM_den, , , ),
 															r.squared = c("", "", "", "", "", "", "", "", "", "", "", "", ""))
 
